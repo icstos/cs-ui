@@ -1,0 +1,34 @@
+# --- START: template .gitignore  ---
+
+# custom path
+output
+docs
+
+
+*.pt
+*.log
+*.db
+
+# Virtual environments
+.venv
+.idea
+.vscode
+
+# pyenv
+.python-version
+
+# 编译, C扩展
+*.so
+# Python-generated files
+# 编译的字节码
+__pycache__/
+*.py[cod]
+*$py.class
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+*.so
+
+# --- END: template .gitignore  ---
