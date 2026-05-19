@@ -11,7 +11,7 @@ class Text(Control):
         text_align=None,
         italic: bool = False,
         selectable: bool = False,
-        max_lines: int = None,
+        max_lines: int | None = None,
     ):
         super().__init__()
         self.value = value

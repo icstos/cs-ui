@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Any
 
 from cs_ui.core.control import Control
 
@@ -6,10 +6,10 @@ from cs_ui.core.control import Control
 class IconButton(Control):
     def __init__(
         self,
-        icon: Optional[Any] = None,
-        content: Optional[Any] = None,
+        icon: Any | None = None,
+        content: Any | None = None,
         on_click=None,
-        tooltip: Optional[str] = None,
+        tooltip: str | None = None,
         width=None,
         height=None,
     ):
@@ -25,10 +25,7 @@ class IconButton(Control):
         icon_arg = None
         # normalize string icon names to ft.icons constants or ft.Icon
         if isinstance(self.icon, str):
-            try:
-                icon_arg = getattr(ft.icons, self.icon.upper())
-            except Exception:
-                icon_arg = ft.Icon(self.icon)
+            icon_arg = getattr(ft.icons, self.icon.upper(), ft.Icon(self.icon))
         else:
             icon_arg = self.icon
 

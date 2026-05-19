@@ -1,13 +1,12 @@
 from cs_ui.core.control import Control
-from typing import Optional
 
 
 class TextField(Control):
     def __init__(
         self,
         value: str = "",
-        label: Optional[str] = None,
-        hint_text: Optional[str] = None,
+        label: str | None = None,
+        hint_text: str | None = None,
         width=None,
         password: bool = False,
         on_change=None,

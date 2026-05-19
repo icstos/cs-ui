@@ -31,15 +31,10 @@ class Container(Control):
 
         content = None
         if self.content is not None:
-            content = (
-                self.content.build() if hasattr(self.content, "build") else self.content
-            )
+            content = Control._build_child(self.content)
         elif self.children:
             content = ft.Column(
-                controls=[
-                    child.build() if hasattr(child, "build") else child
-                    for child in self.children
-                ],
+                controls=[Control._build_child(child) for child in self.children],
                 spacing=10,
                 alignment=self.alignment,
             )

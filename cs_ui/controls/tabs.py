@@ -1,4 +1,5 @@
-from typing import Any, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Any
 
 from cs_ui.core.control import Control
 
@@ -6,7 +7,7 @@ from cs_ui.core.control import Control
 class Tabs(Control):
     def __init__(
         self,
-        tabs: Optional[Sequence[Any]] = None,
+        tabs: Sequence[Any] | None = None,
         value=None,
         on_change=None,
         width=None,
@@ -20,13 +21,12 @@ class Tabs(Control):
     def _create(self):
         import flet as ft
 
-        ft_tabs = []
-        for tab in self.tabs:
-            if isinstance(tab, tuple):
-                val, label = tab
-            else:
-                val, label = tab, str(tab)
-            ft_tabs.append(ft.Tab(label=label, data=val))
+        ft_tabs = [
+            ft.Tab(label=label, data=val)
+            if isinstance(tab, tuple)
+            else ft.Tab(label=str(tab), data=tab)
+            for tab in self.tabs
+        ]
 
         return ft.Tabs(
             content=ft_tabs,

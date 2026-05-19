@@ -1,4 +1,5 @@
-from typing import Any, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Any
 
 from cs_ui.core.control import Control
 
@@ -6,8 +7,8 @@ from cs_ui.core.control import Control
 class RadioGroup(Control):
     def __init__(
         self,
-        label: Optional[str] = None,
-        options: Optional[Sequence[Any]] = None,
+        label: str | None = None,
+        options: Sequence[Any] | None = None,
         value: Any = None,
         on_change=None,
     ):
@@ -20,13 +21,12 @@ class RadioGroup(Control):
     def _create(self):
         import flet as ft
 
-        radios = []
-        for option in self.options:
-            if isinstance(option, tuple):
-                val, text = option
-            else:
-                val, text = option, str(option)
-            radios.append(ft.Radio(value=val, label=text))
+        radios = [
+            ft.Radio(value=val, label=text)
+            if isinstance(option, tuple)
+            else ft.Radio(value=option, label=str(option))
+            for option in self.options
+        ]
 
         controls = []
         if self.label:

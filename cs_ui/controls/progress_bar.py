@@ -15,9 +15,7 @@ class ProgressBar(Control):
     def build(self):
         import flet as ft
 
-        value = self.value
-        if value > 1:
-            value = min(value / 100.0, 1.0)
+        value = min(self.value / 100.0, 1.0) if self.value > 1 else self.value
 
         return ft.ProgressBar(
             value=value,

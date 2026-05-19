@@ -45,6 +45,4 @@ class Control:
 
     @staticmethod
     def _build_child(child):
-        if isinstance(child, Control):
-            return child.build()
-        return child
+        return child.build() if isinstance(child, Control) else child

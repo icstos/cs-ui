@@ -15,10 +15,7 @@ class Column(Control):
         import flet as ft
 
         return ft.Column(
-            controls=[
-                child.build() if hasattr(child, "build") else child
-                for child in self.children
-            ],
+            controls=[Control._build_child(child) for child in self.children],
             alignment=self.alignment,
             spacing=self.spacing,
         )

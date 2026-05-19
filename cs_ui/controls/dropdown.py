@@ -1,4 +1,5 @@
-from typing import Any, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Any
 
 from cs_ui.core.control import Control
 
@@ -6,11 +7,11 @@ from cs_ui.core.control import Control
 class Dropdown(Control):
     def __init__(
         self,
-        label: Optional[str] = None,
-        options: Optional[Sequence[Any]] = None,
+        label: str | None = None,
+        options: Sequence[Any] | None = None,
         value: Any = None,
         width=None,
-        hint_text: Optional[str] = None,
+        hint_text: str | None = None,
         on_change=None,
     ):
         super().__init__(width=width)
@@ -23,13 +24,12 @@ class Dropdown(Control):
     def _create(self):
         import flet as ft
 
-        ft_options = []
-        for option in self.options:
-            if isinstance(option, tuple):
-                val, text = option
-            else:
-                val, text = option, str(option)
-            ft_options.append(ft.dropdown.Option(text, val))
+        ft_options = [
+            ft.dropdown.Option(text, val)
+            if isinstance(option, tuple)
+            else ft.dropdown.Option(str(option), option)
+            for option in self.options
+        ]
 
         return ft.Dropdown(
             text=self.label,

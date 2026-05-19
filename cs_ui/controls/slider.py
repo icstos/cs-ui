@@ -1,5 +1,3 @@
-from typing import Optional
-
 from cs_ui.core.control import Control
 
 
@@ -9,8 +7,8 @@ class Slider(Control):
         value: float = 0.0,
         min_value: float = 0.0,
         max_value: float = 1.0,
-        divisions: Optional[int] = None,
-        label: Optional[str] = None,
+        divisions: int | None = None,
+        label: str | None = None,
         width=None,
         on_change=None,
     ):

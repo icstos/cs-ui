@@ -29,8 +29,6 @@ class Card(Container):
 
     def _create(self):
         card = super()._create()
-        try:
+        if hasattr(card, "elevation"):
             card.elevation = self.elevation
-        except Exception:
-            pass
         return card
