@@ -1,3 +1,3 @@
-from .base_control import BaseControl
+from .base_control import resolve_icon
 
-__all__ = ["BaseControl"]
+__all__ = ["resolve_icon"]
