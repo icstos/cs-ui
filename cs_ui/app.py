@@ -7,7 +7,13 @@ class Page:
         self._page = page
 
     def add(self, *controls):
-        self._page.add(*controls)
+        processed_controls = []
+        for control in controls:
+            if hasattr(control, 'build') and callable(control.build):
+                processed_controls.append(control.build())
+            else:
+                processed_controls.append(control)
+        self._page.add(*processed_controls)
 
     def clear(self):
         self._page.controls.clear()

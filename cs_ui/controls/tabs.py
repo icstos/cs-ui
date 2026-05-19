@@ -2,9 +2,11 @@ import flet as ft
 from collections.abc import Sequence
 from typing import Any
 
+from cs_ui.core import BaseControl
+
 
 @ft.control("Tabs")
-class Tabs(ft.BaseControl):
+class Tabs(BaseControl):
     def __init__(
         self,
         tabs: Sequence[Any] | None = None,
@@ -38,6 +40,15 @@ class Tabs(ft.BaseControl):
             height=self.height,
         )
 
+    def _selected_index(self) -> int:
+        if self.value is None:
+            return 0
+        for index, tab in enumerate(self.tabs):
+            val = tab[0] if isinstance(tab, tuple) else tab
+            if val == self.value:
+                return index
+        return 0
+
 
 def main(page: ft.Page):
     page.title = "Tabs Demo"
@@ -55,12 +66,3 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     ft.run(main)
-
-    def _selected_index(self):
-        if self.value is None:
-            return 0
-        for index, tab in enumerate(self.tabs):
-            val = tab[0] if isinstance(tab, tuple) else tab
-            if val == self.value:
-                return index
-        return 0

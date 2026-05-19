@@ -1,8 +1,10 @@
 import flet as ft
 
+from cs_ui.core import BaseControl
+
 
 @ft.control("Container")
-class Container(ft.BaseControl):
+class Container(BaseControl):
     def __init__(
         self,
         content=None,
@@ -34,10 +36,10 @@ class Container(ft.BaseControl):
 
         content = None
         if self.content is not None:
-            content = self.content
+            content = self._build_control(self.content)
         elif self.children:
             content = ft.Column(
-                controls=[child for child in self.children],
+                controls=self._build_controls(self.children),
                 spacing=10,
                 alignment=self.alignment,
             )

@@ -1,2 +1,3 @@
-# core package preserved for package layout. No public Control base is exposed.
+from .base_control import BaseControl
 
+__all__ = ["BaseControl"]

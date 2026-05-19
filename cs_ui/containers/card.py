@@ -3,7 +3,7 @@ import flet as ft
 from cs_ui.containers.container import Container
 
 
-@ft.control("Container")
+@ft.control("Card")
 class Card(Container):
     def __init__(
         self,
@@ -30,14 +30,9 @@ class Card(Container):
         self.elevation = elevation
 
     def build(self):
-        return ft.Container(
-            content=super().build().content,
-            alignment=self.alignment,
-            padding=self.padding,
-            border_radius=self.border_radius,
-            width=self.width,
-            height=self.height,
-            bgcolor=self.bgcolor,
+        return ft.Card(
+            content=super().build(),
+            elevation=self.elevation,
         )
 
 
