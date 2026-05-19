@@ -44,4 +44,4 @@ class App:
             if callable(self._on_start):
                 self._on_start(self.page)
 
-        ft.app(target=main)
+        ft.run(main)
