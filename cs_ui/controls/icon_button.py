@@ -1,6 +1,6 @@
 from typing import Optional, Any
 
-from ..core.control import Control
+from cs_ui.core.control import Control
 
 
 class IconButton(Control):

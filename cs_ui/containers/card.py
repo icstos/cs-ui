@@ -1,5 +1,5 @@
-from ..core.control import Control
-from .container import Container
+from cs_ui.core.control import Control
+from cs_ui.containers.container import Container
 
 
 class Card(Container):

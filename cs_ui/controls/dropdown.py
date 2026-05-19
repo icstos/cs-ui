@@ -1,6 +1,6 @@
 from typing import Any, Optional, Sequence, Tuple
 
-from ..core.control import Control
+from cs_ui.core.control import Control
 
 
 class Dropdown(Control):
