@@ -1,7 +1,8 @@
-from cs_ui.core.control import Control
+import flet as ft
 
 
-class Checkbox(Control):
+@ft.control("Checkbox")
+class Checkbox(ft.BaseControl):
     def __init__(
         self,
         label: str = "",
@@ -16,15 +17,25 @@ class Checkbox(Control):
         self.disabled = disabled
 
     def build(self):
-        import flet as ft
-
         return ft.Checkbox(
             label=self.label,
             value=self.value,
-            on_change=self._handle_change,
+            on_change=self.on_change,
             disabled=self.disabled,
         )
 
-    def _handle_change(self, event):
-        if callable(self.on_change):
-            self.on_change(event)
+
+def main(page: ft.Page):
+    page.title = "Checkbox Demo"
+    page.add(
+        Checkbox(
+            label="示例复选框",
+            on_change=lambda e: page.add(
+                ft.Text(f"状态：{e.control.value}", color="green")
+            ),
+        )
+    )
+
+
+if __name__ == "__main__":
+    ft.run(main)

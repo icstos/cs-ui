@@ -1,6 +1,5 @@
 import flet as ft
 from collections.abc import Callable
-from cs_ui.core.control import Control
 
 
 class Page:
@@ -8,11 +7,7 @@ class Page:
         self._page = page
 
     def add(self, *controls):
-        built = [
-            control.build() if isinstance(control, Control) else control
-            for control in controls
-        ]
-        self._page.add(*built)
+        self._page.add(*controls)
 
     def clear(self):
         self._page.controls.clear()
@@ -45,4 +40,4 @@ class App:
             if callable(self.on_start):
                 self.on_start(self.page)
 
-        ft.app(target=main)
+        ft.run(main)

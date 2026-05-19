@@ -1,7 +1,8 @@
-from cs_ui.core.control import Control
+import flet as ft
 
 
-class TextField(Control):
+@ft.control("TextField")
+class TextField(ft.BaseControl):
     def __init__(
         self,
         value: str = "",
@@ -12,30 +13,40 @@ class TextField(Control):
         on_change=None,
         on_submit=None,
     ):
-        super().__init__(width=width)
+        super().__init__()
         self.value = value
         self.label = label
         self.hint_text = hint_text
         self.password = password
+        self.width = width
         self.on_change = on_change
         self.on_submit = on_submit
 
-    def _create(self):
-        import flet as ft
-
+    def build(self):
         return ft.TextField(
             value=self.value,
             label=self.label,
             hint_text=self.hint_text,
             password=self.password,
-            on_change=self._handle_change,
-            on_submit=self._handle_submit,
+            on_change=self.on_change,
+            on_submit=self.on_submit,
+            width=self.width,
         )
 
-    def _handle_change(self, event):
-        if callable(self.on_change):
-            self.on_change(event)
 
-    def _handle_submit(self, event):
-        if callable(self.on_submit):
-            self.on_submit(event)
+def main(page: ft.Page):
+    page.title = "TextField Demo"
+    page.add(
+        TextField(
+            label="输入内容",
+            hint_text="按回车提交",
+            width=320,
+            on_submit=lambda e: page.add(
+                ft.Text(f"提交内容：{e.control.value}", color="green")
+            ),
+        )
+    )
+
+
+if __name__ == "__main__":
+    ft.run(main)

@@ -1,9 +1,9 @@
+import flet as ft
 from typing import Any
 
-from cs_ui.core.control import Control
 
-
-class IconButton(Control):
+@ft.control("IconButton")
+class IconButton(ft.BaseControl):
     def __init__(
         self,
         icon: Any | None = None,
@@ -13,41 +13,50 @@ class IconButton(Control):
         width=None,
         height=None,
     ):
-        super().__init__(width=width, height=height)
+        super().__init__()
         self.icon = icon
         self.content = content
         self.on_click = on_click
         self.tooltip = tooltip
+        self.width = width
+        self.height = height
 
-    def _create(self):
-        import flet as ft
-
+    def build(self):
         icon_arg = None
-        # normalize string icon names to ft.icons constants or ft.Icon
         if isinstance(self.icon, str):
-            icon_arg = getattr(ft.icons, self.icon.upper(), ft.Icon(self.icon))
+            icon_arg = getattr(ft.icons, self.icon.upper(), None)
+            if icon_arg is None:
+                icon_arg = ft.Icon(self.icon)
         else:
             icon_arg = self.icon
 
+        if icon_arg is None and self.content is not None:
+            icon_arg = (
+                ft.Text(self.content) if isinstance(self.content, str) else self.content
+            )
+
         kwargs = {
             "tooltip": self.tooltip,
-            "on_click": self._handle_click,
+            "on_click": self.on_click,
             "width": self.width,
             "height": self.height,
         }
-
         if icon_arg is not None:
             kwargs["icon"] = icon_arg
-        elif self.content is not None:
-            # IconButton doesn't accept a `content` kwarg; map visible content
-            # into the `icon` parameter as a control so it's displayed.
-            if isinstance(self.content, str):
-                kwargs["icon"] = ft.Text(self.content)
-            else:
-                kwargs["icon"] = self.content
 
         return ft.IconButton(**kwargs)
 
-    def _handle_click(self, event):
-        if callable(self.on_click):
-            self.on_click(event)
+
+def main(page: ft.Page):
+    page.title = "IconButton Demo"
+    page.add(
+        IconButton(
+            icon="favorite",
+            tooltip="喜欢",
+            on_click=lambda e: page.add(ft.Text("IconButton 点击", color="blue")),
+        )
+    )
+
+
+if __name__ == "__main__":
+    ft.run(main)

@@ -1,7 +1,8 @@
-from cs_ui.core.control import Control
+import flet as ft
 
 
-class ProgressBar(Control):
+@ft.control("ProgressBar")
+class ProgressBar(ft.BaseControl):
     def __init__(
         self, value: float = 0.0, width=None, bgcolor=None, color=None, height=None
     ):
@@ -13,10 +14,7 @@ class ProgressBar(Control):
         self.height = height
 
     def build(self):
-        import flet as ft
-
         value = min(self.value / 100.0, 1.0) if self.value > 1 else self.value
-
         return ft.ProgressBar(
             value=value,
             width=self.width,
@@ -24,3 +22,14 @@ class ProgressBar(Control):
             color=self.color,
             height=self.height,
         )
+
+
+def main(page: ft.Page):
+    page.title = "ProgressBar Demo"
+    page.add(
+        ProgressBar(value=45, width=320, color="#4caf50", bgcolor="#e0e0e0", height=16)
+    )
+
+
+if __name__ == "__main__":
+    ft.run(main)

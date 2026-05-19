@@ -1,7 +1,8 @@
-from cs_ui.core.control import Control
+import flet as ft
 
 
-class Column(Control):
+@ft.control("Column")
+class Column(ft.BaseControl):
     def __init__(self, *children, alignment=None, spacing=10):
         super().__init__()
         self.children = list(children)
@@ -11,11 +12,25 @@ class Column(Control):
     def add(self, *controls):
         self.children.extend(controls)
 
-    def _create(self):
-        import flet as ft
-
+    def build(self):
         return ft.Column(
-            controls=[Control._build_child(child) for child in self.children],
+            controls=[child for child in self.children],
             alignment=self.alignment,
             spacing=self.spacing,
         )
+
+
+def main(page: ft.Page):
+    page.title = "Column Demo"
+    page.add(
+        Column(
+            ft.Text("Column 布局示例", size=20, weight="bold"),
+            ft.Text("第一项"),
+            ft.Text("第二项"),
+            spacing=12,
+        )
+    )
+
+
+if __name__ == "__main__":
+    ft.run(main)

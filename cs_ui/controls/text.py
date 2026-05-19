@@ -1,7 +1,8 @@
-from cs_ui.core.control import Control
+import flet as ft
 
 
-class Text(Control):
+@ft.control("Text")
+class Text(ft.BaseControl):
     def __init__(
         self,
         value: str,
@@ -23,9 +24,7 @@ class Text(Control):
         self.selectable = selectable
         self.max_lines = max_lines
 
-    def _create(self):
-        import flet as ft
-
+    def build(self):
         return ft.Text(
             self.value,
             size=self.size,
@@ -36,3 +35,12 @@ class Text(Control):
             selectable=self.selectable,
             max_lines=self.max_lines,
         )
+
+
+def main(page: ft.Page):
+    page.title = "Text Demo"
+    page.add(Text("这是 Text 组件示例", size=24, color="#1f6feb", weight="bold"))
+
+
+if __name__ == "__main__":
+    ft.run(main)
