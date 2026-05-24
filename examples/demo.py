@@ -1,6 +1,7 @@
 import os
 import sys
 import warnings
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -38,6 +39,7 @@ from cs_ui import (
 
 
 # ─── 路由页面构建函数 ───────────────────────────────────────────────
+
 
 def home_view(page):
     """首页 - 导航入口"""
@@ -83,14 +85,13 @@ def home_view(page):
         appbar=ft.AppBar(title=ft.Text("CS UI Demo"), bgcolor="#1f6feb", color="white"),
         controls=[
             Text("CS UI 组件库", size=28, weight="bold", color="#1f2937"),
-            Text("基于 Flet 的 Python UI 组件库，点击卡片查看各分类组件效果", size=14, color="#6b7280"),
-            Divider(),
-            Column(
-                expand=True,
-                scroll=ft.ScrollMode.AUTO,
-                spacing=8,
-                controls=cards,
+            Text(
+                "基于 Flet 的 Python UI 组件库，点击卡片查看各分类组件效果",
+                size=14,
+                color="#6b7280",
             ),
+            Divider(),
+            Column(expand=True, scroll=ft.ScrollMode.AUTO, spacing=8, controls=cards),
         ],
         padding=20,
         bgcolor="#f8fafc",
@@ -101,10 +102,15 @@ def core_view(page):
     """Core - 核心工具"""
     return ft.View(
         route="/core",
-        appbar=ft.AppBar(title=ft.Text("Core 核心工具"), bgcolor="#1f6feb", color="white"),
+        appbar=ft.AppBar(
+            title=ft.Text("Core 核心工具"), bgcolor="#1f6feb", color="white"
+        ),
         controls=[
-            Text("resolve_icon() 图标解析", size=20, weight="bold"),
-            Text("将字符串图标名自动解析为 Flet 图标对象，支持 ft.Icons 枚举和字符串", size=13, color="#6b7280"),
+            Text(
+                "将字符串图标名自动解析为 Flet 图标对象，支持 ft.Icons 枚举和字符串",
+                size=13,
+                color="#6b7280",
+            ),
             Divider(),
             Text("使用 ft.Icons 枚举：", size=14, weight="bold"),
             Row(
@@ -118,7 +124,11 @@ def core_view(page):
             ),
             Divider(),
             Text("组件继承体系：", size=14, weight="bold"),
-            Text("所有组件直接继承自 ft.Xxx 原生控件，通过 __init__ 自定义默认值和便捷参数", size=13, color="#6b7280"),
+            Text(
+                "所有组件直接继承自 ft.Xxx 原生控件，通过 __init__ 自定义默认值和便捷参数",
+                size=13,
+                color="#6b7280",
+            ),
             Card(
                 elevation=2,
                 content=Container(
@@ -131,7 +141,9 @@ def core_view(page):
                         "        super().__init__(bgcolor=bgcolor, **kwargs)\n"
                         "        if label:\n"
                         "            self.content = ft.Text(label, color='white')",
-                        color="#e2e8f0", size=13, font_family="Consolas",
+                        color="#e2e8f0",
+                        size=13,
+                        font_family="Consolas",
                     ),
                 ),
             ),
@@ -146,7 +158,9 @@ def general_view(page):
     """General - 通用组件"""
     return ft.View(
         route="/general",
-        appbar=ft.AppBar(title=ft.Text("General 通用组件"), bgcolor="#1f6feb", color="white"),
+        appbar=ft.AppBar(
+            title=ft.Text("General 通用组件"), bgcolor="#1f6feb", color="white"
+        ),
         controls=[
             Text("Text 文本", size=20, weight="bold"),
             Row(
@@ -159,7 +173,6 @@ def general_view(page):
                 ],
             ),
             Divider(),
-
             Text("Button 按钮", size=20, weight="bold"),
             Row(
                 spacing=12,
@@ -171,29 +184,38 @@ def general_view(page):
                 ],
             ),
             Divider(),
-
             Text("IconButton 图标按钮", size=20, weight="bold"),
             Row(
                 spacing=12,
                 controls=[
-                    IconButton(icon=ft.Icons.FAVORITE, icon_color="#ef4444", tooltip="喜欢"),
-                    IconButton(icon=ft.Icons.DELETE, icon_color="#6b7280", tooltip="删除"),
-                    IconButton(icon=ft.Icons.ADD_CIRCLE, icon_color="#10b981", tooltip="添加"),
+                    IconButton(
+                        icon=ft.Icons.FAVORITE, icon_color="#ef4444", tooltip="喜欢"
+                    ),
+                    IconButton(
+                        icon=ft.Icons.DELETE, icon_color="#6b7280", tooltip="删除"
+                    ),
+                    IconButton(
+                        icon=ft.Icons.ADD_CIRCLE, icon_color="#10b981", tooltip="添加"
+                    ),
                 ],
             ),
             Divider(),
-
             Text("Badge 徽标", size=20, weight="bold"),
             Row(
                 spacing=16,
                 controls=[
                     ft.FilledIconButton(icon=ft.Icons.MAIL, badge=Badge(badge_value=5)),
-                    ft.FilledIconButton(icon=ft.Icons.NOTIFICATIONS, badge=Badge(badge_value=99, max_value=99)),
-                    ft.FilledIconButton(icon=ft.Icons.SHOPPING_CART, badge=Badge(badge_value=0, badge_color="#10b981")),
+                    ft.FilledIconButton(
+                        icon=ft.Icons.NOTIFICATIONS,
+                        badge=Badge(badge_value=99, max_value=99),
+                    ),
+                    ft.FilledIconButton(
+                        icon=ft.Icons.SHOPPING_CART,
+                        badge=Badge(badge_value=0, badge_color="#10b981"),
+                    ),
                 ],
             ),
             Divider(),
-
             Text("Chip 标签", size=20, weight="bold"),
             Row(
                 spacing=8,
@@ -204,20 +226,17 @@ def general_view(page):
                 ],
             ),
             Divider(),
-
             Text("Divider 分割线", size=20, weight="bold"),
             Text("上方文本"),
             Divider(),
             Text("下方文本"),
             Divider(),
-
             Text("Tooltip 提示", size=20, weight="bold"),
             Tooltip(
                 message="这是一个提示信息",
                 content=Text("鼠标悬停查看提示", color="#1f6feb", size=14),
             ),
             Divider(),
-
             Text("Image 图片", size=20, weight="bold"),
             Image(
                 src="https://picsum.photos/seed/csui/300/150",
@@ -237,7 +256,9 @@ def layout_view(page):
     """Layout - 布局组件"""
     return ft.View(
         route="/layout",
-        appbar=ft.AppBar(title=ft.Text("Layout 布局组件"), bgcolor="#1f6feb", color="white"),
+        appbar=ft.AppBar(
+            title=ft.Text("Layout 布局组件"), bgcolor="#1f6feb", color="white"
+        ),
         controls=[
             Text("Row 行布局", size=20, weight="bold"),
             Row(
@@ -251,7 +272,6 @@ def layout_view(page):
                 ],
             ),
             Divider(),
-
             Text("Column 列布局", size=20, weight="bold"),
             Column(
                 spacing=8,
@@ -262,27 +282,31 @@ def layout_view(page):
                 ],
             ),
             Divider(),
-
             Text("Container 容器", size=20, weight="bold"),
             Row(
                 spacing=12,
                 controls=[
                     Container(
-                        bgcolor="#dbeafe", padding=16, border_radius=8,
+                        bgcolor="#dbeafe",
+                        padding=16,
+                        border_radius=8,
                         content=Text("蓝色容器", color="#1e40af"),
                     ),
                     Container(
-                        bgcolor="#dcfce7", padding=16, border_radius=8,
+                        bgcolor="#dcfce7",
+                        padding=16,
+                        border_radius=8,
                         content=Text("绿色容器", color="#166534"),
                     ),
                     Container(
-                        bgcolor="#fef3c7", padding=16, border_radius=8,
+                        bgcolor="#fef3c7",
+                        padding=16,
+                        border_radius=8,
                         content=Text("黄色容器", color="#92400e"),
                     ),
                 ],
             ),
             Divider(),
-
             Text("Card 卡片", size=20, weight="bold"),
             Row(
                 spacing=12,
@@ -290,7 +314,8 @@ def layout_view(page):
                     Card(
                         elevation=2,
                         content=Container(
-                            padding=16, border_radius=12,
+                            padding=16,
+                            border_radius=12,
                             content=Column(
                                 spacing=4,
                                 controls=[
@@ -303,7 +328,8 @@ def layout_view(page):
                     Card(
                         elevation=8,
                         content=Container(
-                            padding=16, border_radius=12,
+                            padding=16,
+                            border_radius=12,
                             content=Column(
                                 spacing=4,
                                 controls=[
@@ -316,7 +342,6 @@ def layout_view(page):
                 ],
             ),
             Divider(),
-
             Text("ListView 列表视图", size=20, weight="bold"),
             Container(
                 height=200,
@@ -337,7 +362,6 @@ def layout_view(page):
                 ),
             ),
             Divider(),
-
             Text("GridView 网格视图", size=20, weight="bold"),
             Container(
                 height=200,
@@ -351,8 +375,15 @@ def layout_view(page):
                     run_spacing=8,
                     controls=[
                         Container(
-                            bgcolor="#dbeafe", border_radius=8, padding=12,
-                            content=Text(f"网格 {i + 1}", size=13, color="#1e40af", text_align="center"),
+                            bgcolor="#dbeafe",
+                            border_radius=8,
+                            padding=12,
+                            content=Text(
+                                f"网格 {i + 1}",
+                                size=13,
+                                color="#1e40af",
+                                text_align="center",
+                            ),
                         )
                         for i in range(8)
                     ],
@@ -369,12 +400,13 @@ def navigation_view(page):
     """Navigation - 导航组件"""
     return ft.View(
         route="/navigation",
-        appbar=ft.AppBar(title=ft.Text("Navigation 导航组件"), bgcolor="#1f6feb", color="white"),
+        appbar=ft.AppBar(
+            title=ft.Text("Navigation 导航组件"), bgcolor="#1f6feb", color="white"
+        ),
         controls=[
             Text("AppBar 应用栏", size=20, weight="bold"),
             Text("当前页面顶部的 AppBar 即为示例", size=13, color="#6b7280"),
             Divider(),
-
             Text("Tabs 标签页", size=20, weight="bold"),
             Tabs(
                 expand=True,
@@ -384,30 +416,30 @@ def navigation_view(page):
                     ft.Tab(
                         label="标签一",
                         content=Container(
-                            padding=16,
-                            content=Text("标签一的内容", size=14),
+                            padding=16, content=Text("标签一的内容", size=14)
                         ),
                     ),
                     ft.Tab(
                         label="标签二",
                         content=Container(
-                            padding=16,
-                            content=Text("标签二的内容", size=14),
+                            padding=16, content=Text("标签二的内容", size=14)
                         ),
                     ),
                     ft.Tab(
                         label="标签三",
                         content=Container(
-                            padding=16,
-                            content=Text("标签三的内容", size=14),
+                            padding=16, content=Text("标签三的内容", size=14)
                         ),
                     ),
                 ],
             ),
             Divider(),
-
             Text("NavigationBar 底部导航", size=20, weight="bold"),
-            Text("NavigationBar 适合放在页面底部，此处展示静态效果", size=13, color="#6b7280"),
+            Text(
+                "NavigationBar 适合放在页面底部，此处展示静态效果",
+                size=13,
+                color="#6b7280",
+            ),
             Container(
                 bgcolor="#ffffff",
                 border_radius=12,
@@ -433,13 +465,20 @@ def form_view(page):
     """Form - 表单组件"""
     return ft.View(
         route="/form",
-        appbar=ft.AppBar(title=ft.Text("Form 表单组件"), bgcolor="#1f6feb", color="white"),
+        appbar=ft.AppBar(
+            title=ft.Text("Form 表单组件"), bgcolor="#1f6feb", color="white"
+        ),
         controls=[
             Text("TextField 文本输入", size=20, weight="bold"),
             TextField(label="用户名", hint_text="请输入用户名", width=320),
-            TextField(label="密码", hint_text="请输入密码", password=True, can_reveal_password=True, width=320),
+            TextField(
+                label="密码",
+                hint_text="请输入密码",
+                password=True,
+                can_reveal_password=True,
+                width=320,
+            ),
             Divider(),
-
             Text("Dropdown 下拉选择", size=20, weight="bold"),
             Dropdown(
                 label="选择城市",
@@ -447,7 +486,6 @@ def form_view(page):
                 width=320,
             ),
             Divider(),
-
             Text("Checkbox 复选框", size=20, weight="bold"),
             Column(
                 spacing=4,
@@ -457,7 +495,6 @@ def form_view(page):
                 ],
             ),
             Divider(),
-
             Text("Switch 开关", size=20, weight="bold"),
             Column(
                 spacing=4,
@@ -467,17 +504,11 @@ def form_view(page):
                 ],
             ),
             Divider(),
-
             Text("Slider 滑块", size=20, weight="bold"),
             Slider(min=0, max=100, divisions=10, label="{value}%", width=320),
             Divider(),
-
             Text("RadioGroup 单选组", size=20, weight="bold"),
-            RadioGroup(
-                label="选择性别",
-                options=["男", "女", "其他"],
-                value="男",
-            ),
+            RadioGroup(label="选择性别", options=["男", "女", "其他"], value="男"),
         ],
         padding=20,
         bgcolor="#f8fafc",
@@ -510,7 +541,9 @@ def feedback_view(page):
 
     return ft.View(
         route="/feedback",
-        appbar=ft.AppBar(title=ft.Text("Feedback 反馈组件"), bgcolor="#1f6feb", color="white"),
+        appbar=ft.AppBar(
+            title=ft.Text("Feedback 反馈组件"), bgcolor="#1f6feb", color="white"
+        ),
         controls=[
             Text("ProgressBar 进度条", size=20, weight="bold"),
             Text("progress=30（百分比模式）", size=13, color="#6b7280"),
@@ -520,7 +553,6 @@ def feedback_view(page):
             Text("progress=100（满进度）", size=13, color="#6b7280"),
             ProgressBar(progress=100, width=400, color="#f59e0b"),
             Divider(),
-
             Text("Loading 加载中", size=20, weight="bold"),
             Row(
                 alignment="end",
@@ -550,11 +582,9 @@ def feedback_view(page):
                 ],
             ),
             Divider(),
-
             Text("SnackBar 消息提示", size=20, weight="bold"),
             Button(label="显示 SnackBar", on_click=show_snackbar),
             Divider(),
-
             Text("AlertDialog 对话框", size=20, weight="bold"),
             Button(label="显示 AlertDialog", on_click=show_dialog, bgcolor="#6366f1"),
         ],
@@ -568,7 +598,9 @@ def data_display_view(page):
     """Data Display - 数据展示"""
     return ft.View(
         route="/data_display",
-        appbar=ft.AppBar(title=ft.Text("Data Display 数据展示"), bgcolor="#1f6feb", color="white"),
+        appbar=ft.AppBar(
+            title=ft.Text("Data Display 数据展示"), bgcolor="#1f6feb", color="white"
+        ),
         controls=[
             Text("ListTile 列表项", size=20, weight="bold"),
             Card(
@@ -576,13 +608,21 @@ def data_display_view(page):
                 content=Column(
                     spacing=0,
                     controls=[
-                        ListTile(title_text="用户管理", subtitle_text="管理系统用户和权限"),
+                        ListTile(
+                            title_text="用户管理", subtitle_text="管理系统用户和权限"
+                        ),
                         Divider(height=1),
-                        ListTile(title_text="系统设置", subtitle_text="配置系统参数和选项"),
+                        ListTile(
+                            title_text="系统设置", subtitle_text="配置系统参数和选项"
+                        ),
                         Divider(height=1),
-                        ListTile(title_text="数据备份", subtitle_text="备份和恢复系统数据"),
+                        ListTile(
+                            title_text="数据备份", subtitle_text="备份和恢复系统数据"
+                        ),
                         Divider(height=1),
-                        ListTile(title_text="操作日志", subtitle_text="查看系统操作记录"),
+                        ListTile(
+                            title_text="操作日志", subtitle_text="查看系统操作记录"
+                        ),
                     ],
                 ),
             ),
@@ -605,14 +645,18 @@ def about_view(page):
             Card(
                 elevation=2,
                 content=Container(
-                    padding=20, border_radius=12,
+                    padding=20,
+                    border_radius=12,
                     content=Column(
                         spacing=8,
                         controls=[
                             Text("设计理念", size=18, weight="bold"),
                             Text("• 直接继承 Flet 原生控件，零学习成本", size=14),
                             Text("• 通过 __init__ 自定义默认值和便捷参数", size=14),
-                            Text("• 组件按功能分类：general / layout / navigation / form / feedback / data_display", size=14),
+                            Text(
+                                "• 组件按功能分类：general / layout / navigation / form / feedback / data_display",
+                                size=14,
+                            ),
                             Text("• 所有组件 100% 兼容 Flet 原生 API", size=14),
                         ],
                     ),
@@ -627,7 +671,8 @@ def about_view(page):
                     Card(
                         elevation=1,
                         content=Container(
-                            padding=16, border_radius=8,
+                            padding=16,
+                            border_radius=8,
                             content=Column(
                                 spacing=2,
                                 controls=[
@@ -640,7 +685,8 @@ def about_view(page):
                     Card(
                         elevation=1,
                         content=Container(
-                            padding=16, border_radius=8,
+                            padding=16,
+                            border_radius=8,
                             content=Column(
                                 spacing=2,
                                 controls=[
@@ -653,7 +699,8 @@ def about_view(page):
                     Card(
                         elevation=1,
                         content=Container(
-                            padding=16, border_radius=8,
+                            padding=16,
+                            border_radius=8,
                             content=Column(
                                 spacing=2,
                                 controls=[
@@ -666,7 +713,8 @@ def about_view(page):
                     Card(
                         elevation=1,
                         content=Container(
-                            padding=16, border_radius=8,
+                            padding=16,
+                            border_radius=8,
                             content=Column(
                                 spacing=2,
                                 controls=[
@@ -679,7 +727,8 @@ def about_view(page):
                     Card(
                         elevation=1,
                         content=Container(
-                            padding=16, border_radius=8,
+                            padding=16,
+                            border_radius=8,
                             content=Column(
                                 spacing=2,
                                 controls=[
@@ -692,7 +741,8 @@ def about_view(page):
                     Card(
                         elevation=1,
                         content=Container(
-                            padding=16, border_radius=8,
+                            padding=16,
+                            border_radius=8,
                             content=Column(
                                 spacing=2,
                                 controls=[
@@ -727,6 +777,7 @@ ROUTES = {
 
 
 # ─── 主程序 ─────────────────────────────────────────────────────────
+
 
 def main(page: ft.Page):
     page.title = "CS UI Demo"
