@@ -1,6 +1,11 @@
+"""2
+View:
+
+"""
+
 import flet as ft
 
 
 @ft.control
-class AppBar(ft.AppBar):
+class View(ft.View):
     pass
