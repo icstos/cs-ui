@@ -1,8 +1,19 @@
 import flet as ft
 from pathlib import Path
+from importlib.util import module_from_spec, spec_from_file_location
+from inspect import getmembers
 
 FONT_DIR = Path(Path(__file__).parent, 'data/fonts').resolve()
 FONTS = {"AlibabaPuHuiTi": str(Path(FONT_DIR, "AlibabaPuHuiTi-3-55-Regular.otf"))}
+
+TEXT_SIZE = 16
+shadow = ft.BoxShadow(
+    spread_radius=0.2,
+    blur_radius=10,
+    color=ft.Colors.GREY_300,
+    offset=ft.Offset(0, 2.5),
+    # blur_style=ft.ShadowBlurStyle.SOLID,
+)
 
 
 @ft.component
@@ -35,7 +46,7 @@ def Contact():
 @ft.component
 def Template():
     outlet = ft.use_route_outlet()
-
+    page = ft.context.page
     # page.bgcolor = ft.Colors.GREY_400
 
     # page.scroll = ft.ScrollMode.AUTO
@@ -46,11 +57,11 @@ def Template():
     # page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     # page.vertical_alignment = ft.MainAxisAlignment.START
 
-    # page.window.resizable = True  # 页面缩放
-    # # # page.on_resized = lambda _: on_page_resize(_, on_resize)
-    # # page.window_full_screen = True
-    # page.window.maximizable = True
-    # page.window.maximized = True
+    page.window.resizable = True  # 页面缩放
+    # # page.on_resized = lambda _: on_page_resize(_, on_resize)
+    # page.window_full_screen = True
+    page.window.maximizable = True
+    page.window.maximized = True
 
     # # page.window_always_on_top = True
     # # 最大化
@@ -99,6 +110,7 @@ class App:
         no_cdn: None | bool = False,
         export_asgi_app: None | bool = False,
         target=None,
+        with_auto_routing=True,
         route_init='/',  # todo
         route_login='/login',  # todo
     ):
@@ -114,6 +126,7 @@ class App:
         self.export_asgi_app = export_asgi_app
         self.target = target
 
+        self.with_auto_routing = with_auto_routing
         self.route = ft.Route(component=Template, outlet=True, children=[])
 
     @ft.component
@@ -126,7 +139,7 @@ class App:
         page.theme_mode = ft.ThemeMode.LIGHT
         page.theme = ft.Theme(
             color_scheme_seed=ft.Colors.BLUE,  # 基于该颜色推导主题其他颜色
-            # color_scheme=ft.ColorScheme(    # 从color_scheme_seed派生的material颜色方案
+            # color_scheme=ft.ColorScheme(  # 从color_scheme_seed派生的material颜色方案
             # ),
             text_theme=ft.TextTheme(),  # 与卡片和画布颜色形成对比的文本样式
             primary_text_theme=ft.TextTheme(),  # 与主色调形成对比的文本主题
@@ -144,7 +157,7 @@ class App:
                 },
             ),
             # tabs_theme=ft.TabsTheme(),
-            font_family="AlibabaPuHuiTi",  # 所有UI元素的基准字体
+            font_family="AlibabaPuHuiTi",
             use_material3=True,  # use material 2: this setting is mainly for the app-bar's elevation
             page_transitions=ft.PageTransitionsTheme(  # Removing animation on route change.
                 android=ft.PageTransitionTheme.NONE,
@@ -154,6 +167,8 @@ class App:
                 linux=ft.PageTransitionTheme.NONE,
             ),
         )
+        if self.with_auto_routing:
+            self.auto_routing()
         return ft.Router([self.route], not_found=NotFoundView, manage_views=True)
 
     def add_route(self, route: ft.Route | list[ft.Route]):
@@ -163,6 +178,27 @@ class App:
             self.route.children.extend(route)
         else:
             print("Error: route.children is None")
+
+    def auto_routing(self, file_dir: str | Path = 'views'):
+        routes = []
+        # for file in file_dir.rglob('*.py[c]'):
+        file_dir = Path(file_dir)
+        for file in file_dir.rglob("*.py"):
+            if file.name != "__init__.py":
+                spec = spec_from_file_location(file.stem, file)
+                if spec is not None:
+                    module = module_from_spec(spec)
+                    if spec.loader is not None:
+                        spec.loader.exec_module(module)
+                    for _, object_page in getmembers(module):
+                        if isinstance(object_page, ft.Route):
+                            routes.append(object_page)
+        if len(routes) == 0:
+            # raise ValueError(
+            print(
+                f"Warning: No instances of ft.Route found. Check the assigned path of the {file_dir.absolute()}"
+            )
+        self.add_route(routes)
 
     def run(self):
         ft.run(

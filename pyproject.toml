@@ -1,12 +1,10 @@
 [project]
 name = "ui"
-version = "0.1.0"
+version = "0.0.5"
 description = "A Python UI framework inspired by Flet"
 readme = "README.md"
-requires-python = ">=3.8"
-dependencies = [
-    "flet>=0.85.1"
-]
+requires-python = ">=3.13"
+dependencies = ["flet[all]>=0.85.2", "flet-code-editor"]
 
 # [project.urls]
 # "Homepage" = "https://example.com"
@@ -17,7 +15,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["ui"]
+package-dir = { "ui" = "src/ui" }
 include-package-data = true
 
-[tool.setuptools.package-dir]
-ui = "cs_ui"
+# [tool.setuptools.package-dir]
+# ui = "cs_ui"
