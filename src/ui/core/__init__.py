@@ -4,6 +4,7 @@ from .constants import (
     SizeType,
     LayoutType,
     FormValueType,
+    StyleType,
     FeedbackStyle,
     ButtonShape,
 )
@@ -15,6 +16,7 @@ __all__ = [
     'SizeType',
     'LayoutType',
     'FormValueType',
+    "StyleType",
     'FeedbackStyle',
     'ButtonShape',
     'FormField',

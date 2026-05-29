@@ -26,16 +26,16 @@ def get_human_file_size(file_size: float) -> str:
 @ft.control
 class FilePicker(ft.Container):
     label: str = '选择文件'
-    suffix_list: list = field(default_factory=list)
+    allowed_extensions: list = field(default_factory=list)
     allow_multiple: bool = True
     help: str = ''
-    selected_file_list: list = field(default_factory=list)
+    selected_files: list = field(default_factory=list)
     on_change: Callable | None = None
 
     def init(self):
         file: Path
-        for idx, file in enumerate(copy.deepcopy(self.selected_file_list)):
-            self.selected_file_list.append(
+        for idx, file in enumerate(copy.deepcopy(self.selected_files)):
+            self.selected_files.append(
                 ft.FilePickerFile(
                     id=idx,
                     name=file.name,
@@ -51,17 +51,15 @@ class FilePicker(ft.Container):
             icon=ft.Icons.INSERT_DRIVE_FILE_OUTLINED,
             on_click=self.handle_files_pick,
         )
-        self.v_selected_file_list = ft.ListView(
-            spacing=-2, padding=ft.Padding.only(left=3)
-        )
-        self.v_selected_file_list_ctn = ft.Container(content=self.v_selected_file_list)
+        self.v_selected_files = ft.ListView(spacing=-2, padding=ft.Padding.only(left=3))
+        self.v_selected_files_ctn = ft.Container(content=self.v_selected_files)
         self.content = ft.Column(
-            controls=[self.v_choose_btn, self.v_selected_file_list_ctn]
+            controls=[self.v_choose_btn, self.v_selected_files_ctn]
         )
-        self.update_v_selected_file_list()
+        self.update_v_selected_files()
 
-    def update_v_selected_file_list(self):
-        self.v_selected_file_list.controls = [
+    def update_v_selected_files(self):
+        self.v_selected_files.controls = [
             ft.Container(
                 ft.Row(
                     controls=[
@@ -80,35 +78,36 @@ class FilePicker(ft.Container):
                 key=file.name,
                 tooltip=file.path,
             )
-            for file in self.selected_file_list
+            for file in self.selected_files
         ]
 
     async def handle_files_pick(self, e):
-        self.selected_file_list = await self.v_file_picker.pick_files(
-            allow_multiple=self.allow_multiple
+        self.selected_files = await self.v_file_picker.pick_files(
+            allow_multiple=self.allow_multiple,
+            allowed_extensions=self.allowed_extensions,
         )
-        self.update_v_selected_file_list()
+        self.update_v_selected_files()
         self.update_ctn_border()
         if self.on_change:
-            self.on_change(self.selected_file_list)
+            self.on_change(self.selected_files)
 
     def click_delete_item(self, e):
         """
         删除已选文件。
         """
-        for item in self.v_selected_file_list.controls:
+        for item in self.v_selected_files.controls:
             if item.key == e.control.key:
-                self.v_selected_file_list.controls.remove(item)
+                self.v_selected_files.controls.remove(item)
         self.update_ctn_border()
 
     def update_ctn_border(self):
         """
         根据文件列表是否为空设置边框。
         """
-        if len(self.v_selected_file_list.controls) > 0:
-            self.v_selected_file_list_ctn.border = ft.Border.all(1, ft.Colors.BLUE)
+        if len(self.v_selected_files.controls) > 0:
+            self.v_selected_files_ctn.border = ft.Border.all(1, ft.Colors.BLUE)
         else:
-            self.v_selected_file_list_ctn.border = None
+            self.v_selected_files_ctn.border = None
 
 
 @ft.control
@@ -208,7 +207,7 @@ def main(page: ft.Page):
     now_file_saver = FileSaver()
 
     def test(_):
-        print('FilePicker: ', now_file_uploader.selected_file_list)
+        print('FilePicker: ', now_file_uploader.selected_files)
 
     def test_dir_picker(_):
         print('DirPicker: ', now_dir_picker.rst_dir_path)

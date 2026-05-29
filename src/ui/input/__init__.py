@@ -9,7 +9,7 @@ from .radio import Radio
 from .rating import Rating
 from .search_bar import SearchBar
 from .segmented_button import SegmentedButton
-from .select_box import SelectBox
+from .select_box import SelectBox, SelectOption
 from .slider import Slider, RangeSlider
 from .switch import Switch
 
@@ -32,6 +32,7 @@ __all__ = [
     "SearchBar",
     "SegmentedButton",
     "SelectBox",
+    "SelectOption",
     "Slider",
     "RangeSlider",
     "Switch",

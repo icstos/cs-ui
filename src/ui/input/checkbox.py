@@ -21,9 +21,9 @@ class CheckboxGroup(ft.Container):
     layout_type: LayoutType = LayoutType.VERTICAL
 
     def init(self):
-        self.selected_list = []
+        self.selected = []
         self.check_all = Checkbox(label='全选', on_change=self.select_all)
-        self.v_controls = [self.check_all]
+        self.v_controls: list[ft.Control] = [self.check_all]
 
         if self.layout_type == LayoutType.VERTICAL:
             self.v_controls.append(ft.Divider())
@@ -43,24 +43,24 @@ class CheckboxGroup(ft.Container):
 
     @property
     def value(self) -> list[str]:
-        return self.selected_list
+        return self.selected
 
     def change_single(self, e):
         val = e.control.label
         if e.data:
-            if val not in self.selected_list:
-                self.selected_list.append(val)
+            if val not in self.selected:
+                self.selected.append(val)
         else:
-            if val in self.selected_list:
-                self.selected_list.remove(val)
-        self.check_all.value = len(self.selected_list) == len(self.options)
+            if val in self.selected:
+                self.selected.remove(val)
+        self.check_all.value = len(self.selected) == len(self.options)
 
     def select_all(self, e):
         self.check_all.tristate = False
         val = self.check_all.value
         for i in range(2, len(self.v_controls)):
             self.v_controls[i].value = val
-        self.selected_list = self.options.copy() if val else []
+        self.selected = self.options.copy() if val else []
 
 
 def main(page: ft.Page):

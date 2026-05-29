@@ -1,6 +1,6 @@
 import flet as ft
 from dataclasses import field
-
+import time
 import re
 import asyncio
 
@@ -22,7 +22,7 @@ class LogContainer(ft.Container):
         )
         self.content = ft.SelectionArea(content=self.logs)
 
-    async def add_log(self, log: str):
+    async def add(self, log: str):
         log_color = ft.Colors.BLACK
         if re.search(r"error|fail|exception", log, re.IGNORECASE):
             log_color = ft.Colors.RED
@@ -48,15 +48,15 @@ def main(page: ft.Page):
     page.add(log_container)
 
     async def add_log():
-        await log_container.add_log("New log message after clearing.")
-        await asyncio.sleep(1)
-        await log_container.add_log("error: error log message after clearing.")
-        await asyncio.sleep(1)
-        await log_container.add_log("warning: warning log message after clearing.")
-        await asyncio.sleep(1)
-        await log_container.add_log("pass: pass log message after clearing.")
-        await asyncio.sleep(1)
-        await log_container.add_log("info: info log message after clearing.")
+        await log_container.add("New log message after clearing.")
+        time.sleep(1)
+        await log_container.add("error: error log message after clearing.")
+        time.sleep(1)
+        await log_container.add("warning: warning log message after clearing.")
+        time.sleep(1)
+        await log_container.add("pass: pass log message after clearing.")
+        time.sleep(1)
+        await log_container.add("info: info log message after clearing.")
 
     def clear_logs():
         log_container.clear_logs()

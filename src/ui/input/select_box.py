@@ -1,11 +1,18 @@
 import flet as ft
 from dataclasses import field
+
 # from ui.core.constants import
+from collections.abc import Callable
 
 ICON_SIZE = 18
 TEXT_SIZE = 14
 PADDING = 10
 INPUT_HEIGHT = 36
+
+
+@ft.control
+class SelectOption(ft.DropdownOption):
+    pass
 
 
 @ft.control
@@ -15,11 +22,12 @@ class SelectBox(ft.Dropdown):
     filled: bool = True
     editable: bool = True
     # animate_size: int = 5000
+    on_change: Callable | None = None
 
     def init(self):
         if len(self.options) > 0 and isinstance(self.options[0], str):
             self._options = [ft.DropdownOption(text=_) for _ in self.options]
-            self.options = self._options
+            self.options = self._options  # type: ignore
         self.content_padding = ft.Padding.only(left=PADDING)
 
         self.border_color = ft.Colors.GREY_400
@@ -30,6 +38,12 @@ class SelectBox(ft.Dropdown):
         self.select_icon_enabled_color = ft.Colors.GREY_500
         self.padding = ft.Padding.all(0)
         self.options_fill_horizontally = True
+        self.on_text_change = self._on_text_change
+
+    def _on_text_change(self, e):
+        if self.on_change is not None:
+            self.on_change(e)
+        return super().on_text_change
 
 
 def main(page: ft.Page):

@@ -71,7 +71,7 @@ class PrevNextPageButton(ft.IconButton):
     )
 
 
-def get_center_page_list(current_page: int, sum_page_nums: int) -> list:
+def get_center_pages(current_page: int, sum_page_nums: int) -> list:
     """
     根据当前页码和总页数生成分页按钮的页码列表。
     - 页数少于等于6时，全部显示。
@@ -175,7 +175,7 @@ class Paging(ft.Row):
             pass  # 非法输入忽略
 
     def _update(self):
-        rst_control_list = []
+        rst_controls = []
         first_page_btn = PrevNextPageButton(
             icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_LEFT,
             on_click=self.click_update_page,
@@ -184,7 +184,7 @@ class Paging(ft.Row):
             disabled=(self.current_page == 1),
             icon_color=ft.Colors.GREY if (self.current_page == 1) else None,
         )
-        rst_control_list.append(first_page_btn)
+        rst_controls.append(first_page_btn)
         prev_page_btn = PrevNextPageButton(
             icon=ft.Icons.KEYBOARD_ARROW_LEFT,
             on_click=self.click_update_page,
@@ -193,14 +193,14 @@ class Paging(ft.Row):
             disabled=(self.current_page == 1),
             icon_color=ft.Colors.GREY if (self.current_page == 1) else None,
         )
-        rst_control_list.append(prev_page_btn)
+        rst_controls.append(prev_page_btn)
 
-        for _page in get_center_page_list(self.current_page, self.sum_page_nums):
+        for _page in get_center_pages(self.current_page, self.sum_page_nums):
             if _page == -1:
-                rst_control_list.append(ft.Text('...'))
+                rst_controls.append(ft.Text('...'))
             elif _page == self.current_page:
                 # 当前页
-                rst_control_list.append(
+                rst_controls.append(
                     NowPageButton(
                         content=str(_page),
                         on_click=self.click_update_page,
@@ -211,7 +211,7 @@ class Paging(ft.Row):
 
             else:
                 # 其他页
-                rst_control_list.append(
+                rst_controls.append(
                     OtherPageButton(
                         content=str(_page),
                         on_click=self.click_update_page,
@@ -231,7 +231,7 @@ class Paging(ft.Row):
             if self.current_page >= self.sum_page_nums
             else None,
         )
-        rst_control_list.append(next_page_btn)
+        rst_controls.append(next_page_btn)
         last_page_btn = PrevNextPageButton(
             icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_RIGHT,
             on_click=self.click_update_page,
@@ -242,8 +242,8 @@ class Paging(ft.Row):
             if (self.current_page >= self.sum_page_nums)
             else None,
         )
-        rst_control_list.append(last_page_btn)
-        self.v_now_page.controls = rst_control_list
+        rst_controls.append(last_page_btn)
+        self.v_now_page.controls = rst_controls
 
     def click_update_page(self, e):
         """点击页码或前后页按钮事件"""

@@ -46,24 +46,7 @@ def Contact():
 @ft.component
 def Template():
     outlet = ft.use_route_outlet()
-    page = ft.context.page
-    # page.bgcolor = ft.Colors.GREY_400
 
-    # page.scroll = ft.ScrollMode.AUTO
-    # page.spacing = 0
-    # page.padding = 0
-    # page.scroll = ft.ScrollMode.AUTO
-
-    # page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    # page.vertical_alignment = ft.MainAxisAlignment.START
-
-    page.window.resizable = True  # 页面缩放
-    # # page.on_resized = lambda _: on_page_resize(_, on_resize)
-    # page.window_full_screen = True
-    page.window.maximizable = True
-    page.window.maximized = True
-
-    # # page.window_always_on_top = True
     # # 最大化
     return ft.View(
         route="/", controls=[ft.Container(content=outlet, expand=True, padding=20)]
@@ -72,6 +55,8 @@ def Template():
 
 @ft.component
 def NotFoundView():
+    page = ft.context.page
+    #  page.window.center()
     return ft.Container(
         content=ft.Column(
             controls=[
@@ -94,6 +79,27 @@ def NotFoundView():
         padding=20,
         border_radius=10,
     )
+
+
+def set_app():
+    page = ft.context.page
+    # page.bgcolor = ft.Colors.GREY_400
+
+    # page.scroll = ft.ScrollMode.AUTO
+    # page.spacing = 0
+    # page.padding = 0
+    # page.scroll = ft.ScrollMode.AUTO
+
+    # page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    # page.vertical_alignment = ft.MainAxisAlignment.START
+
+    page.window.resizable = True  # 页面缩放
+    # # page.on_resized = lambda _: on_page_resize(_, on_resize)
+    # page.window_full_screen = True
+    page.window.maximizable = True
+    page.window.maximized = True
+
+    # # page.window_always_on_top = True
 
 
 class App:

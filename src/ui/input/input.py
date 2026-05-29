@@ -187,11 +187,9 @@ class FileInput(Input):
         )
 
     async def handle_file_picker(self, e):
-        self.selected_file_list = await self.v_file_picker.pick_files(
-            allow_multiple=False
-        )
-        if self.selected_file_list is not None and len(self.selected_file_list) > 0:
-            self.value = str(self.selected_file_list[0].path)
+        self.selected_files = await self.v_file_picker.pick_files(allow_multiple=False)
+        if self.selected_files is not None and len(self.selected_files) > 0:
+            self.value = str(self.selected_files[0].path)
             if self.on_change:
                 self.on_change(e)
 

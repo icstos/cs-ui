@@ -3,17 +3,21 @@ import flet as ft
 
 @ft.control
 class Chip(ft.Chip):
+    text: ft.StrOrControl | None = None
+    label: ft.StrOrControl | None = None
     selected_color: ft.Colors = ft.Colors.GREEN
     selected: bool = False
 
     def init(self):
+        self.label = self.label or self.text
         if self.label and isinstance(self.label, str):
-            self.label = ft.Text(self.label)
+            if self.selected:
+                self.label = ft.Text(self.label, color=ft.Colors.WHITE)
+            else:
+                self.label = ft.Text(self.label, color=ft.Colors.BLACK)
+
         self.on_click = self.on_click or self._on_click
         self.check_color = ft.Colors.WHITE
-
-    def did_mount(self):
-        self._update_color()
 
     def _on_click(self, e):
         self.selected = not self.selected
@@ -25,7 +29,6 @@ class Chip(ft.Chip):
                 self.label.color = ft.Colors.WHITE
             else:
                 self.label.color = ft.Colors.BLACK
-        self.update()
 
 
 def main(page: ft.Page):

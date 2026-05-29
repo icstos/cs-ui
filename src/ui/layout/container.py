@@ -7,6 +7,17 @@ import flet as ft
 
 
 @ft.control
-class Container(ft.InteractiveViewer):
-    pan_enabled: bool = False
-    scale_enabled: bool = False
+class Container(ft.Container):
+    pass
+    # pan_enabled: bool = False
+    # scale_enabled: bool = False
+
+
+def main(page: ft.Page):
+    container = Container(bgcolor=ft.Colors.RED, width=100, expand=True)
+    page.add(container)
+    page.add(ft.Button('ee', on_click=lambda _: print(container.height)))
+
+
+if __name__ == '__main__':
+    ft.run(main)
