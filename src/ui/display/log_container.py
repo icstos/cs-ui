@@ -1,8 +1,8 @@
-import flet as ft
-from dataclasses import field
-import time
-import re
 import asyncio
+import re
+from dataclasses import field
+
+import flet as ft
 
 
 @ft.control
@@ -36,7 +36,7 @@ class LogContainer(ft.Container):
             log_color = ft.Colors.BLACK
         self.logs.controls.append(ft.Text(log, color=log_color))
         self.update()
-        await asyncio.sleep(0)  # Simulate delay for log addition
+        await asyncio.sleep(0)
 
     def clear_logs(self):
         self.logs.controls.clear()
@@ -47,18 +47,18 @@ def main(page: ft.Page):
     log_container = LogContainer()
     page.add(log_container)
 
-    async def add_log():
+    async def add_log(e):
         await log_container.add("New log message after clearing.")
-        time.sleep(1)
+        await asyncio.sleep(1)
         await log_container.add("error: error log message after clearing.")
-        time.sleep(1)
+        await asyncio.sleep(1)
         await log_container.add("warning: warning log message after clearing.")
-        time.sleep(1)
+        await asyncio.sleep(1)
         await log_container.add("pass: pass log message after clearing.")
-        time.sleep(1)
+        await asyncio.sleep(1)
         await log_container.add("info: info log message after clearing.")
 
-    def clear_logs():
+    def clear_logs(e):
         log_container.clear_logs()
 
     page.add(ft.Button("Add Log", on_click=add_log))

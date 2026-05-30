@@ -126,9 +126,8 @@ class NumberInput(Input):
     def _on_change(self, e):
         try:
             if isinstance(self.value, str) and self.value.strip() != "":
-                __value = float(self.value)
+                float(self.value)  # 验证数值合法性
         except ValueError:
-            print("NumberInputValueError", self.value, self.last_value)
             self.value = self.last_value
         else:
             self.last_value = self.value

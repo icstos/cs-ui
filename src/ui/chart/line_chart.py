@@ -34,6 +34,7 @@ DataInput = Union[
     Dict[str, List[Union[int, float]]],
     List[Union[int, float]],
     Tuple[Union[int, float], ...],
+    List[Union[Tuple, List]],
 ]
 
 

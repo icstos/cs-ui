@@ -4,6 +4,7 @@ import flet as ft
 @ft.control
 class Card(ft.Card):
     def init(self):
+        self._hovered = False
         self.container = ft.Container(
             width=self.width,
             height=self.height,
@@ -28,16 +29,16 @@ class Card(ft.Card):
         )
 
     def on_content_hover(self, e):
-        if e.data:
+        if e.data and not self._hovered:
+            self._hovered = True
             if self.elevation is not None:
                 self.elevation = self.elevation + 20
-
             self.container.border = ft.Border.all(2, ft.Colors.BLUE)
             self.container.update()
-        else:
+        elif not e.data and self._hovered:
+            self._hovered = False
             if self.elevation is not None:
                 self.elevation = self.elevation - 20
-
             self.container.border = ft.Border.all(2, ft.Colors.WHITE_24)
             self.container.update()
         self.update()

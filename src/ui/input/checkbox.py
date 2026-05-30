@@ -1,8 +1,6 @@
 import flet as ft
 from dataclasses import field
 
-from rich import color
-
 from ui.core.constants import LayoutType
 
 
