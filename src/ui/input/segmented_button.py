@@ -35,15 +35,23 @@ class SegmentedButton(ft.SegmentedButton):
         )
 
 
-def main(page: ft.Page):
-    tmp = SegmentedButton(
+# def main(page: ft.Page):
+#     tmp =
+#     page.add(tmp)
+#     print(tmp.allow_multiple_selection)
+#     print(tmp.allow_empty_selection)
+
+
+# if __name__ == "__main__":
+#     ft.run(main)
+@ft.component
+def App():
+
+    return SegmentedButton(
         options=["Option 1", "Option 2", "Option 3"],
         selected_icon=ft.Icon(icon=ft.Icons.CHECK, color=ft.Colors.WHITE),
     )
-    page.add(tmp)
-    print(tmp.allow_multiple_selection)
-    print(tmp.allow_empty_selection)
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(lambda page: page.render(App))

@@ -46,9 +46,11 @@ class SelectBox(ft.Dropdown):
         return super().on_text_change
 
 
-def main(page: ft.Page):
-    page.add(SelectBox(options=['Option 1', 'Option 2', 'Option 3']))
+@ft.component
+def App():
+
+    return SelectBox(options=['Option 1', 'Option 2', 'Option 3'])
 
 
-if __name__ == '__main__':
-    ft.run(main)
+if __name__ == "__main__":
+    ft.run(lambda page: page.render(App))

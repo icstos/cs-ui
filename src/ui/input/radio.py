@@ -33,14 +33,13 @@ class Radio(ft.RadioGroup):
             self.content = ft.Column(controls=self._options, spacing=2, run_spacing=10)
 
 
-def main(page: ft.Page):
-    page.add(
-        Radio(
-            options=["aa", "bb", "cc"], on_change=lambda e: print(f"Selected: {e.data}")
-        )
+@ft.component
+def App():
+
+    return Radio(
+        options=["aa", "bb", "cc"], on_change=lambda e: print(f"Selected: {e.data}")
     )
-    page.update()
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(lambda page: page.render(App))

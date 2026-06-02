@@ -18,9 +18,11 @@ class RangeSlider(ft.RangeSlider):
         self.end_value = self.end_value or (self.max - self.min) * 2 / 5
 
 
-def main(page: ft.Page):
-    page.add(Slider(), RangeSlider(start_value=0.1))
+@ft.component
+def App():
+
+    return ft.Column([Slider(), RangeSlider(start_value=0.1)])
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(lambda page: page.render(App))
