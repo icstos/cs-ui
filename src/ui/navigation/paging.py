@@ -3,6 +3,7 @@ from dataclasses import field
 import flet as ft
 from collections.abc import Callable
 from enum import Enum
+from dataclasses import dataclass
 
 
 class BorderRadiusSize(Enum):
@@ -88,58 +89,15 @@ def get_center_pages(current_page: int, sum_page_nums: int) -> list:
             return [1, -1] + list(range(c - 2, c + 3)) + [-1, s]
 
 
-@ft.control
-class Paging(ft.Row):
+@ft.observable
+@dataclass
+class PagingState:
     sum_data_nums: int = 0  # 总数据条数
     on_change_page: Callable[[int], None] | None = None  # 页码变更回调
     on_change_per_page_nums: Callable[[int], None] | None = None  # 每页数据条数变更回调
     data_per_page_nums: int = 10  # 每页数据条数
     current_page: int = 1  # 当前页码
     data_unit: str = '项'  # 数据单位
-    alignment: ft.MainAxisAlignment = ft.MainAxisAlignment.SPACE_BETWEEN
-    expand: bool = True
-
-    def init(self):
-        self.v_count = ft.Text(value=f'共 {self.sum_data_nums} {self.data_unit}')
-        self.v_now_page = ft.Row()
-        self.v_goto_page = ft.TextField(
-            on_submit=self.handle_goto_page_submit,
-            width=40,
-            height=32,
-            text_align=ft.TextAlign.CENTER,
-            content_padding=0,
-            border_color=ft.Colors.GREY_300,
-        )
-        self.v_num_of_row_changer_field = ft.Dropdown(
-            options=[ft.DropdownOption(_) for _ in [5, 10, 15, 20, 30, 40, 50]],
-            value=str(self.data_per_page_nums),
-            width=88,
-            dense=True,
-            content_padding=0,
-            border_color=ft.Colors.GREY_300,
-            scale=0.9,
-            on_select=self.handle_change_per_page_nums,
-        )
-        self.controls = [
-            self.v_count,
-            ft.Row(
-                controls=[
-                    self.v_now_page,
-                    ft.Text('前往'),
-                    self.v_goto_page,
-                    ft.Text('页'),
-                ],
-                spacing=6,
-            ),
-            ft.Row(
-                controls=[
-                    ft.Text('每页'),
-                    self.v_num_of_row_changer_field,
-                    ft.Text(self.data_unit),
-                ]
-            ),
-        ]
-        self._update()
 
     @property
     def sum_page_nums(self) -> int:
@@ -149,19 +107,13 @@ class Paging(ft.Row):
     def handle_change_per_page_nums(self, e):
         self.data_per_page_nums = int(e.control.value)
         self.current_page = 1  # 切换每页条数时回到首页
-        self._update()
         if self.on_change_page:
             self.on_change_page(self.current_page)
         if self.on_change_per_page_nums:
             self.on_change_per_page_nums(self.data_per_page_nums)
 
-    def handle_update(self):
-        self.v_count.value = f'共 {self.sum_data_nums} {self.data_unit}'
-        self._update()
-
     def update_sum_data_nums(self, value: int):
         self.sum_data_nums = value
-        self.handle_update()
 
     def handle_goto_page_submit(self, e):
         try:
@@ -170,80 +122,8 @@ class Paging(ft.Row):
                 self.current_page = page
                 if self.on_change_page:
                     self.on_change_page(self.current_page)
-                self._update()
         except Exception:
             pass  # 非法输入忽略
-
-    def _update(self):
-        rst_controls = []
-        first_page_btn = PrevNextPageButton(
-            icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_LEFT,
-            on_click=self.click_update_page,
-            tooltip='首页',
-            data=1,
-            disabled=(self.current_page == 1),
-            icon_color=ft.Colors.GREY if (self.current_page == 1) else None,
-        )
-        rst_controls.append(first_page_btn)
-        prev_page_btn = PrevNextPageButton(
-            icon=ft.Icons.KEYBOARD_ARROW_LEFT,
-            on_click=self.click_update_page,
-            tooltip='上一页',
-            data=self.current_page - 1,
-            disabled=(self.current_page == 1),
-            icon_color=ft.Colors.GREY if (self.current_page == 1) else None,
-        )
-        rst_controls.append(prev_page_btn)
-
-        for _page in get_center_pages(self.current_page, self.sum_page_nums):
-            if _page == -1:
-                rst_controls.append(ft.Text('...'))
-            elif _page == self.current_page:
-                # 当前页
-                rst_controls.append(
-                    NowPageButton(
-                        content=str(_page),
-                        on_click=self.click_update_page,
-                        tooltip=f'第 {_page} 页',
-                        data=_page,
-                    )
-                )
-
-            else:
-                # 其他页
-                rst_controls.append(
-                    OtherPageButton(
-                        content=str(_page),
-                        on_click=self.click_update_page,
-                        tooltip=f'第 {_page} 页',
-                        data=_page,
-                    )
-                )
-
-        # 下一页按钮
-        next_page_btn = PrevNextPageButton(
-            icon=ft.Icons.KEYBOARD_ARROW_RIGHT,
-            on_click=self.click_update_page,
-            tooltip='下一页',
-            data=self.current_page + 1,
-            disabled=self.current_page >= self.sum_page_nums,
-            icon_color=ft.Colors.GREY
-            if self.current_page >= self.sum_page_nums
-            else None,
-        )
-        rst_controls.append(next_page_btn)
-        last_page_btn = PrevNextPageButton(
-            icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_RIGHT,
-            on_click=self.click_update_page,
-            tooltip='尾页',
-            data=self.sum_page_nums,
-            disabled=(self.current_page >= self.sum_page_nums),
-            icon_color=ft.Colors.GREY
-            if (self.current_page >= self.sum_page_nums)
-            else None,
-        )
-        rst_controls.append(last_page_btn)
-        self.v_now_page.controls = rst_controls
 
     def click_update_page(self, e):
         """点击页码或前后页按钮事件"""
@@ -252,15 +132,141 @@ class Paging(ft.Row):
             self.current_page = page
             if self.on_change_page:
                 self.on_change_page(self.current_page)
-            self._update()
 
 
-def main(page: ft.Page):
-    def on_change_page(data):
-        print(f'当前页码: {data}')
+@ft.component
+def Paging(state: PagingState):
+    # sum_data_nums: int = 0  # 总数据条数
+    # on_change_page: Callable[[int], None] | None = None  # 页码变更回调
+    # on_change_per_page_nums: Callable[[int], None] | None = None  # 每页数据条数变更回调
+    # data_per_page_nums: int = 10  # 每页数据条数
+    # current_page: int = 1  # 当前页码
+    # data_unit: str = '项'  # 数据单位
+    # alignment: ft.MainAxisAlignment = ft.MainAxisAlignment.SPACE_BETWEEN
+    # expand: bool = True
 
-    page.add(Paging(sum_data_nums=123, on_change_page=on_change_page))
+    v_count = ft.Text(value=f'共 {state.sum_data_nums} {state.data_unit}')
+    rst_controls = []
+
+    first_page_btn = PrevNextPageButton(
+        icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_LEFT,
+        on_click=state.click_update_page,
+        tooltip='首页',
+        data=1,
+        disabled=(state.current_page == 1),
+        icon_color=ft.Colors.GREY if (state.current_page == 1) else None,
+    )
+    rst_controls.append(first_page_btn)
+    prev_page_btn = PrevNextPageButton(
+        icon=ft.Icons.KEYBOARD_ARROW_LEFT,
+        on_click=state.click_update_page,
+        tooltip='上一页',
+        data=state.current_page - 1,
+        disabled=(state.current_page == 1),
+        icon_color=ft.Colors.GREY if (state.current_page == 1) else None,
+    )
+    rst_controls.append(prev_page_btn)
+
+    for _page in get_center_pages(state.current_page, state.sum_page_nums):
+        if _page == -1:
+            rst_controls.append(ft.Text('...'))
+        elif _page == state.current_page:
+            # 当前页
+            rst_controls.append(
+                NowPageButton(
+                    content=str(_page),
+                    on_click=state.click_update_page,
+                    tooltip=f'第 {_page} 页',
+                    data=_page,
+                )
+            )
+
+        else:
+            # 其他页
+            rst_controls.append(
+                OtherPageButton(
+                    content=str(_page),
+                    on_click=state.click_update_page,
+                    tooltip=f'第 {_page} 页',
+                    data=_page,
+                )
+            )
+    # 下一页按钮
+    rst_controls.append(
+        PrevNextPageButton(
+            icon=ft.Icons.KEYBOARD_ARROW_RIGHT,
+            on_click=state.click_update_page,
+            tooltip='下一页',
+            data=state.current_page + 1,
+            disabled=state.current_page >= state.sum_page_nums,
+            icon_color=ft.Colors.GREY
+            if state.current_page >= state.sum_page_nums
+            else None,
+        )
+    )
+    rst_controls.append(
+        PrevNextPageButton(
+            icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_RIGHT,
+            on_click=state.click_update_page,
+            tooltip='尾页',
+            data=state.sum_page_nums,
+            disabled=(state.current_page >= state.sum_page_nums),
+            icon_color=ft.Colors.GREY
+            if (state.current_page >= state.sum_page_nums)
+            else None,
+        )
+    )
+    v_now_page = ft.Row(controls=rst_controls)
+    v_goto_page = ft.TextField(
+        on_submit=state.handle_goto_page_submit,
+        width=40,
+        height=32,
+        text_align=ft.TextAlign.CENTER,
+        content_padding=0,
+        border_color=ft.Colors.GREY_300,
+    )
+    v_num_of_row_changer_field = ft.Dropdown(
+        options=[ft.DropdownOption(_) for _ in [5, 10, 15, 20, 30, 40, 50]],
+        value=str(state.data_per_page_nums),
+        width=88,
+        dense=True,
+        content_padding=0,
+        border_color=ft.Colors.GREY_300,
+        scale=0.9,
+        on_select=state.handle_change_per_page_nums,
+    )
+    return ft.Row(
+        controls=[
+            v_count,
+            ft.Row(
+                controls=[v_now_page, ft.Text('前往'), v_goto_page, ft.Text('页')],
+                spacing=6,
+            ),
+            ft.Row(
+                controls=[
+                    ft.Text('每页'),
+                    v_num_of_row_changer_field,
+                    ft.Text(state.data_unit),
+                ]
+            ),
+        ]
+    )
+
+
+@ft.component
+def App():
+    paging_state = PagingState(
+        sum_data_nums=123,
+        on_change_page=lambda page: print(f'当前页码: {page}'),
+        on_change_per_page_nums=lambda per_page_nums: print(
+            f'每页条数: {per_page_nums}'
+        ),
+    )
+    # def on_change_page(data):
+    # print(f'当前页码: {data}')
+
+    return Paging(paging_state)
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(lambda page: page.render(App))

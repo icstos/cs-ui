@@ -33,29 +33,36 @@ class TabBarView(ft.TabBarView):
         self.height = self.height or 1000
 
 
-def main(page: ft.Page):
-    page.title = 'Tabs'
-    page.add(
-        Tabs(
-            length=3,
-            content=ft.Column(
-                controls=[
-                    TabBar(
-                        tabs=[Tab(text='Tab 1'), Tab(text='Tab 2'), Tab(text='Tab 3')]
-                    ),
-                    TabBarView(
-                        controls=[
-                            ft.Text('Content of Tab 1'),
-                            ft.Text('Content of Tab 2'),
-                            ft.Text('Content of Tab 3'),
-                        ],
-                        height=800,
-                    ),
-                ]
-            ),
-        )
+@ft.component
+def App():
+
+    return ft.Column(
+        [
+            Tabs(
+                length=3,
+                content=ft.Column(
+                    controls=[
+                        TabBar(
+                            tabs=[
+                                Tab(text='Tab 1'),
+                                Tab(text='Tab 2'),
+                                Tab(text='Tab 3'),
+                            ]
+                        ),
+                        TabBarView(
+                            controls=[
+                                ft.Text('Content of Tab 1'),
+                                ft.Text('Content of Tab 2'),
+                                ft.Text('Content of Tab 3'),
+                            ],
+                            height=800,
+                        ),
+                    ]
+                ),
+            )
+        ]
     )
 
 
-if __name__ == '__main__':
-    ft.run(main)
+if __name__ == "__main__":
+    ft.run(lambda page: page.render(App))

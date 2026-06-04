@@ -5,7 +5,8 @@ Table:
 import flet as ft
 import copy
 import random
-from ui.navigation.paging import Paging
+from ui.layout import page
+from ui.navigation.paging import Paging, PagingState
 
 
 @ft.control
@@ -28,12 +29,14 @@ class Table(ft.Column):
         self.paged_padding_right = 20
         self.paged_padding_top = 10
         self.paged_padding_bottom = 10
-
-        self.v_paging = Paging(
-            sum_data_nums=self.num_rows,
-            on_change_page=self.set_page,
-            # on_row_per_page_change=self,
+        self.paging_state = PagingState(
+            sum_data_nums=self.num_rows, on_change_page=self.set_page
         )
+        self.v_paging = Paging(self.paging_state)
+        # sum_data_nums=self.num_rows,
+        # on_change_page=self.set_page,
+        # on_row_per_page_change=self,
+        # )
 
         self.v_data_table = ft.DataTable(
             columns=self.input_data_table.columns,
@@ -77,7 +80,7 @@ class Table(ft.Column):
 
     @property
     def data_per_page_nums(self) -> int:
-        return self.v_paging.data_per_page_nums
+        return self.paging_state.data_per_page_nums
 
     @property
     def num_rows(self) -> int:
@@ -85,7 +88,7 @@ class Table(ft.Column):
 
     @property
     def num_pages(self) -> int:
-        return self.v_paging.sum_page_nums
+        return self.paging_state.sum_page_nums
 
     @property
     def data_columns(self):
@@ -122,6 +125,8 @@ class Table(ft.Column):
         else:
             return
         self.v_data_table.rows = self.build_rows()
+        # TODO: bad design: need add TableState
+        self.update()
 
     def build_rows(self) -> list:
 
@@ -177,7 +182,9 @@ def pandas_to_datatable(dataframe):
     return datatable
 
 
-def main(page: ft.Page):
+@ft.component
+def App():
+    page = ft.context.page
     page.scroll = ft.ScrollMode.AUTO
     rows = []
     for i in range(200):
@@ -200,12 +207,8 @@ def main(page: ft.Page):
     )
     print(f'Table: {len(data_table.rows)}')
 
-    page.add(
-        ft.Column(
-            controls=[Table(data_table=data_table, rows_per_page=10, with_paged=True)]
-        )
-    )
+    return ft.Column([Table(data_table=data_table, rows_per_page=10, with_paged=True)])
 
 
-if __name__ == '__main__':
-    ft.run(main)
+if __name__ == "__main__":
+    ft.run(lambda page: page.render(App))

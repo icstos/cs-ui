@@ -125,7 +125,9 @@ def show_alert_dialog(page: ft.Page, alert_dialog: ft.AlertDialog):
     page.show_dialog(alert_dialog)
 
 
-def main(page: ft.Page):
+@ft.component
+def App():
+    page = ft.context.page
     default_dialog = AlertDialog(
         title="确认按钮",
         content=ft.Container(
@@ -171,33 +173,39 @@ def main(page: ft.Page):
     def test_info_dialog(e):
         info_dialog.show(e.page)
 
-    default_button = Button(ft.Text(value="确认按钮"), on_click=test_default_dialog)
-    primary_button = Button(ft.Text(value="primary"), on_click=test_primary_dialog)
-    success_button = Button(ft.Text(value="success"), on_click=test_success_dialog)
-    warning_button = Button(ft.Text(value="warning"), on_click=test_warning_dialog)
-    error_button = Button(ft.Text(value="error"), on_click=test_error_dialog)
-    info_button = Button(ft.Text(value="info"), on_click=test_info_dialog)
+    default_button = Button(
+        content=ft.Text(value="确认按钮"), on_click=test_default_dialog
+    )
+    primary_button = Button(
+        content=ft.Text(value="primary"), on_click=test_primary_dialog
+    )
+    success_button = Button(
+        content=ft.Text(value="success"), on_click=test_success_dialog
+    )
+    warning_button = Button(
+        content=ft.Text(value="warning"), on_click=test_warning_dialog
+    )
+    error_button = Button(content=ft.Text(value="error"), on_click=test_error_dialog)
+    info_button = Button(content=ft.Text(value="info"), on_click=test_info_dialog)
 
     alert_dialog = AlertDialog(title="Alert", msg="This is an alert dialog")
-    page.add(Button("Click me", on_click=lambda e: page.show_dialog(alert_dialog)))
-    page.add(
-        ft.IconButton(
-            ft.Icons.DONE, icon_color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN
-        )
-    )
-    page.add(
-        ft.Column(
-            controls=[
-                default_button,
-                primary_button,
-                success_button,
-                warning_button,
-                error_button,
-                info_button,
-            ]
-        )
+    return ft.Column(
+        controls=[
+            Button(
+                content="Click me", on_click=lambda e: page.show_dialog(alert_dialog)
+            ),
+            ft.IconButton(
+                ft.Icons.DONE, icon_color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN
+            ),
+            default_button,
+            primary_button,
+            success_button,
+            warning_button,
+            error_button,
+            info_button,
+        ]
     )
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(lambda page: page.render(App))
