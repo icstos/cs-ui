@@ -1,12 +1,15 @@
 import flet as ft
 import warnings
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import os
 import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from cs_ui import Text, Card, Container, Column, Row, Divider
+from ui import Text, Card, Container, Column, Row, Divider
+
 
 def home_view(page):
     """首页 - 导航入口"""
@@ -50,11 +53,13 @@ def home_view(page):
         bgcolor="#f8fafc",
     )
 
+
 def main(page: ft.Page):
     page.title = "Test Demo"
     page.bgcolor = "#f8fafc"
 
     page.views.append(home_view(page))
     page.update()
+
 
 ft.run(main)

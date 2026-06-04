@@ -6,9 +6,11 @@ class Switch(ft.Switch):
     pass
 
 
-def main(page: ft.Page):
-    page.add(Switch())
+@ft.component
+def App():
+
+    return Switch()
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(lambda page: page.render(App))

@@ -1,28 +1,28 @@
 import asyncio
 import re
-from dataclasses import field
+from dataclasses import field, dataclass
 
 import flet as ft
 
 
-@ft.control
-class LogContainer(ft.Container):
+@ft.observable
+@dataclass
+class LogContainerState:
+    logs: list[str] = field(default_factory=list)
     height: int = 200
-    border: ft.Border = field(
-        default_factory=lambda: ft.Border.all(1, ft.Colors.GREY_300)
-    )
-    margin: ft.Margin = field(default_factory=lambda: ft.Margin.all(4))
-    border_radius: ft.BorderRadius = field(
-        default_factory=lambda: ft.BorderRadius.all(4)
-    )
-
-    def init(self):
-        self.logs = ft.ListView(
-            expand=1, spacing=2, padding=4, auto_scroll=True, height=self.height
-        )
-        self.content = ft.SelectionArea(content=self.logs)
 
     async def add(self, log: str):
+        self.logs.append(log)
+        await asyncio.sleep(0)
+
+    def clear(self):
+        self.logs = []
+
+
+@ft.component
+def LogContainer(state: LogContainerState):
+    v_vlogs = []
+    for log in state.logs:
         log_color = ft.Colors.BLACK
         if re.search(r"error|fail|exception", log, re.IGNORECASE):
             log_color = ft.Colors.RED
@@ -34,36 +34,49 @@ class LogContainer(ft.Container):
             log_color = ft.Colors.BLUE
         else:
             log_color = ft.Colors.BLACK
-        self.logs.controls.append(ft.Text(log, color=log_color))
-        self.update()
-        await asyncio.sleep(0)
+        v_vlogs.append(ft.Text(log, color=log_color))
+    return ft.Container(
+        content=ft.SelectionArea(
+            content=ft.ListView(
+                controls=v_vlogs, expand=1, spacing=2, padding=4, auto_scroll=True
+            )
+        ),
+        border=ft.Border.all(1, ft.Colors.GREY_300),
+        margin=ft.Margin.all(4),
+        border_radius=ft.BorderRadius.all(4),
+        height=state.height,
+    )
 
-    def clear_logs(self):
-        self.logs.controls.clear()
-        self.update()
 
-
-def main(page: ft.Page):
-    log_container = LogContainer()
-    page.add(log_container)
+@ft.component
+def App():
+    log_container = LogContainer(log_container_state := LogContainerState())
 
     async def add_log(e):
-        await log_container.add("New log message after clearing.")
+        await log_container_state.add("New log message after clearing.")
         await asyncio.sleep(1)
-        await log_container.add("error: error log message after clearing.")
+        await log_container_state.add("error: error log message after clearing.")
         await asyncio.sleep(1)
-        await log_container.add("warning: warning log message after clearing.")
+        await log_container_state.add("warning: warning log message after clearing.")
         await asyncio.sleep(1)
-        await log_container.add("pass: pass log message after clearing.")
+        await log_container_state.add("pass: pass log message after clearing.")
         await asyncio.sleep(1)
-        await log_container.add("info: info log message after clearing.")
+        await log_container_state.add("info: info log message after clearing.")
 
     def clear_logs(e):
-        log_container.clear_logs()
+        log_container_state.clear()
 
-    page.add(ft.Button("Add Log", on_click=add_log))
-    page.add(ft.Button("Clear Logs", on_click=clear_logs))
+    return ft.Column(
+        [
+            log_container,
+            ft.Button("Add Log", on_click=add_log),
+            ft.Button("Clear Logs", on_click=clear_logs),
+            ft.Button(
+                'show now logs', on_click=lambda e: print(log_container_state.logs)
+            ),
+        ]
+    )
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(lambda page: page.render(App))

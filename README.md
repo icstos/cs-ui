@@ -1,96 +1,195 @@
-# cs_ui
+# CS UI
 
-A Python UI framework inspired by Flet. It provides a lightweight component system with a Flet-style API and clear package structure.
+A Python UI framework built on [Flet](https://flet.dev/), providing a rich set of pre-styled, ready-to-use components with enhanced defaults and a clean package structure.
 
 ## Features
 
-- `App` / `Page` wrapper to manage app lifecycle
-- Base `Control` class for custom components
-- Built-in controls: `Text`, `Button`, `TextField`, `Checkbox`, `Switch`, `Dropdown`, `RadioGroup`, `Slider`, `Tabs`, `IconButton`, `Image`, `ProgressBar`
-- Layouts: `Column`, `Row`
-- Container wrapper for composition
-- `Card` container for panel-style grouping
+- **Batteries included** — `from ui import *` re-exports everything from Flet plus all CS UI components
+- **Inheritance-based** — all components directly subclass Flet native controls (e.g., `Button(ft.Button)`, `Text(ft.Text)`)
+- **Smart defaults** — components come with sensible styling defaults (colors, sizes, border-radius, etc.) for rapid prototyping
+- **Categorized modules** — components organized by function: chart, display, feedback, input, layout, navigation
+- **Route system** — built-in `App` class with auto-routing support
+- **Charts** — Bar, Line, Area, and Scatter chart wrappers via `flet-charts`
 
-## Example
+## Requirements
 
-```python
-from ui import App, Button, Card, Checkbox, Column, Container, Image, ProgressBar, Row, Switch, Text, TextField
-
-
-def main(page):
-    card = Card(
-        bgcolor="#ffffff",
-        padding=24,
-        border_radius=16,
-        elevation=4,
-    )
-    card.add(
-        Column(
-            Text("CS UI 框架示例", size=24, weight="bold"),
-            Text("基于 Flet 风格构建的组件体系。", size=14),
-            TextField(
-                label="输入内容",
-                hint_text="按回车提交",
-                width=320,
-                on_submit=lambda e: page.add(Text(f"提交内容：{e.control.value}", color="green")),
-            ),
-            Row(
-                Checkbox(label="我已阅读", on_change=lambda e: page.add(Text(f"勾选状态：{e.control.value}"))),
-                Switch(label="开关示例", on_change=lambda e: page.add(Text(f"开关状态：{e.control.value}"))),
-                spacing=20,
-            ),
-            ProgressBar(value=60, width=320, color="#4caf50"),
-            Row(
-                Image(
-                    src="https://via.placeholder.com/120",
-                    width=120,
-                    height=120,
-                    border_radius=12,
-                ),
-                Button(
-                    "点我",
-                    on_click=lambda e: page.add(Text("按钮已点击!", color="green")),
-                    width=120,
-                ),
-                spacing=20,
-            ),
-            spacing=16,
-        )
-    )
-    page.add(card)
-
-
-if __name__ == "__main__":
-    App(title="CS UI Demo", on_start=main).run()
-```
+- Python >= 3.13
+- flet[all] >= 0.85.2
+- flet-code-editor
+- flet-charts
 
 ## Installation
 
-Install `flet` in your environment before using this package:
-
 ```bash
-pip install flet
+uv pip install cs-ui
 ```
 
-To install this project in editable mode and import it as `ui` from the repository root:
+Or install from source in editable mode:
 
 ```bash
+git clone https://github.com/icstos/cs-ui.git
+cd cs-ui
 pip install -e .
 ```
 
-After installation you can import via:
+## Quick Start
 
 ```python
-import ui
-# or use the original package name if desired
-import cs_ui
+import flet as ft
+from ui import App, Button, Card, Checkbox, Column, Container, Divider, Row, Switch, Text, TextField
+
+def main(page: ft.Page):
+    page.title = "CS UI Demo"
+    page.bgcolor = "#f8fafc"
+
+    card = Card(
+        elevation=4,
+        content=Container(
+            padding=24,
+            border_radius=16,
+            content=Column(
+                controls=[
+                    Text("CS UI 框架示例", size=24, weight="bold"),
+                    Text("基于 Flet 风格构建的组件体系。", size=14, color="#6b7280"),
+                    Divider(),
+                    TextField(
+                        label="输入内容",
+                        hint_text="按回车提交",
+                        width=320,
+                    ),
+                    Row(
+                        controls=[
+                            Checkbox(label="我已阅读"),
+                            Switch(label="开关示例"),
+                        ],
+                        spacing=20,
+                    ),
+                    Button(label="点我", on_click=lambda e: print("clicked!")),
+                ],
+                spacing=16,
+            ),
+        ),
+    )
+    page.add(card)
+
+if __name__ == "__main__":
+    ft.app(target=main)
 ```
 
-## Package structure
+## Package Structure
 
-- `cs_ui/app.py` — application entry and page wrapper
-- `cs_ui/core/control.py` — base control abstraction
-- `cs_ui/controls` — button, text, input, checkbox, switch, dropdown, radio, slider, tabs, icon, image, progress components
-- `cs_ui/containers` — container and card wrappers
-- `cs_ui/layouts` — row and column layouts
-- `examples/demo.py` — demo usage example
+```
+src/ui/
+├── __init__.py          # re-exports from flet + all subpackages
+├── app.py               # App class with routing
+├── ft_init.py           # Flet initialization
+├── chart/               # Charts
+│   ├── bar_chart.py     #   BarChart
+│   ├── line_chart.py    #   LineChart
+│   ├── rea_chart.py     #   AreaChart
+│   └── scatter_chart.py #   ScatterChart
+├── core/                # Core utilities
+│   ├── config.py
+│   ├── constants.py
+│   ├── form.py
+│   └── language.py
+├── data/                # Static assets (fonts, images)
+├── display/             # Display components
+│   ├── image.py         #   Image
+│   ├── image_gridview.py#   ImageGridView
+│   ├── list_tile.py     #   ListTile
+│   ├── log_container.py #   LogContainer
+│   └── text.py          #   Text
+├── feedback/            # Feedback & overlays
+│   ├── alert_dialog.py  #   AlertDialog
+│   ├── loading.py       #   Loading
+│   ├── message.py       #   Message
+│   ├── progress_bar.py  #   ProgressBar
+│   └── toast.py         #   SnackBar (toast)
+├── input/               # Form inputs
+│   ├── button.py            #   Button
+│   ├── checkbox.py          #   Checkbox
+│   ├── chip.py              #   Chip
+│   ├── color_picker.py      #   ColorPicker
+│   ├── date_input.py        #   DateInput
+│   ├── datetime_input.py    #   DateTimeInput
+│   ├── file_picker.py       #   FilePicker
+│   ├── image_picker.py      #   ImagePicker
+│   ├── input.py             #   TextField
+│   ├── multi_select.py      #   MultiSelect
+│   ├── radio.py             #   RadioGroup
+│   ├── rating.py            #   Rating
+│   ├── search_bar.py        #   SearchBar
+│   ├── segmented_button.py  #   SegmentedButton
+│   ├── select_box.py        #   Dropdown
+│   └── slider.py            #   Slider
+│   └── switch.py            #   Switch
+├── layout/              # Layout & containers
+│   ├── card.py          #   Card
+│   ├── column.py        #   Column
+│   ├── container.py     #   Container
+│   ├── divider.py       #   Divider
+│   ├── expander.py      #   Expander
+│   ├── grid_view.py     #   GridView
+│   ├── list_view.py     #   ListView
+│   ├── page.py          #   Page
+│   ├── row.py           #   Row
+│   ├── stack.py         #   Stack
+│   ├── table.py         #   Table
+│   ├── tabs.py          #   Tabs
+│   ├── time_line.py     #   Timeline
+│   └── view.py          #   View
+├── navigation/          # Navigation
+│   ├── app_bar.py       #   AppBar
+│   ├── bread_crumb.py   #   BreadCrumb
+│   └── paging.py        #   NavigationBar
+└── utils/               # Utilities
+    ├── code_editor.py   #   CodeEditor
+    ├── code_view.py     #   CodeView
+    └── componts.py      #   Helper components
+```
+
+## Component Overview
+
+| Category | Components |
+|----------|-----------|
+| **Chart** | BarChart, LineChart, AreaChart, ScatterChart |
+| **Display** | Image, ImageGridView, ListTile, LogContainer, Text |
+| **Feedback** | AlertDialog, Loading, Message, ProgressBar, SnackBar |
+| **Input** | Button, Checkbox, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker, ImagePicker, TextField, MultiSelect, RadioGroup, Rating, SearchBar, SegmentedButton, Dropdown, Slider, Switch |
+| **Layout** | Card, Column, Container, Divider, Expander, GridView, ListView, Page, Row, Stack, Table, Tabs, Timeline, View |
+| **Navigation** | AppBar, BreadCrumb, NavigationBar |
+
+## Importing
+
+All components can be imported directly from `ui`:
+
+```python
+from ui import App, Button, Card, Column, Container, Divider, Row, Text, TextField
+```
+
+Since `ui` re-exports Flet, you can also access Flet types directly:
+
+```python
+from ui import ft  # the flet module
+# or
+from ui import Page, Colors, Icons, MainAxisAlignment, CrossAxisAlignment
+```
+
+## Examples
+
+Run the demo to see all components in action:
+
+```bash
+python examples/demo.py
+```
+
+Additional test files:
+
+- `examples/test_home.py` — minimal home page
+- `examples/test_form.py` — form components
+- `examples/test_feedback.py` — feedback (dialog, snackbar, loading, progress)
+- `examples/test_chart.py` — chart components
+- `examples/test_line_chart.py` — line chart
+- `examples/test_button.py` — button variants
+- `examples/test_minimal.py` / `test_simple.py` — minimal examples

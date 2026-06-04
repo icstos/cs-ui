@@ -15,10 +15,11 @@ class SearchBar(ft.SearchBar):
             )
 
 
-def main(page: ft.Page):
-    search_bar = SearchBar(options=["Option 1", "Option 2", "Option 3"])
-    page.add(search_bar)
+@ft.component
+def App():
+
+    return SearchBar(options=["Option 1", "Option 2", "Option 3"])
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(lambda page: page.render(App))

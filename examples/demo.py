@@ -7,7 +7,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import flet as ft
-from cs_ui import (
+from ui import (
     AlertDialog,
     AppBar,
     Badge,
@@ -481,9 +481,7 @@ def form_view(page):
             Divider(),
             Text("Dropdown 下拉选择", size=20, weight="bold"),
             Dropdown(
-                label="选择城市",
-                options_list=["北京", "上海", "广州", "深圳"],
-                width=320,
+                label="选择城市", options=["北京", "上海", "广州", "深圳"], width=320
             ),
             Divider(),
             Text("Checkbox 复选框", size=20, weight="bold"),

@@ -77,7 +77,7 @@ class NumberInput(Input):
                 top_left=0, top_right=0, bottom_left=0, bottom_right=0
             ),
             on_click=self.handle_decrease_click,
-            on_hover=self.handle_hover,
+            # on_hover=self.handle_hover,
             height=self.height,
             width=30,
             alignment=ft.Alignment.CENTER,
@@ -89,7 +89,8 @@ class NumberInput(Input):
                 top_left=0, top_right=8, bottom_left=0, bottom_right=8
             ),
             on_click=self.handle_increase_click,
-            on_hover=self.handle_hover,
+            # on_hover=self.handle_hover,
+            bgcolor={ft.ControlState.DEFAULT: ft.Colors.BLUE_100},
             height=self.height,
             width=30,
             alignment=ft.Alignment.CENTER,
@@ -121,7 +122,7 @@ class NumberInput(Input):
         else:
             e.control.content.color = None
             e.control.bgcolor = None
-        e.control.update()
+        # e.control.update()
 
     def _on_change(self, e):
         try:
@@ -214,16 +215,38 @@ class DirInput(FileInput):
                 self.on_change(e)
 
 
-def main(page: ft.Page):
-    page.add(Input(value="123"))
-    page.add(NumberInput(value=123))
-    page.add(FileInput())
-    dir_input = DirInput()
-    page.add(dir_input)
-    print(isinstance(dir_input, Input))
-    print(isinstance(dir_input, FileInput))
-    print(isinstance(dir_input, DirInput))
+# def main(page: ft.Page):
+#     page.add(Input(value="123"))
+#     page.add(NumberInput(value=123))
+#     page.add(FileInput())
+#     dir_input = DirInput()
+#     page.add(dir_input)
+#     print(isinstance(dir_input, Input))
+#     print(isinstance(dir_input, FileInput))
+#     print(isinstance(dir_input, DirInput))
+
+
+# if __name__ == "__main__":
+#     ft.run(main)
+
+
+@ft.component
+def App():
+
+    return ft.SafeArea(
+        content=ft.Container(
+            padding=20,
+            content=ft.Column(
+                controls=[
+                    Input(value="123"),
+                    NumberInput(value=123),
+                    # FileInput(),
+                    # DirInput(),
+                ]
+            ),
+        )
+    )
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(lambda page: page.render(App))
