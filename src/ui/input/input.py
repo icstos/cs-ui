@@ -1,47 +1,29 @@
 import flet as ft
 from decimal import Decimal
 from pathlib import Path
-import math
-from dataclasses import field
-from enum import Enum
-
-from ui.core.constants import FormValueType, DEFAULT_FORM_HEIGHT
+from dataclasses import field, dataclass
+from ui.core.constants import DEFAULT_FORM_HEIGHT
 
 ICON_SIZE = 16
+BORDER_RADIUS = 8
 
 
-@ft.control
-class Input(ft.TextField):
-    value: int | float | Decimal | str | None = ''
-    theme_mode = ft.ThemeMode.LIGHT
-    keyboard_type: ft.KeyboardType = ft.KeyboardType.TEXT
-    cursor_color: ft.Colors = ft.Colors.BLUE
-    focused_border_color: ft.Colors = ft.Colors.BLUE
-    selection_color: ft.Colors = ft.Colors.GREY_400
-    hover_color: ft.Colors = ft.Colors.BLUE_50
-    border_radius: ft.BorderRadius = field(
-        default_factory=lambda: ft.BorderRadius.all(7)
-    )
-    border: ft.InputBorder = ft.InputBorder.OUTLINE
-    border_width: int = 1
-    cursor_width: int = 1
-    filled: bool = True
-    height: int = DEFAULT_FORM_HEIGHT
-    form_value_type: FormValueType = FormValueType.STR
-    # text_align: ft.TextAlign = ft.TextAlign.CENTER
+@ft.observable
+@dataclass
+class InputState:
+    value: int | float | Decimal | str | Path = ''
+    last_value: int | float | Decimal | str = ''
+    is_int: bool = False
+    is_float: bool = False
+    step: int | float = 0.01
+    is_file: bool = False
+    is_dir: bool = False
 
-    def init(self):
-        if self.prefix and not self.suffix:
-            self.content_padding = ft.Padding.only(left=10, right=5)
-        elif self.suffix and not self.prefix:
-            self.content_padding = ft.Padding.only(left=5, right=10)
-        elif self.prefix and self.suffix:
-            self.content_padding = ft.Padding.symmetric(horizontal=10)
-        else:
-            self.content_padding = ft.Padding.all(1)
+    def __post_init__(self):
+        self.last_value = self.value
 
-        self.default_value = self.value
-
+    # min_value: ft.Number = -math.inf
+    # max_value: ft.Number = math.inf
     @property
     def path(self) -> Path | None:
         if self.value is None or len(str(self.value).strip()) == 0:
@@ -49,91 +31,22 @@ class Input(ft.TextField):
         else:
             return Path(str(self.value).strip().strip('"').strip("'"))
 
-
-@ft.control
-class NumberInput(Input):
-    value: int | float | Decimal | str = 0
-    min_value: ft.Number = -math.inf
-    max_value: ft.Number = math.inf
-    step: ft.Number = 0.01
-    is_int: bool = False
-    text_align: ft.TextAlign = ft.TextAlign.CENTER
-    form_value_type: FormValueType = FormValueType.FLOAT
-
-    def init(self):
-        if isinstance(self.value, int) or self.is_int:
-            self.step = 1
-            self.is_int = True
-            self.form_value_type = FormValueType.INT
-        elif isinstance(self.value, float):
-            self.step = 0.01
-            self.is_int = False
+    def on_change(self, e):
+        print('before', self.last_value, self.value)
+        if self.is_int or self.is_float:
+            try:
+                if isinstance(e.data, str) and e.data.strip() != "":
+                    float(e.data)  # 验证数值合法性
+            except ValueError:
+                self.last_value = self.value
+                self.value = self.last_value
+            else:
+                self.last_value = self.value
+                self.value = e.data
         else:
-            raise ValueError('value must be int or float')
-
-        self.v_decrease = ft.Container(
-            content=ft.Icon(icon=ft.Icons.REMOVE, size=ICON_SIZE),
-            border_radius=ft.BorderRadius(
-                top_left=0, top_right=0, bottom_left=0, bottom_right=0
-            ),
-            on_click=self.handle_decrease_click,
-            # on_hover=self.handle_hover,
-            height=self.height,
-            width=30,
-            alignment=ft.Alignment.CENTER,
-        )
-        self.v_increase_icon = ft.Icon(icon=ft.Icons.ADD, size=ICON_SIZE)
-        self.v_increase = ft.Container(
-            content=self.v_increase_icon,
-            border_radius=ft.BorderRadius(
-                top_left=0, top_right=8, bottom_left=0, bottom_right=8
-            ),
-            on_click=self.handle_increase_click,
-            # on_hover=self.handle_hover,
-            bgcolor={ft.ControlState.DEFAULT: ft.Colors.BLUE_100},
-            height=self.height,
-            width=30,
-            alignment=ft.Alignment.CENTER,
-        )
-        self.suffix = ft.Container(
-            content=ft.Row(
-                controls=[self.v_decrease, self.v_increase],
-                alignment=ft.MainAxisAlignment.END,
-                vertical_alignment=ft.CrossAxisAlignment.START,
-                spacing=0,
-                run_spacing=0,
-            ),
-            width=60,
-            alignment=ft.Alignment.CENTER_RIGHT,
-            height=self.height,
-            # TODO: 不加这个的话背景颜色会偏移
-            offset=ft.Offset(x=0.1, y=0.03),
-        )
-        self.last_value = self.value
-        self.content_padding = ft.Padding.only(left=5, right=0, top=0, bottom=10)
-        self.text_vertical_align = ft.VerticalAlignment.START
-
-        self.on_change = self._on_change
-
-    def handle_hover(self, e):
-        if e.data:
-            e.control.content.color = ft.Colors.WHITE
-            e.control.bgcolor = ft.Colors.BLUE
-        else:
-            e.control.content.color = None
-            e.control.bgcolor = None
-        # e.control.update()
-
-    def _on_change(self, e):
-        try:
-            if isinstance(self.value, str) and self.value.strip() != "":
-                float(self.value)  # 验证数值合法性
-        except ValueError:
-            self.value = self.last_value
-        else:
-            self.last_value = self.value
-        self.update()
-        return super().on_change
+            self.value = e.data
+        # await asyncio.sleep(1)
+        print('after', self.last_value, self.value)
 
     def handle_decrease_click(self, e):
         _value = float(Decimal(str(self.value)) - Decimal(str(self.step)))
@@ -141,110 +54,172 @@ class NumberInput(Input):
             self.value = int(_value)
         else:
             self.value = float(_value)
+        self.last_value = self.value
 
     def handle_increase_click(self, e):
+        print(self.value, self.step)
         _value = float(Decimal(str(self.value)) + Decimal(str(self.step)))
         if self.is_int:
             self.value = int(_value)
         else:
             self.value = float(_value)
-
-
-@ft.control
-class IconContainer(ft.Container):
-    width: int = 30
-    padding: ft.Padding = field(default_factory=lambda: ft.Padding.all(0))
-
-    def init(self):
-        self.on_hover = self.handle_hover
-        self.border_radius = ft.BorderRadius(
-            top_left=6, top_right=0, bottom_left=6, bottom_right=0
-        )
-
-    def handle_hover(self, e):
-        if e.data:
-            e.control.content.color = ft.Colors.WHITE
-            e.control.bgcolor = ft.Colors.BLUE
-        else:
-            e.control.content.color = None
-            e.control.bgcolor = None
-        e.control.update()
-
-
-@ft.control
-class FileInput(Input):
-    value: str | Path | None = None
-    form_value_type: FormValueType = FormValueType.FILE
-    content_padding: ft.Padding = field(
-        default_factory=lambda: ft.Padding.only(left=5, right=10, top=0, bottom=0)
-    )
-
-    def init(self):
-        self.v_file_picker = ft.FilePicker()
-        self.prefix_icon = IconContainer(
-            content=ft.Icon(icon=ft.Icons.FILE_OPEN_OUTLINED, size=ICON_SIZE),
-            on_click=self.handle_file_picker,
-        )
+        self.last_value = self.value
 
     async def handle_file_picker(self, e):
-        self.selected_files = await self.v_file_picker.pick_files(allow_multiple=False)
+        self.selected_files = await e.control.pick_files(allow_multiple=False)
         if self.selected_files is not None and len(self.selected_files) > 0:
             self.value = str(self.selected_files[0].path)
-            if self.on_change:
-                self.on_change(e)
 
 
-@ft.control
-class DirInput(FileInput):
-    value: str | Path | None = None
-    form_value_type: FormValueType = FormValueType.DIR
-
-    def init(self):
-        self.v_file_picker = ft.FilePicker()
-        self.prefix_icon = IconContainer(
-            content=ft.Icon(icon=ft.Icons.FOLDER_OPEN_OUTLINED, size=ICON_SIZE),
-            on_click=self.handle_file_picker,
+@ft.component
+def Input(
+    state: InputState,
+    prefix: ft.Control | None = None,
+    suffix: ft.Control | None = None,
+    prefix_icon: ft.Control | None = None,
+):
+    is_decrese_hover, set_decrese_hover = ft.use_state(False)
+    is_increase_hover, set_increase_hover = ft.use_state(False)
+    text_align: ft.TextAlign = ft.TextAlign.START
+    keyboard_type: ft.KeyboardType = ft.KeyboardType.TEXT
+    if state.is_int or state.is_float:
+        text_align: ft.TextAlign = ft.TextAlign.CENTER
+        if state.is_int:
+            state.step = 1
+        elif state.is_float:
+            state.step = 0.01
+        v_decrease = ft.Container(
+            content=ft.Icon(
+                icon=ft.Icons.REMOVE,
+                size=ICON_SIZE,
+                color=ft.Colors.WHITE if is_decrese_hover else None,
+            ),
+            border_radius=ft.BorderRadius(
+                top_left=0, top_right=0, bottom_left=0, bottom_right=0
+            ),
+            on_click=state.handle_decrease_click,
+            width=30,
             alignment=ft.Alignment.CENTER,
+            bgcolor=ft.Colors.BLUE if is_decrese_hover else None,
+            on_hover=lambda e: set_decrese_hover(e.data),
+        )
+        v_increase = ft.Container(
+            content=ft.Icon(
+                icon=ft.Icons.ADD,
+                size=ICON_SIZE,
+                color=ft.Colors.WHITE if is_increase_hover else None,
+            ),
+            border_radius=ft.BorderRadius(
+                top_left=0,
+                top_right=BORDER_RADIUS,
+                bottom_left=0,
+                bottom_right=BORDER_RADIUS,
+            ),
+            on_click=state.handle_increase_click,
+            width=30,
+            alignment=ft.Alignment.CENTER,
+            bgcolor=ft.Colors.BLUE if is_increase_hover else None,
+            on_hover=lambda e: set_increase_hover(e.data),
+        )
+        suffix = ft.Container(
+            content=ft.Row(
+                controls=[v_decrease, v_increase],
+                alignment=ft.MainAxisAlignment.END,
+                vertical_alignment=ft.CrossAxisAlignment.START,
+                spacing=0,
+                run_spacing=0,
+            ),
+            width=60,
+            alignment=ft.Alignment.CENTER_RIGHT,
+            # TODO: 不加这个的话背景颜色会偏移
+            offset=ft.Offset(x=0.1, y=-0.05),
+        )
+        content_padding = ft.Padding.only(left=5, right=0, top=0, bottom=10)
+        keyboard_type: ft.KeyboardType = ft.KeyboardType.NUMBER
+    elif state.is_file or state.is_dir:
+        is_pick, set_is_pick = ft.use_state(False)
+        content_padding: ft.Padding = ft.Padding.only(left=5, right=10, top=0, bottom=0)
+
+        async def handle_file_picker(e):
+            selected_files = await v_file_picker.pick_files(allow_multiple=False)
+            if selected_files is not None and len(selected_files) > 0:
+                state.value = str(selected_files[0].path)
+
+        async def handle_dir_picker(e):
+            seleted_dir = await v_file_picker.get_directory_path()
+            if seleted_dir is not None:
+                state.value = str(seleted_dir)
+
+        v_file_picker = ft.FilePicker()
+        # NOTE: prefix的话，需要移到上面才会显示
+        prefix_icon = ft.Container(
+            content=ft.Icon(
+                icon=ft.Icons.FILE_OPEN_OUTLINED
+                if state.is_file
+                else ft.Icons.FOLDER_OPEN_OUTLINED,
+                size=ICON_SIZE,
+                color=ft.Colors.WHITE if is_pick else None,
+            ),
+            on_click=handle_file_picker if state.is_file else handle_dir_picker,
+            bgcolor=ft.Colors.BLUE if is_pick else None,
+            on_hover=lambda e: set_is_pick(e.data),
+            border_radius=ft.BorderRadius(
+                top_left=BORDER_RADIUS,
+                top_right=0,
+                bottom_left=BORDER_RADIUS,
+                bottom_right=0,
+            ),
         )
 
-    async def handle_file_picker(self, e):
-        self.seleted_dir = await self.v_file_picker.get_directory_path()
-        if self.seleted_dir is not None:
-            self.value = str(self.seleted_dir)
-            if self.on_change:
-                self.on_change(e)
+    else:
+        if prefix and not suffix:
+            content_padding = ft.Padding.only(left=10, right=5)
+        elif suffix and not prefix:
+            content_padding = ft.Padding.only(left=5, right=10)
+        elif prefix and suffix:
+            content_padding = ft.Padding.symmetric(horizontal=10)
+        else:
+            content_padding = ft.Padding.all(1)
 
+    def _on_change(e):
+        state.on_change(e)
+        state.notify()
 
-# def main(page: ft.Page):
-#     page.add(Input(value="123"))
-#     page.add(NumberInput(value=123))
-#     page.add(FileInput())
-#     dir_input = DirInput()
-#     page.add(dir_input)
-#     print(isinstance(dir_input, Input))
-#     print(isinstance(dir_input, FileInput))
-#     print(isinstance(dir_input, DirInput))
-
-
-# if __name__ == "__main__":
-#     ft.run(main)
+    return ft.TextField(
+        value=str(state.value),
+        cursor_color=ft.Colors.BLUE,
+        focused_border_color=ft.Colors.BLUE,
+        selection_color=ft.Colors.GREY_400,
+        hover_color=ft.Colors.BLUE_50,
+        border_radius=ft.BorderRadius.all(BORDER_RADIUS),
+        border=ft.InputBorder.OUTLINE,
+        border_width=1,
+        cursor_width=1,
+        filled=True,
+        height=DEFAULT_FORM_HEIGHT,
+        text_align=text_align,
+        keyboard_type=keyboard_type,
+        content_padding=content_padding,
+        suffix=suffix,
+        prefix=prefix,
+        prefix_icon=prefix_icon,
+        on_change=_on_change,
+    )
 
 
 @ft.component
 def App():
 
-    return ft.SafeArea(
-        content=ft.Container(
-            padding=20,
-            content=ft.Column(
-                controls=[
-                    Input(value="123"),
-                    NumberInput(value=123),
-                    # FileInput(),
-                    # DirInput(),
-                ]
-            ),
-        )
+    return ft.Column(
+        controls=[
+            Input(InputState(value="123")),
+            Input(InputState(value="123", is_int=True)),
+            Input(InputState(value="", is_file=True)),
+            Input(dir_input := InputState(value="", is_dir=True)),
+            ft.Button(content='print', on_click=lambda _: print(dir_input.value)),
+            # FileInput(),
+            # DirInput(),
+        ]
     )
 
 
