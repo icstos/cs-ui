@@ -27,13 +27,18 @@ class Image(ft.Image):
     #     self.height = height
 
 
-def main(page: ft.Page):
-    page.add(
-        Image(
-            src="https://flet.dev/img/pages/home/flet-home.png", width=200, height=200
-        )
+@ft.component
+def App():
+    return ft.Column(
+        [
+            Image(
+                src="https://flet.dev/img/pages/home/flet-home.png",
+                width=200,
+                height=200,
+            )
+        ]
     )
 
 
-if __name__ == '__main__':
-    ft.run(main)
+if __name__ == "__main__":
+    ft.run(lambda page: page.render(App))

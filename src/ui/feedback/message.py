@@ -47,7 +47,8 @@ class Message(ft.SnackBar):
         ft.context.page.show_dialog(self)
 
 
-def main(page: ft.Page):
+@ft.component
+def App():
     def click_default(e):
         Message(content='test').show()
 
@@ -66,35 +67,31 @@ def main(page: ft.Page):
     def click_warning(e):
         Message(content='test', style_type=StyleType.WARNING).show()
 
-    page.add(
-        ft.Column(
-            controls=[
-                ft.Button(
-                    content=ft.Text(value='show default message'),
-                    on_click=click_default,
-                ),
-                ft.Button(
-                    content=ft.Text(value='show primary message'),
-                    on_click=click_primary,
-                ),
-                ft.Button(
-                    content=ft.Text(value='show info message'), on_click=click_info
-                ),
-                ft.Button(
-                    content=ft.Text(value='show success message'),
-                    on_click=click_success,
-                ),
-                ft.Button(
-                    content=ft.Text(value='show error message'), on_click=click_error
-                ),
-                ft.Button(
-                    content=ft.Text(value='show warning message'),
-                    on_click=click_warning,
-                ),
-            ]
-        )
+    return ft.Column(
+        controls=[
+            ft.Button(
+                content=ft.Text(value='show default message'),
+                on_click=click_default,
+            ),
+            ft.Button(
+                content=ft.Text(value='show primary message'),
+                on_click=click_primary,
+            ),
+            ft.Button(content=ft.Text(value='show info message'), on_click=click_info),
+            ft.Button(
+                content=ft.Text(value='show success message'),
+                on_click=click_success,
+            ),
+            ft.Button(
+                content=ft.Text(value='show error message'), on_click=click_error
+            ),
+            ft.Button(
+                content=ft.Text(value='show warning message'),
+                on_click=click_warning,
+            ),
+        ]
     )
 
 
-if __name__ == '__main__':
-    ft.run(main)
+if __name__ == "__main__":
+    ft.run(lambda page: page.render(App))

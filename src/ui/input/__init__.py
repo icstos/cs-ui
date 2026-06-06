@@ -4,7 +4,7 @@ from .chip import Chip
 from .date_input import DateInput
 from .file_picker import FilePicker, DirPicker, FileSaver
 from .image_picker import ImagePicker
-from .input import Input, NumberInput, FileInput, DirInput
+from .input import Input
 from .radio import Radio
 from .rating import Rating
 from .search_bar import SearchBar
@@ -24,9 +24,6 @@ __all__ = [
     "FileSaver",
     "ImagePicker",
     "Input",
-    "NumberInput",
-    "FileInput",
-    "DirInput",
     "Radio",
     "Rating",
     "SearchBar",

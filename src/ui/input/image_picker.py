@@ -1,50 +1,58 @@
 import flet as ft
+from dataclasses import dataclass
+from pathlib import Path
+from ui.input.input import Input
 
 
-@ft.control
-class ImagePicker(ft.Stack):
-    is_file_field: bool = True
-    file_changed: bool = False
-    value: str | None = None
+@ft.observable
+@dataclass
+class ImagePicker(Input):
+    @ft.component
+    def ui(self):
+        def image_picked(e):
+            if not e.files:
+                return
+            file = e.files[0]
+            self.value = file.path
 
-    def init(self):
-        self.image = ft.Image(
+        file_picker = ft.FilePicker(on_upload=image_picked)
+
+        async def on_click(_):
+            selected_file = await file_picker.pick_files(
+                allow_multiple=False, file_type=ft.FilePickerFileType.IMAGE
+            )
+            if selected_file is not None and len(selected_file) > 0:
+                self.value = selected_file[0].path
+                # v_ctn.content = ft.Image(src=selected_file[0].path)
+
+        content_1 = ft.Placeholder()
+        content_2 = ft.Image(
             width=150,
             height=150,
             border_radius=10,
             fit=ft.BoxFit.COVER,
-            src='data/images/test.png',
+            src=str(self.value),
         )
-        self.v_ctn = ft.Container(
+        if self.value is None or not Path(self.value).exists():
+            content = content_1
+        else:
+            content = content_2
+
+        return ft.Container(
+            content=content,
             height=200,
             width=150,
-            content=ft.Column([ft.Placeholder(height=200), self.image]),
-            on_click=self.on_click,
             alignment=ft.Alignment.CENTER,
-            bgcolor=ft.Colors.GREY,
+            on_click=on_click,
+            bgcolor=ft.Colors.GREY_200,
         )
-        self.controls = [self.v_ctn]
-
-        self.file_picker = ft.FilePicker(on_upload=self.image_picked)
-
-    def image_picked(self, e):
-        if not e.files:
-            return
-        file = e.files[0]
-        self.value = file.path
-        self.file_changed = True
-
-    async def on_click(self, _):
-        self.selected_file = await self.file_picker.pick_files(
-            allow_multiple=False, file_type=ft.FilePickerFileType.IMAGE
-        )
-        if self.selected_file is not None and len(self.selected_file) > 0:
-            self.v_ctn.content = ft.Image(src=self.selected_file[0].path)
 
 
-def main(page: ft.Page):
-    page.add(ImagePicker())
+@ft.component
+def App():
+
+    return ft.Column(controls=[ImagePicker(value='data/images/test.png').ui()])
 
 
 if __name__ == '__main__':
-    ft.run(main)
+    ft.run(lambda page: page.render(App))

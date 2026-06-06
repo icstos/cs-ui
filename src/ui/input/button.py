@@ -108,109 +108,121 @@ class Button(ft.Button):
                 self.style.shape = ft.StadiumBorder()
 
 
-def main(page: ft.Page):
-
-    page.add(
-        Button(content="test"),
-        Button(content="test", is_primary=True),
-        ft.Text("主按钮"),
-        ft.Row(
-            controls=[
-                Button(content="default_button", style_type=StyleType.DEFAULT),
-                Button(content="primary_button", style_type=StyleType.PRIMARY),
-                Button(content="success_button", style_type=StyleType.SUCCESS),
-                Button(content="info_button", style_type=StyleType.INFO),
-                Button(content="warning_button", style_type=StyleType.WARNING),
-                Button(content="error_button", style_type=StyleType.ERROR),
-            ]
-        ),
-        ft.Text("次按钮，描边按钮，plain"),
-        ft.Row(
-            controls=[
-                Button(
-                    content="color_button", style_type=StyleType.DEFAULT, plain=True
-                ),
-                Button(
-                    content="primary_button", style_type=StyleType.PRIMARY, plain=True
-                ),
-                Button(
-                    content="success_button", style_type=StyleType.SUCCESS, plain=True
-                ),
-                Button(content="info_button", style_type=StyleType.INFO, plain=True),
-                Button(
-                    content="warning_button", style_type=StyleType.WARNING, plain=True
-                ),
-                Button(content="error_button", style_type=StyleType.ERROR, plain=True),
-            ]
-        ),
-        ft.Text("rectangle-round-circle"),
-        ft.Row(
-            controls=[
-                Button(
-                    content="ButtonShape.rect",
-                    style_type=StyleType.DEFAULT,
-                    plain=True,
-                    shape=ButtonShape.RECTANGLE,
-                ),
-                Button(
-                    content="ButtonShape.round",
-                    style_type=StyleType.DEFAULT,
-                    plain=True,
-                    shape=ButtonShape.ROUND,
-                ),
-                Button(
-                    content="ButtonShape.circle",
-                    style_type=StyleType.DEFAULT,
-                    plain=True,
-                    shape=ButtonShape.CIRCLE,
-                ),
-            ]
-        ),
-        ft.Text("disabled"),
-        ft.Row(
-            controls=[
-                Button(
-                    content="color_button",
-                    style_type=StyleType.DEFAULT,
-                    plain=True,
-                    disabled=True,
-                ),
-                Button(
-                    content="primary_button",
-                    style_type=StyleType.PRIMARY,
-                    plain=True,
-                    disabled=True,
-                ),
-                Button(
-                    content="success_button",
-                    style_type=StyleType.SUCCESS,
-                    plain=True,
-                    disabled=True,
-                ),
-                Button(
-                    content="info_button",
-                    style_type=StyleType.INFO,
-                    plain=True,
-                    disabled=True,
-                ),
-                Button(
-                    content="warning_button",
-                    style_type=StyleType.WARNING,
-                    plain=True,
-                    disabled=True,
-                ),
-                Button(
-                    content="error_button",
-                    style_type=StyleType.ERROR,
-                    plain=True,
-                    disabled=True,
-                ),
-            ]
-        ),
-        ft.Text("icon_button"),
-        Button(content="icon_button", icon=ft.Icons.ADD),
+@ft.component
+def App():
+    return ft.Column(
+        controls=[
+            Button(content="test"),
+            Button(content="test", is_primary=True),
+            ft.Text("主按钮"),
+            ft.Row(
+                controls=[
+                    Button(content="default_button", style_type=StyleType.DEFAULT),
+                    Button(content="primary_button", style_type=StyleType.PRIMARY),
+                    Button(content="success_button", style_type=StyleType.SUCCESS),
+                    Button(content="info_button", style_type=StyleType.INFO),
+                    Button(content="warning_button", style_type=StyleType.WARNING),
+                    Button(content="error_button", style_type=StyleType.ERROR),
+                ]
+            ),
+            ft.Text("次按钮，描边按钮，plain"),
+            ft.Row(
+                controls=[
+                    Button(
+                        content="color_button", style_type=StyleType.DEFAULT, plain=True
+                    ),
+                    Button(
+                        content="primary_button",
+                        style_type=StyleType.PRIMARY,
+                        plain=True,
+                    ),
+                    Button(
+                        content="success_button",
+                        style_type=StyleType.SUCCESS,
+                        plain=True,
+                    ),
+                    Button(
+                        content="info_button", style_type=StyleType.INFO, plain=True
+                    ),
+                    Button(
+                        content="warning_button",
+                        style_type=StyleType.WARNING,
+                        plain=True,
+                    ),
+                    Button(
+                        content="error_button", style_type=StyleType.ERROR, plain=True
+                    ),
+                ]
+            ),
+            ft.Text("rectangle-round-circle"),
+            ft.Row(
+                controls=[
+                    Button(
+                        content="ButtonShape.rect",
+                        style_type=StyleType.DEFAULT,
+                        plain=True,
+                        shape=ButtonShape.RECTANGLE,
+                    ),
+                    Button(
+                        content="ButtonShape.round",
+                        style_type=StyleType.DEFAULT,
+                        plain=True,
+                        shape=ButtonShape.ROUND,
+                    ),
+                    Button(
+                        content="ButtonShape.circle",
+                        style_type=StyleType.DEFAULT,
+                        plain=True,
+                        shape=ButtonShape.CIRCLE,
+                    ),
+                ]
+            ),
+            ft.Text("disabled"),
+            ft.Row(
+                controls=[
+                    Button(
+                        content="color_button",
+                        style_type=StyleType.DEFAULT,
+                        plain=True,
+                        disabled=True,
+                    ),
+                    Button(
+                        content="primary_button",
+                        style_type=StyleType.PRIMARY,
+                        plain=True,
+                        disabled=True,
+                    ),
+                    Button(
+                        content="success_button",
+                        style_type=StyleType.SUCCESS,
+                        plain=True,
+                        disabled=True,
+                    ),
+                    Button(
+                        content="info_button",
+                        style_type=StyleType.INFO,
+                        plain=True,
+                        disabled=True,
+                    ),
+                    Button(
+                        content="warning_button",
+                        style_type=StyleType.WARNING,
+                        plain=True,
+                        disabled=True,
+                    ),
+                    Button(
+                        content="error_button",
+                        style_type=StyleType.ERROR,
+                        plain=True,
+                        disabled=True,
+                    ),
+                ]
+            ),
+            ft.Text("icon_button"),
+            Button(content="icon_button", icon=ft.Icons.ADD),
+        ]
     )
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(lambda page: page.render(App))

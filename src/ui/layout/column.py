@@ -11,9 +11,10 @@ class Column(ft.Column):
     pass
 
 
-def main(page: ft.Page):
-    page.add(Column(controls=[ft.Text("Column control")]))
+@ft.component
+def App():
+    return Column(controls=[ft.Text("Column control")])
 
 
 if __name__ == '__main__':
-    ft.run(main)
+    ft.run(lambda page: page.render(App))

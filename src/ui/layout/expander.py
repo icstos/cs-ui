@@ -12,7 +12,10 @@ class Expander(ft.ExpansionTile):
 
     def init(self):
         if isinstance(self.title, str):
-            self.title = ft.Container(ft.Text(self.title), on_hover=self.handle_hover)
+            self.title = ft.Container(
+                ft.Text(self.title),
+                # on_hover=self.handle_hover,
+            )
         if isinstance(self.subtitle, str):
             self.subtitle = ft.Container(ft.Text(self.subtitle))
         else:
@@ -34,25 +37,24 @@ class Expander(ft.ExpansionTile):
                 )
             ]
 
-    def handle_hover(self, e):
-        # if isinstance(self.title, ft.Container):
-        #     self.title.bgcolor = ft.Colors.BLUE_200 if e.data else ft.Colors.BLUE_100
-        # if self.subtitle is not None and isinstance(self.subtitle, ft.Container):
-        #     self.subtitle.bgcolor = ft.Colors.BLUE_200 if e.data else ft.Colors.BLUE_100
-        self.bgcolor = ft.Colors.BLUE_300 if e.data else ft.Colors.BLUE_200
+    # def handle_hover(self, e):
+    #     # if isinstance(self.title, ft.Container):
+    #     #     self.title.bgcolor = ft.Colors.BLUE_200 if e.data else ft.Colors.BLUE_100
+    #     # if self.subtitle is not None and isinstance(self.subtitle, ft.Container):
+    #     #     self.subtitle.bgcolor = ft.Colors.BLUE_200 if e.data else ft.Colors.BLUE_100
+    #     self.bgcolor = ft.Colors.BLUE_300 if e.data else ft.Colors.BLUE_200
 
 
-def main(page: ft.Page):
-    page.add(
-        Expander(
-            title="Expander control",
-            controls=[
-                ft.Text("This is the content of the expander."),
-                ft.Text("You can add any controls here."),
-            ],
-        )
+@ft.component
+def App():
+    return Expander(
+        title="Expander control",
+        controls=[
+            ft.Text("This is the content of the expander."),
+            ft.Text("You can add any controls here."),
+        ],
     )
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(lambda page: page.render(App))
