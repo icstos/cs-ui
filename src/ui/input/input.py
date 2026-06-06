@@ -4,13 +4,14 @@ from pathlib import Path
 from dataclasses import field, dataclass
 
 ICON_SIZE = 16
+FONT_SIZE = 16
 BORDER_RADIUS = 8
 DEFAULT_FORM_HEIGHT = 36
 
 
 @ft.observable
 @dataclass
-class Input:
+class Label:
     label: str | None = None
     label_width: int | None = None
     is_vertical: bool = False
@@ -18,6 +19,34 @@ class Input:
     spacing: ft.Number = 10
     run_spacing: ft.Number = 10
 
+    @property
+    def v_label(self):
+        if self.label is not None:
+            if self.is_required:
+                spans = [
+                    ft.TextSpan(text="*", style=ft.TextStyle(color=ft.Colors.RED)),
+                    ft.TextSpan(self.label),
+                ]
+            else:
+                spans = [ft.TextSpan(text=self.label)]
+            if self.label.endswith(":") or self.label.endswith("："):
+                pass
+            else:
+                #     self.label = self.label + ": " # NOTE, 在前面走这处，程序就死机了
+                spans.append(ft.TextSpan(text=': '))
+            return ft.Text(
+                spans=spans,
+                text_align=ft.TextAlign.START if self.is_vertical else ft.TextAlign.END,
+                width=self.label_width,
+                size=FONT_SIZE,
+            )
+        else:
+            return None
+
+
+@ft.observable
+@dataclass
+class Input(Label):
     value: int | float | Decimal | str | Path | None = None
     last_value: int | float | Decimal | str | Path | None = None
     hint_text: str | None = None
@@ -194,7 +223,7 @@ class Input:
             self.on_change(e)
             self.notify()
 
-        v_input = ft.TextField(
+        v_ui = ft.TextField(
             value=str(self.value),
             cursor_color=ft.Colors.BLUE,
             focused_border_color=ft.Colors.BLUE,
@@ -216,32 +245,16 @@ class Input:
             prefix_icon=prefix_icon,
             on_change=_on_change,
         )
-        v_label = ft.Text('')
-        if self.label is not None:
-            if self.is_required:
-                spans = [
-                    ft.TextSpan(text="*", style=ft.TextStyle(color=ft.Colors.RED)),
-                    ft.TextSpan(self.label),
-                ]
+        if self.v_label is not None:
+            if self.is_vertical:
+                return ft.Column(
+                    controls=[self.v_label, v_ui],
+                    horizontal_alignment=ft.CrossAxisAlignment.START,
+                )
             else:
-                spans = [ft.TextSpan(text=self.label)]
-            if self.label.endswith(":") or self.label.endswith("："):
-                pass
-            else:
-                #     self.label = self.label + ": " # NOTE, 在前面走这处，程序就死机了
-                spans.append(ft.TextSpan(text=': '))
-            v_label = ft.Text(
-                spans=spans,
-                text_align=ft.TextAlign.START if self.is_vertical else ft.TextAlign.END,
-                width=self.label_width,
-            )
-        if self.is_vertical:
-            return ft.Column(
-                controls=[v_label, v_input],
-                horizontal_alignment=ft.CrossAxisAlignment.START,
-            )
+                return ft.Row(controls=[self.v_label, v_ui])
         else:
-            return ft.Row(controls=[v_label, v_input])
+            return v_ui
 
 
 @ft.component
@@ -262,6 +275,7 @@ def App():
             age.ui(),
             Input(label='age', value="123", data_type='int', is_required=True).ui(),
             Input(label='file', value="", data_type='file').ui(),
+            Input(value="", data_type='file').ui(),
             Input(label='file', value="", label_width=300, data_type='file').ui(),
             file.ui(),
             _dir.ui(),

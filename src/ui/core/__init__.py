@@ -8,7 +8,6 @@ from .constants import (
     FeedbackStyle,
     ButtonShape,
 )
-from .form import FormField, Label
 
 __all__ = [
     'Config',
@@ -19,6 +18,4 @@ __all__ = [
     "StyleType",
     'FeedbackStyle',
     'ButtonShape',
-    'FormField',
-    'Label',
 ]
