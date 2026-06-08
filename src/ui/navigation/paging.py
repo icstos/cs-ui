@@ -27,9 +27,11 @@ class NowPageButton(ft.Button):
     height: int = ICON_HEIGHT
     style: ft.ButtonStyle = field(
         default_factory=lambda: ft.ButtonStyle(
-            color=ft.Colors.BLUE_800,
-            bgcolor={ft.ControlState.DEFAULT: ft.Colors.BLUE_100},
-            side={ft.ControlState.HOVERED: ft.BorderSide(1, ft.Colors.BLUE)},
+            color=ft.Colors.BLUE,
+            bgcolor={ft.ControlState.DEFAULT: ft.Colors.WHITE},
+            side={
+                ft.ControlState.DEFAULT: ft.BorderSide(1, ft.Colors.BLUE),
+            },
             shape=ft.RoundedRectangleBorder(radius=BorderRadiusSize.M.value),
             elevation=0,
             padding=0,

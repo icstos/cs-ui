@@ -7,6 +7,7 @@ import flet as ft
 from dataclasses import dataclass, field
 from ui.core.constants import LayoutType
 from ui.input.input import Label
+from collections.abc import Callable
 
 ICON_SIZE = 16
 BORDER_RADIUS = 8
@@ -25,13 +26,15 @@ class Chip(Label):
         chip_layout_type: 布局方向，水平或垂直，默认水平。
     """
 
+    text: ft.StrOrControl | None = None
     value: str | None = None
     selected_values: list[str] = field(default_factory=list)
     options: list[str] = field(default_factory=list)
     multi_select: bool = False
     chip_layout_type: LayoutType = LayoutType.HORIZONTAL
+    on_change: Callable | None = None
 
-    def on_change(self, option: str, selected: bool) -> None:
+    def _on_change(self, option: str, selected: bool, e) -> None:
         """芯片选择状态变化时的回调。
 
         子类可重写此方法以处理自定义逻辑。
@@ -40,7 +43,8 @@ class Chip(Label):
             option: 被点击的选项文本。
             selected: 该选项被点击后的选中状态。
         """
-        pass
+        if self.on_change:
+            self.on_change(e)
 
     @ft.component
     def ui(self):
@@ -79,7 +83,7 @@ class Chip(Label):
                             self.value = None
                         else:
                             self.value = opt
-                    self.on_change(
+                    self._on_change(
                         opt,
                         opt
                         in (
@@ -89,6 +93,7 @@ class Chip(Label):
                             if self.value
                             else []
                         ),
+                        e,
                     )
                     self.notify()
 

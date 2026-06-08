@@ -17,7 +17,7 @@ class Message(ft.SnackBar):
     def set_theme(self, style_type):
         self.style = FeedbackStyle(*style_type.value)
         if style_type == StyleType.DEFAULT:
-            self.bgcolor = ft.Colors.GREY_800
+            self.bgcolor = ft.Colors.GREY_600
         else:
             self.bgcolor = self.style.color
         self.accent_color = self.style.color_accent

@@ -32,6 +32,9 @@ class SegmentedButton(ft.SegmentedButton):
                 ft.ControlState.DEFAULT: ft.RoundedRectangleBorder(radius=6),
                 ft.ControlState.SELECTED: ft.RoundedRectangleBorder(radius=6),
             },
+            side={
+                ft.ControlState.SELECTED: ft.BorderSide(color=ft.Colors.WHITE),
+            },
         )
 
 

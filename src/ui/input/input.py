@@ -1,7 +1,7 @@
 import flet as ft
 from decimal import Decimal
 from pathlib import Path
-from dataclasses import field, dataclass
+from dataclasses import dataclass
 
 ICON_SIZE = 16
 FONT_SIZE = 16
@@ -228,9 +228,11 @@ class Input(Label):
             cursor_color=ft.Colors.BLUE,
             focused_border_color=ft.Colors.BLUE,
             selection_color=ft.Colors.GREY_400,
+            fill_color=ft.Colors.WHITE,
             hover_color=ft.Colors.BLUE_50,
             border_radius=ft.BorderRadius.all(BORDER_RADIUS),
             border=ft.InputBorder.OUTLINE,
+            border_color=ft.Colors.GREY_300,
             border_width=1,
             cursor_width=1,
             hint_text=self.hint_text,

@@ -35,9 +35,6 @@ class SelectBox(Label):
                 dropdown_options.append(ft.dropdownm2.Option(text=option))
             elif isinstance(option, ft.dropdownm2.Option):
                 dropdown_options.append(option)
-            elif isinstance(option, ft.dropdownm2.Option):
-                # convert legacy dropdown.Option to dropdownm2.Option
-                dropdown_options.append(option)
             else:
                 # fallback: coerce to string
                 dropdown_options.append(ft.dropdownm2.Option(text=str(option)))
@@ -55,7 +52,7 @@ class SelectBox(Label):
             filled=self.filled,
             # editable=self.editable,
             content_padding=ft.Padding.only(left=PADDING),
-            border_color=ft.Colors.GREY_100,
+            border_color=ft.Colors.GREY_200,
             bgcolor=ft.Colors.GREY_200,
             border_width=1,
             border_radius=6,

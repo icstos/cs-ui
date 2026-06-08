@@ -38,7 +38,7 @@ class Button(ft.Button):
                 }
         if self.plain:
             self.style.bgcolor = self.style.bgcolor or {
-                ft.ControlState.DEFAULT: self._style.color_light
+                ft.ControlState.DEFAULT: ft.Colors.WHITE
             }
             self.style.overlay_color = self.style.overlay_color or {
                 ft.ControlState.DEFAULT: ft.Colors.WHITE

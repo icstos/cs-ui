@@ -21,8 +21,10 @@ class AlertDialog(ft.AlertDialog):
 
         self.title_padding = 0
         self.content_padding = 0
-        self.actions_padding = ft.Padding.only(right=8, bottom=8)
-        self.action_button_padding = ft.Padding.only(top=16, bottom=16, right=8, left=8)
+        self.actions_padding = ft.Padding.only(right=10, bottom=10)
+        self.action_button_padding = ft.Padding.only(
+            top=16, bottom=16, right=12, left=12
+        )
         self.actions_overflow_button_spacing = 8
         self.inset_padding = 0
         if isinstance(self.title, str):
@@ -42,7 +44,7 @@ class AlertDialog(ft.AlertDialog):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
             bgcolor=ft.Colors.with_opacity(0.5, self.style.color),
-            padding=ft.Padding.only(left=16, top=4, bottom=4),
+            padding=ft.Padding.only(left=16, top=8, bottom=8),
             border_radius=ft.BorderRadius(
                 top_left=BORDER_RADIUS,
                 top_right=BORDER_RADIUS,
@@ -74,7 +76,7 @@ class AlertDialog(ft.AlertDialog):
             self.content = ft.Container(
                 ft.Row(controls=[ft.Text(value=self.msg)], wrap=True)
             )
-        self.content.padding = ft.Padding.only(left=16, top=8, bottom=8)
+        self.content.padding = ft.Padding.only(left=16, top=12, bottom=12)
 
     def build_actions(self):
         self.actions = []
@@ -134,7 +136,7 @@ def App():
             ft.Text("测试表单内容"),
             # height=400,
             # width=400,
-            padding=ft.Padding.only(left=16, top=4, bottom=4),
+            padding=ft.Padding.only(left=16, top=8, bottom=8),
         ),
         on_yes_click=lambda _: print('yes'),
         on_no_click=lambda _: print('no'),
