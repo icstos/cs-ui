@@ -224,7 +224,7 @@ class Input(Label):
             self.notify()
 
         v_ui = ft.TextField(
-            value=str(self.value),
+            value=str(self.value) if self.value is not None else '',
             cursor_color=ft.Colors.BLUE,
             focused_border_color=ft.Colors.BLUE,
             selection_color=ft.Colors.GREY_400,
