@@ -1,4 +1,8 @@
-# CS UI
+# CS-UI
+
+[![Flet](https://img.shields.io/badge/Flet-0.85.3-blue)](https://flet.dev)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-green)](https://python.org)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 基于 [Flet](https://flet.dev/) 构建的 Python UI 组件库，提供丰富的预样式、开箱即用组件，具备更优的默认值和清晰的模块化包结构。
 
