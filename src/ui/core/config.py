@@ -1,5 +1,6 @@
 from pathlib import Path
 from ui.core.constants import RUN_MODE
+from .logger import Logger
 
 
 class Config:
@@ -10,6 +11,8 @@ class Config:
         self.output_dir = Path(self.root_dir, "output")
         self.log_dir = Path(self.root_dir, "output", "log")
         self.log_dir.mkdir(exist_ok=True, parents=True)
+
+        self.logger = Logger(file=Path(self.log_dir, "ui.log"))
 
         self.language = "zh_CN"
 
@@ -27,5 +30,8 @@ class Config:
 
 
 config = Config()
+logger = config.logger
+
+
 if __name__ == "__main__":
     print(config)
