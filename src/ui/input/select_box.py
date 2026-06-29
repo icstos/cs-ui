@@ -78,7 +78,7 @@ def App():
 
     select = SelectBox(
         label="选择选项",
-        options=['Option 1', 'Option 2', 'Option 3'],
+        options=["Option 1", "Option 2", "Option 3"],
         is_required=True,
     )
 

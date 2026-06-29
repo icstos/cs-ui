@@ -13,13 +13,13 @@ def get_size(file_path):
 
 def get_human_file_size(file_size: float) -> str:
     if file_size < 1024:
-        return f'{file_size:.2f} byte'
+        return f"{file_size:.2f} byte"
     elif file_size < 1024 * 1024:
-        return f'{file_size / 1024:.2f} KB'
+        return f"{file_size / 1024:.2f} KB"
     elif file_size < 1024 * 1024 * 1024:
-        return f'{file_size / (1024 * 1024):.2f} MB'
+        return f"{file_size / (1024 * 1024):.2f} MB"
     else:
-        return f'{file_size / (1024 * 1024 * 1024):.2f} GB'
+        return f"{file_size / (1024 * 1024 * 1024):.2f} GB"
 
 
 @ft.observable
@@ -77,7 +77,7 @@ class FilePicker:
                     ft.Row(
                         controls=[
                             ft.ProgressRing(
-                                value=0, bgcolor='#eeeeee', width=20, height=20
+                                value=0, bgcolor="#eeeeee", width=20, height=20
                             ),
                             ft.Text(value=file.name),
                             ft.Text(value=get_human_file_size(file.size)),
@@ -167,10 +167,10 @@ class FileSaver:
         if not self.value:
             return
         if isinstance(data, str):
-            with open(self.value, 'w', encoding='utf-8') as f:
+            with open(self.value, "w", encoding="utf-8") as f:
                 f.write(data)
         elif isinstance(data, bytes):
-            with open(self.value, 'wb') as f:
+            with open(self.value, "wb") as f:
                 f.write(data)
 
 
@@ -181,14 +181,14 @@ def App():
     now_file_saver = FileSaver()
 
     def test(_):
-        print('FilePicker: ', now_file_uploader.value)
+        print("FilePicker: ", now_file_uploader.value)
 
     def test_dir_picker(_):
-        print('DirPicker: ', now_dir_picker.value)
+        print("DirPicker: ", now_dir_picker.value)
 
     def test_file_saver(_):
-        now_file_saver.save_file('测试内容')
-        print('FileSaver: ', now_file_saver.value)
+        now_file_saver.save_file("测试内容")
+        print("FileSaver: ", now_file_saver.value)
 
     test_btn = ft.Button(content=ft.Text("测试当前选择文件"), on_click=test)
     test_dir_picker_btn = ft.Button(
@@ -209,5 +209,5 @@ def App():
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     ft.run(lambda page: page.render(App))

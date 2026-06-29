@@ -70,7 +70,7 @@ def App():
             log_container.ui(),
             ft.Button("Add Log", on_click=add_log),
             ft.Button("Clear Logs", on_click=clear_logs),
-            ft.Button('show now logs', on_click=lambda e: print(log_container.logs)),
+            ft.Button("show now logs", on_click=lambda e: print(log_container.logs)),
         ]
     )
 

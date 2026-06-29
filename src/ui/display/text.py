@@ -91,25 +91,25 @@ class Json(fce.CodeEditor):
 def App():
     return ft.Column(
         controls=[
-            Header_1('Header 1'),
-            Header_2('Header 2'),
-            Header_3('Header 3'),
-            Header_4('Header 4'),
-            Header_5('Header 5'),
-            Text('text'),
-            Quote('Quote'),
-            Link('Link', link='https://www.baidu.com/'),
+            Header_1("Header 1"),
+            Header_2("Header 2"),
+            Header_3("Header 3"),
+            Header_4("Header 4"),
+            Header_5("Header 5"),
+            Text("text"),
+            Quote("Quote"),
+            Link("Link", link="https://www.baidu.com/"),
             Markdown(
-                '# Markdown\n## Markdown\n### Markdown\n#### Markdown\n##### Markdown\n###### Markdown\n- Markdown\n- Markdown\n- Markdown\n[Markdown](https://www.baidu.com/)'
+                "# Markdown\n## Markdown\n### Markdown\n#### Markdown\n##### Markdown\n###### Markdown\n- Markdown\n- Markdown\n- Markdown\n[Markdown](https://www.baidu.com/)"
             ),
             Json(
                 value='{"name": "cs_ui", "version": "0.1.0", "description": "A UI library for Python."}'
             ),
             Code(
-                value='''{"name": "cs_ui",
+                value="""{"name": "cs_ui",
 "version": "0.1.0",
 "description": "A UI library for Python."}
-                ''',
+                """,
                 language=fce.CodeLanguage.JSON,
             ),
         ]

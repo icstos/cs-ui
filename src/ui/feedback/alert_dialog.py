@@ -138,8 +138,8 @@ def App():
             # width=400,
             padding=ft.Padding.only(left=16, top=8, bottom=8),
         ),
-        on_yes_click=lambda _: print('yes'),
-        on_no_click=lambda _: print('no'),
+        on_yes_click=lambda _: print("yes"),
+        on_no_click=lambda _: print("no"),
     )
     primary_dialog = AlertDialog(
         title="primary 弹窗", msg="tessssst", style_type=StyleType.PRIMARY

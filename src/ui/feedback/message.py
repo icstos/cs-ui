@@ -5,7 +5,7 @@ from dataclasses import field
 
 @ft.control
 class Message(ft.SnackBar):
-    content: ft.StrOrControl = ''
+    content: ft.StrOrControl = ""
     style_type: StyleType = field(default_factory=lambda: StyleType.DEFAULT)
     persist: bool = False
     show_close_icon: bool = True
@@ -50,43 +50,43 @@ class Message(ft.SnackBar):
 @ft.component
 def App():
     def click_default(e):
-        Message(content='test').show()
+        Message(content="test").show()
 
     def click_primary(e):
-        Message(content='test', style_type=StyleType.PRIMARY).show()
+        Message(content="test", style_type=StyleType.PRIMARY).show()
 
     def click_info(e):
-        Message(content='test', style_type=StyleType.INFO).show()
+        Message(content="test", style_type=StyleType.INFO).show()
 
     def click_success(e):
-        Message(content='test', style_type=StyleType.SUCCESS).show()
+        Message(content="test", style_type=StyleType.SUCCESS).show()
 
     def click_error(e):
-        Message(content='test', style_type=StyleType.ERROR).show()
+        Message(content="test", style_type=StyleType.ERROR).show()
 
     def click_warning(e):
-        Message(content='test', style_type=StyleType.WARNING).show()
+        Message(content="test", style_type=StyleType.WARNING).show()
 
     return ft.Column(
         controls=[
             ft.Button(
-                content=ft.Text(value='show default message'),
+                content=ft.Text(value="show default message"),
                 on_click=click_default,
             ),
             ft.Button(
-                content=ft.Text(value='show primary message'),
+                content=ft.Text(value="show primary message"),
                 on_click=click_primary,
             ),
-            ft.Button(content=ft.Text(value='show info message'), on_click=click_info),
+            ft.Button(content=ft.Text(value="show info message"), on_click=click_info),
             ft.Button(
-                content=ft.Text(value='show success message'),
+                content=ft.Text(value="show success message"),
                 on_click=click_success,
             ),
             ft.Button(
-                content=ft.Text(value='show error message'), on_click=click_error
+                content=ft.Text(value="show error message"), on_click=click_error
             ),
             ft.Button(
-                content=ft.Text(value='show warning message'),
+                content=ft.Text(value="show warning message"),
                 on_click=click_warning,
             ),
         ]

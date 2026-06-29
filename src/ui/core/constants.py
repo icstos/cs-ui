@@ -6,24 +6,24 @@ DEFAULT_FORM_HEIGHT = 36
 
 
 class RUN_MODE(Enum):
-    DEV = 'dev'
-    TEST = 'test'
-    RELEASE = 'release'
+    DEV = "dev"
+    TEST = "test"
+    RELEASE = "release"
 
 
 class SizeType(Enum):
-    XS = 'x_small'
-    S = 'small'
-    M = 'medium'
-    L = 'large'
-    XL = 'x_large'
-    XXL = 'xx_large'
-    XXXL = 'xxx_large'
+    XS = "x_small"
+    S = "small"
+    M = "medium"
+    L = "large"
+    XL = "x_large"
+    XXL = "xx_large"
+    XXXL = "xxx_large"
 
 
 class LayoutType(Enum):
-    HORIZONTAL = 'horizontal'
-    VERTICAL = 'vertical'
+    HORIZONTAL = "horizontal"
+    VERTICAL = "vertical"
 
 
 class FormValueType(Enum):
@@ -44,9 +44,9 @@ class FeedbackStyle:
 
 
 class ButtonShape(Enum):
-    CIRCLE = 'circle'
-    RECTANGLE = 'rectangle'
-    ROUND = 'round'
+    CIRCLE = "circle"
+    RECTANGLE = "rectangle"
+    ROUND = "round"
 
 
 @unique

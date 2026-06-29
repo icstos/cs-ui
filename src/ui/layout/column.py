@@ -16,5 +16,5 @@ def App():
     return Column(controls=[ft.Text("Column control")])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     ft.run(lambda page: page.render(App))

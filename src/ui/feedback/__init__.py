@@ -3,4 +3,9 @@ from .loading import Loading
 from .message import Message
 from .progress_bar import ProgressBar
 
-__all__ = ["AlertDialog", "Loading", "ProgressBar", "Message"]
+__all__ = [
+    "AlertDialog",
+    "Loading",
+    "ProgressBar",
+    "Message",
+]

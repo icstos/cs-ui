@@ -51,8 +51,8 @@ class ImagePicker(Input):
 @ft.component
 def App():
 
-    return ft.Column(controls=[ImagePicker(value='data/images/test.png').ui()])
+    return ft.Column(controls=[ImagePicker(value="data/images/test.png").ui()])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     ft.run(lambda page: page.render(App))

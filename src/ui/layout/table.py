@@ -41,10 +41,10 @@ class Table(ft.Column):
         self.v_data_table = ft.DataTable(
             columns=self.input_data_table.columns,
             rows=self.build_rows(),
-            heading_row_color='#f4f4f4',
+            heading_row_color="#f4f4f4",
             sort_column_index=2,
-            horizontal_lines=ft.BorderSide(1, '#EDEEF4'),
-            border=ft.Border.all(1, '#eeeeee'),
+            horizontal_lines=ft.BorderSide(1, "#EDEEF4"),
+            border=ft.Border.all(1, "#eeeeee"),
             expand=self.expand,
             width=10000,
         )
@@ -107,9 +107,9 @@ class Table(ft.Column):
         if (
             self.with_number
             and len(self.v_data_table.columns) >= 1
-            and self.v_data_table.columns[0].label.value != '编号'
+            and self.v_data_table.columns[0].label.value != "编号"
         ):
-            self.v_data_table.columns.insert(0, ft.DataColumn(label=ft.Text('编号')))
+            self.v_data_table.columns.insert(0, ft.DataColumn(label=ft.Text("编号")))
         self.v_data_table.rows = self.build_rows()
 
     def set_page(self, page: str | int | None = None, delta: int = 0):
@@ -191,21 +191,21 @@ def App():
         rows.append(
             ft.DataRow(
                 cells=[
-                    ft.DataCell(ft.Text('John')),
-                    ft.DataCell(ft.Text('Smith')),
+                    ft.DataCell(ft.Text("John")),
+                    ft.DataCell(ft.Text("Smith")),
                     ft.DataCell(ft.Text(str(random.random()))),
                 ]
             )
         )
     data_table = ft.DataTable(
         columns=[
-            ft.DataColumn(label=ft.Text('First name')),
-            ft.DataColumn(label=ft.Text('Last name')),
-            ft.DataColumn(label=ft.Text('Age'), numeric=True),
+            ft.DataColumn(label=ft.Text("First name")),
+            ft.DataColumn(label=ft.Text("Last name")),
+            ft.DataColumn(label=ft.Text("Age"), numeric=True),
         ],
         rows=rows,
     )
-    print(f'Table: {len(data_table.rows)}')
+    print(f"Table: {len(data_table.rows)}")
 
     return ft.Column([Table(data_table=data_table, rows_per_page=10, with_paged=True)])
 

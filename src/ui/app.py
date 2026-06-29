@@ -3,7 +3,7 @@ from pathlib import Path
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmembers
 
-FONT_DIR = Path(Path(__file__).parent, 'data/fonts').resolve()
+FONT_DIR = Path(Path(__file__).parent, "data/fonts").resolve()
 FONTS = {"AlibabaPuHuiTi": str(Path(FONT_DIR, "AlibabaPuHuiTi-3-55-Regular.otf"))}
 
 TEXT_SIZE = 16
@@ -117,8 +117,8 @@ class App:
         export_asgi_app: None | bool = False,
         target=None,
         with_auto_routing=True,
-        route_init='/',  # todo
-        route_login='/login',  # todo
+        route_init="/",  # todo
+        route_login="/login",  # todo
     ):
         self.name = name
         self.host = host
@@ -185,7 +185,7 @@ class App:
         else:
             print("Error: route.children is None")
 
-    def auto_routing(self, file_dir: str | Path = 'views'):
+    def auto_routing(self, file_dir: str | Path = "views"):
         routes = []
         # for file in file_dir.rglob('*.py[c]'):
         file_dir = Path(file_dir)

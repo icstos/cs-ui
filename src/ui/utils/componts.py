@@ -33,7 +33,7 @@ def App():
     async def on_click(e):
         await state.on_text_changed("Hello, Flet!")
 
-    return ft.Column([dynamic_write_text, ft.Button('test', on_click=on_click)])
+    return ft.Column([dynamic_write_text, ft.Button("test", on_click=on_click)])
 
 
 if __name__ == "__main__":

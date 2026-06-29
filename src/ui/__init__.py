@@ -15,10 +15,10 @@ from .app import App
 
 
 # 手动
-__name__ = 'cs-ui'
-__version__ = '0.0.5'
-__author__ = 'Shawn Chen'
-__email__ = 'cs@cstos.com'
-__copyright__ = 'Shawn Chen'
-__description__ = ''
-__url__ = 'https://github.com/icstos/cs-ui'
+__name__ = "cs-ui"
+__version__ = "0.0.5"
+__author__ = "Shawn Chen"
+__email__ = "cs@cstos.com"
+__copyright__ = "Shawn Chen"
+__description__ = ""
+__url__ = "https://github.com/icstos/cs-ui"

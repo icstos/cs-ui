@@ -20,7 +20,7 @@ class TabBar(ft.TabBar):
 
 @ft.control
 class Tab(ft.Tab):
-    text: str | ft.Control = ''
+    text: str | ft.Control = ""
     content: ft.Control | None = None
 
     def init(self):
@@ -44,16 +44,16 @@ def App():
                     controls=[
                         TabBar(
                             tabs=[
-                                Tab(text='Tab 1'),
-                                Tab(text='Tab 2'),
-                                Tab(text='Tab 3'),
+                                Tab(text="Tab 1"),
+                                Tab(text="Tab 2"),
+                                Tab(text="Tab 3"),
                             ]
                         ),
                         TabBarView(
                             controls=[
-                                ft.Text('Content of Tab 1'),
-                                ft.Text('Content of Tab 2'),
-                                ft.Text('Content of Tab 3'),
+                                ft.Text("Content of Tab 1"),
+                                ft.Text("Content of Tab 2"),
+                                ft.Text("Content of Tab 3"),
                             ],
                             height=800,
                         ),

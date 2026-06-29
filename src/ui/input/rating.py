@@ -81,5 +81,5 @@ def main(page: ft.Page):
     page.add(Rating(on_change=handle_change))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     ft.run(main)
