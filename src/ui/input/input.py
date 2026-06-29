@@ -7,13 +7,14 @@ ICON_SIZE = 16
 FONT_SIZE = 16
 BORDER_RADIUS = 8
 DEFAULT_FORM_HEIGHT = 36
+SPACING = 10  # Column或ROW的controls之间的间隔
 
 
 @ft.observable
 @dataclass
 class Label:
     label: str | None = None
-    label_width: int | None = None
+    label_width: int = 150
     is_vertical: bool = False
     is_required: bool = False
     spacing: ft.Number = 10
@@ -33,7 +34,7 @@ class Label:
                 pass
             else:
                 #     self.label = self.label + ": " # NOTE, 在前面走这处，程序就死机了
-                spans.append(ft.TextSpan(text=': '))
+                spans.append(ft.TextSpan(text=": "))
             return ft.Text(
                 spans=spans,
                 text_align=ft.TextAlign.START if self.is_vertical else ft.TextAlign.END,
@@ -51,8 +52,9 @@ class Input(Label):
     last_value: int | float | Decimal | str | Path | None = None
     hint_text: str | None = None
     multiline: bool = False
-    data_type: str = 'str'
+    data_type: str = "str"
     step: int | float = 0.01
+    width: int = 500
 
     def __post_init__(self):
         self.last_value = self.value
@@ -67,8 +69,8 @@ class Input(Label):
             return Path(str(self.value).strip().strip('"').strip("'"))
 
     def on_change(self, e):
-        print('before', self.last_value, self.value)
-        if self.data_type == 'int' or self.data_type == 'float':
+        print("before", self.last_value, self.value)
+        if self.data_type == "int" or self.data_type == "float":
             try:
                 if isinstance(e.data, str) and e.data.strip() != "":
                     float(e.data)  # 验证数值合法性
@@ -81,11 +83,11 @@ class Input(Label):
         else:
             self.value = e.data
         # await asyncio.sleep(1)
-        print('after', self.last_value, self.value)
+        print("after", self.last_value, self.value)
 
     def handle_decrease_click(self, e):
         _value = float(Decimal(str(self.value)) - Decimal(str(self.step)))
-        if self.data_type == 'int':
+        if self.data_type == "int":
             self.value = int(_value)
         else:
             self.value = float(_value)
@@ -94,7 +96,7 @@ class Input(Label):
     def handle_increase_click(self, e):
         print(self.value, self.step)
         _value = float(Decimal(str(self.value)) + Decimal(str(self.step)))
-        if self.data_type == 'int':
+        if self.data_type == "int":
             self.value = int(_value)
         else:
             self.value = float(_value)
@@ -116,11 +118,11 @@ class Input(Label):
         is_increase_hover, set_increase_hover = ft.use_state(False)
         text_align: ft.TextAlign = ft.TextAlign.START
         keyboard_type: ft.KeyboardType = ft.KeyboardType.TEXT
-        if self.data_type == 'int' or self.data_type == 'float':
+        if self.data_type == "int" or self.data_type == "float":
             text_align: ft.TextAlign = ft.TextAlign.CENTER
-            if self.data_type == 'int':
+            if self.data_type == "int":
                 self.step = 1
-            elif self.data_type == 'float':
+            elif self.data_type == "float":
                 self.step = 0.01
             v_decrease = ft.Container(
                 content=ft.Icon(
@@ -170,7 +172,7 @@ class Input(Label):
             )
             content_padding = ft.Padding.only(left=5, right=0, top=0, bottom=10)
             keyboard_type: ft.KeyboardType = ft.KeyboardType.NUMBER
-        elif self.data_type == 'file' or self.data_type == 'dir':
+        elif self.data_type == "file" or self.data_type == "dir":
             is_pick, set_is_pick = ft.use_state(False)
             content_padding: ft.Padding = ft.Padding.only(
                 left=5, right=10, top=0, bottom=0
@@ -191,13 +193,13 @@ class Input(Label):
             prefix_icon = ft.Container(
                 content=ft.Icon(
                     icon=ft.Icons.FILE_OPEN_OUTLINED
-                    if self.data_type == 'file'
+                    if self.data_type == "file"
                     else ft.Icons.FOLDER_OPEN_OUTLINED,
                     size=ICON_SIZE,
                     color=ft.Colors.WHITE if is_pick else None,
                 ),
                 on_click=handle_file_picker
-                if self.data_type == 'file'
+                if self.data_type == "file"
                 else handle_dir_picker,
                 bgcolor=ft.Colors.BLUE if is_pick else None,
                 on_hover=lambda e: set_is_pick(e.data),
@@ -224,7 +226,7 @@ class Input(Label):
             self.notify()
 
         v_ui = ft.TextField(
-            value=str(self.value) if self.value is not None else '',
+            value=str(self.value) if self.value is not None else "",
             cursor_color=ft.Colors.BLUE,
             focused_border_color=ft.Colors.BLUE,
             selection_color=ft.Colors.GREY_400,
@@ -246,45 +248,49 @@ class Input(Label):
             prefix=prefix,
             prefix_icon=prefix_icon,
             on_change=_on_change,
+            width=self.width,
         )
         if self.v_label is not None:
             if self.is_vertical:
                 return ft.Column(
                     controls=[self.v_label, v_ui],
-                    horizontal_alignment=ft.CrossAxisAlignment.START,
+                    width=self.width + 10,
                 )
             else:
-                return ft.Row(controls=[self.v_label, v_ui])
+                return ft.Row(
+                    controls=[self.v_label, v_ui],
+                    width=self.label_width + self.width + SPACING,
+                )
         else:
             return v_ui
 
 
 @ft.component
 def App():
-    name = Input(label='name', value="shawn")
-    age = Input(label='age', value="123", data_type='int')
+    name = Input(label="name", value="shawn")
+    age = Input(label="age", value="123", data_type="int")
     file = Input(
-        label='file',
+        label="file",
         value="",
         label_width=300,
         is_vertical=True,
-        data_type='file',
+        data_type="file",
     )
-    _dir = Input(label='dir', value="", data_type='dir')
+    _dir = Input(label="dir", value="", data_type="dir")
     return ft.Column(
         controls=[
             name.ui(),
             age.ui(),
-            Input(label='age', value="123", data_type='int', is_required=True).ui(),
-            Input(label='file', value="", data_type='file').ui(),
-            Input(value="", data_type='file').ui(),
-            Input(label='file', value="", label_width=300, data_type='file').ui(),
+            Input(label="age", value="123", data_type="int", is_required=True).ui(),
+            Input(label="file", value="", data_type="file").ui(),
+            Input(value="", data_type="file").ui(),
+            Input(label="file", value="", label_width=300, data_type="file").ui(),
             file.ui(),
             _dir.ui(),
             ft.Button(
-                content='print',
+                content="print",
                 on_click=lambda _: print(
-                    f'???{name.value}，{age.value},{file.value},{_dir.value}'
+                    f"???{name.value}，{age.value},{file.value},{_dir.value}"
                 ),
             ),
         ]
