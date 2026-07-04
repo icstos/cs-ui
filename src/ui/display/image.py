@@ -28,11 +28,11 @@ class Image(ft.Image):
     #     self.height = height
 
 
-@ft.component
+@ft.control
 class ImgView(ft.Column):
-    img_path: str | Path
+    img_path: str | Path | None = None
     repeat: ft.ImageRepeat = ft.ImageRepeat.NO_REPEAT
-    fit: ft.BoxFit | None = ft.BoxFit.CONTAIN
+    fit: ft.BoxFit | None = ft.BoxFit.COVER
     # img_width: int = 200
     # img_height: int = 200
 
@@ -64,7 +64,12 @@ def App():
                 src="https://flet.dev/img/pages/home/flet-home.png",
                 width=200,
                 height=200,
-            )
+            ),
+            ImgView(
+                img_path="https://flet.dev/img/pages/home/flet-home.png",
+                # width=200,
+                # height=200,
+            ),
         ]
     )
 

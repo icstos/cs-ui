@@ -16,6 +16,9 @@ class Config:
 
         self.language = "zh_CN"
 
+    class App:
+        name: str = "UI"
+
     def __repr__(self):
         return f"""
 - {self.output_dir=}

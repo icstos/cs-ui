@@ -1,7 +1,8 @@
 import asyncio
 import re
 from dataclasses import field, dataclass
-
+import ui
+import traceback
 import flet as ft
 
 
@@ -11,9 +12,20 @@ class LogContainer:
     logs: list[str] = field(default_factory=list)
     height: int = 200
 
-    async def add(self, log: str):
-        self.logs.append(log)
+    async def add(self, log: str | list[str]):
+        if isinstance(log, str):
+            self.logs.append(log)
+        elif isinstance(log, list):
+            try:
+                for _ in log:
+                    self.logs.append(_)
+            except Exception:
+                ui.logger.error(traceback.format_exc())
         await asyncio.sleep(0)
+
+    async def set(self, log: str | list[str]):
+        self.logs = []
+        await self.add(log)
 
     def clear(self):
         self.logs = []

@@ -3,6 +3,9 @@ import flet as ft
 
 @ft.control
 class Card(ft.Card):
+    bgcolor: ft.ColorValue = ft.Colors.TRANSPARENT
+    border_radius: int = 8
+
     def init(self):
         pass
 
