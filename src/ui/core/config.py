@@ -15,6 +15,8 @@ class Config:
         self.logger = Logger(file=Path(self.log_dir, "ui.log"))
 
         self.language = "zh_CN"
+        self.title = "cs-ui"
+        self.theme_mode = "dark"
 
     class App:
         name: str = "UI"

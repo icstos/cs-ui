@@ -1,7 +1,9 @@
+import traceback
 import flet as ft
 from pathlib import Path
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmembers
+from ui.core.config import logger
 
 FONT_DIR = Path(Path(__file__).parent, "data/fonts").resolve()
 FONTS = {"AlibabaPuHuiTi": str(Path(FONT_DIR, "AlibabaPuHuiTi-3-55-Regular.otf"))}
@@ -207,20 +209,27 @@ class App:
         self.add_route(routes)
 
     def run(self):
-        ft.run(
-            lambda page: page.render_views(self._app),
-            name=self.name,
-            host=self.host,
-            port=self.port,
-            view=self.view,
-            assets_dir=self.assets_dir,
-            upload_dir=self.upload_dir,
-            web_renderer=self.web_renderer,
-            route_url_strategy=self.route_url_strategy,
-            no_cdn=self.no_cdn,
-            export_asgi_app=self.export_asgi_app,
-            target=self.target,
-        )
+        try:
+            ft.run(
+                lambda page: page.render_views(self._app),
+                name=self.name,
+                host=self.host,
+                port=self.port,
+                view=self.view,
+                assets_dir=self.assets_dir,
+                upload_dir=self.upload_dir,
+                web_renderer=self.web_renderer,
+                route_url_strategy=self.route_url_strategy,
+                no_cdn=self.no_cdn,
+                export_asgi_app=self.export_asgi_app,
+                target=self.target,
+            )
+        except Exception as e:
+            error_message = f"Error: {e!s}\n\n message:\n{traceback.format_exc()}"
+            try:
+                logger.error(error_message)
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":

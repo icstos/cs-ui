@@ -7,7 +7,7 @@ from ui.navigation.paging import Paging
 
 @ft.control
 class ImageGridView(ft.Card):
-    title: str | None = ''
+    title: str = ""
     img_file_paths: list[str | Path] = field(default_factory=list)
     num_item_per_page: int = 10
 
@@ -18,13 +18,13 @@ class ImageGridView(ft.Card):
         self.v_title = ft.Text(
             value=self.title,
             theme_style=ft.TextThemeStyle.HEADLINE_LARGE,
-            weight='bold',
+            weight=ft.FontWeight.BOLD,
         )
         self.v_img_size = ft.Slider(
             min=100,
             max=500,
             divisions=10,
-            label='{value}',
+            label="{value}",
             value=200,
             width=200,
             on_change=self.change_img_size_slider,
@@ -35,7 +35,7 @@ class ImageGridView(ft.Card):
                     [self.v_title], alignment=ft.MainAxisAlignment.START, expand=True
                 ),
                 ft.Row(
-                    [ft.Text('图像大小:'), self.v_img_size],
+                    [ft.Text("图像大小:"), self.v_img_size],
                     alignment=ft.MainAxisAlignment.END,
                 ),
             ]
@@ -126,15 +126,15 @@ def main(page: ft.Page):
     page.scroll = ft.ScrollMode.AUTO
 
     file_paths = []
-    file_dir = Path(r'src/ui/data/images')
+    file_dir = Path(r"src/ui/data/images")
     print(file_dir.absolute())
     for i in range(10):
-        for file in file_dir.glob('*.png'):
+        for file in file_dir.glob("*.png"):
             file_paths.append(str(file))
-    print(f'ImageGridView: {len(file_paths)}')
-    multi_img_show = ImageGridView(title='测试数据集', img_file_paths=file_paths)
+    print(f"ImageGridView: {len(file_paths)}")
+    multi_img_show = ImageGridView(title="测试数据集", img_file_paths=file_paths)
     page.add(multi_img_show)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     ft.run(main)
