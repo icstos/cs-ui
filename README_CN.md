@@ -1,6 +1,6 @@
 # CS-UI
 
-[![Flet](https://img.shields.io/badge/Flet-0.85.3-blue)](https://flet.dev)
+[![Flet](https://img.shields.io/badge/Flet-0.85.6-blue)](https://flet.dev)
 [![Python](https://img.shields.io/badge/Python-3.12%2B-green)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
@@ -18,7 +18,7 @@
 ## 环境要求
 
 - Python >= 3.13
-- flet[all] >= 0.85.2
+- flet[all] >= 0.85.6
 - flet-code-editor
 - flet-charts
 
@@ -40,7 +40,20 @@ pip install -e .
 
 ```python
 import flet as ft
-from ui import App, Button, Card, Checkbox, Column, Container, Divider, Row, Switch, Text, TextField
+from ui import (
+    App,
+    Button,
+    Card,
+    Checkbox,
+    Column,
+    Container,
+    Divider,
+    Row,
+    Switch,
+    Text,
+    TextField,
+)
+
 
 def main(page: ft.Page):
     page.title = "CS UI Demo"
@@ -75,6 +88,7 @@ def main(page: ft.Page):
         ),
     )
     page.add(card)
+
 
 if __name__ == "__main__":
     ft.app(target=main)
@@ -176,6 +190,7 @@ from ui import App, Button, Card, Column, Container, Divider, Row, Text, TextFie
 
 ```python
 from ui import ft  # flet 模块
+
 # 或
 from ui import Page, Colors, Icons, MainAxisAlignment, CrossAxisAlignment
 ```

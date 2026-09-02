@@ -14,7 +14,7 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 ## Requirements
 
 - Python >= 3.13
-- flet[all] >= 0.85.2
+- flet[all] >= 0.85.6
 - flet-code-editor
 - flet-charts
 
@@ -36,7 +36,20 @@ pip install -e .
 
 ```python
 import flet as ft
-from ui import App, Button, Card, Checkbox, Column, Container, Divider, Row, Switch, Text, TextField
+from ui import (
+    App,
+    Button,
+    Card,
+    Checkbox,
+    Column,
+    Container,
+    Divider,
+    Row,
+    Switch,
+    Text,
+    TextField,
+)
+
 
 def main(page: ft.Page):
     page.title = "CS UI Demo"
@@ -71,6 +84,7 @@ def main(page: ft.Page):
         ),
     )
     page.add(card)
+
 
 if __name__ == "__main__":
     ft.app(target=main)
@@ -172,6 +186,7 @@ Since `ui` re-exports Flet, you can also access Flet types directly:
 
 ```python
 from ui import ft  # the flet module
+
 # or
 from ui import Page, Colors, Icons, MainAxisAlignment, CrossAxisAlignment
 ```

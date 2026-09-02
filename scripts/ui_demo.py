@@ -1116,7 +1116,7 @@ def DisplayPage():
             "JSON 展示 (Json)",
             "只读 JSON 代码视图",
             Json(
-                value='{\n  "name": "cs-ui",\n  "version": "0.0.5",\n  "author": "Shawn Chen",\n  "dependencies": ["flet>=0.85.3", "flet-charts"]\n}',
+                value='{\n  "name": "cs-ui",\n  "version": "0.0.5",\n  "author": "Shawn Chen",\n  "dependencies": ["flet>=0.85.6", "flet-charts"]\n}',
                 height=140,
             ),
         ),
