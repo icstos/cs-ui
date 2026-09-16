@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Shawn Chen", email = "cs@cstos.com" }]
 dependencies = [
-    "flet[all]>=0.85.6",
+    "flet[all]>=1.0.0",
     "flet-code-editor",
     "flet-charts",
     "flet-video",

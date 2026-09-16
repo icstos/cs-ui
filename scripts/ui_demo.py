@@ -4,12 +4,12 @@
 运行方式: python scripts/ui_demo.py
 """
 
-import os
-import sys
-import math
-import random
-import datetime
 import asyncio
+import datetime
+import math
+import os
+import random
+import sys
 import warnings
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -17,61 +17,61 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import flet as ft
 from ui import (
+    # feedback
+    AlertDialog,
     App,
-    Route,
+    # navigation
+    AppBar,
     # input
     Button,
+    ButtonShape,
+    # layout
+    Card,
     Checkbox,
     CheckboxGroup,
     Chip,
+    Code,
     DateInput,
-    Input,
-    Radio,
-    Rating,
-    SearchBar,
-    SegmentedButton,
-    SelectBox,
-    Slider,
-    RangeSlider,
-    Switch,
+    Divider,
+    Expander,
     # display
     Header_1,
     Header_2,
     Header_3,
     Header_4,
     Header_5,
-    Quote,
-    Link,
-    Code,
-    Markdown,
-    Json,
     Image,
+    Input,
+    Json,
+    LayoutType,
+    # chart
+    LineChart,
+    Link,
     ListTile,
-    LogContainer,
-    # feedback
-    AlertDialog,
     Loading,
+    LogContainer,
+    Markdown,
     Message,
+    Paging,
     ProgressBar,
-    # layout
-    Card,
-    Divider,
-    VerticalDivider,
-    Expander,
-    Table,
-    Tabs,
+    Quote,
+    Radio,
+    RangeSlider,
+    Rating,
+    Route,
+    SearchBar,
+    SegmentedButton,
+    SelectBox,
+    Slider,
+    # core
+    StyleType,
+    Switch,
     Tab,
     TabBar,
     TabBarView,
-    # navigation
-    AppBar,
-    Paging,
-    # chart
-    LineChart,
-    # core
-    StyleType,
-    ButtonShape,
-    LayoutType,
+    Table,
+    Tabs,
+    VerticalDivider,
 )
 
 # 直接导入：navigation/__init__.py 未导出 PagingState，
@@ -1116,7 +1116,7 @@ def DisplayPage():
             "JSON 展示 (Json)",
             "只读 JSON 代码视图",
             Json(
-                value='{\n  "name": "cs-ui",\n  "version": "0.0.5",\n  "author": "Shawn Chen",\n  "dependencies": ["flet>=0.85.6", "flet-charts"]\n}',
+                value='{\n  "name": "cs-ui",\n  "version": "0.0.5",\n  "author": "Shawn Chen",\n  "dependencies": ["flet>=1.0.0", "flet-charts"]\n}',
                 height=140,
             ),
         ),

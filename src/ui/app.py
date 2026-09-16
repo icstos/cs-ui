@@ -1,8 +1,10 @@
 import traceback
-import flet as ft
-from pathlib import Path
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmembers
+from pathlib import Path
+
+import flet as ft
+
 from ui.core.config import logger
 
 FONT_DIR = Path(Path(__file__).parent, "data/fonts").resolve()
@@ -132,7 +134,6 @@ class App:
         self.route_url_strategy = route_url_strategy
         self.no_cdn = no_cdn
         self.export_asgi_app = export_asgi_app
-        self.target = target
 
         self.with_auto_routing = with_auto_routing
         self.route = ft.Route(component=Template, outlet=True, children=[])
@@ -222,7 +223,6 @@ class App:
                 route_url_strategy=self.route_url_strategy,
                 no_cdn=self.no_cdn,
                 export_asgi_app=self.export_asgi_app,
-                target=self.target,
             )
         except Exception as e:
             error_message = f"Error: {e!s}\n\n message:\n{traceback.format_exc()}"

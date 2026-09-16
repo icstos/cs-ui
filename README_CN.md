@@ -1,6 +1,6 @@
 # CS-UI
 
-[![Flet](https://img.shields.io/badge/Flet-0.85.6-blue)](https://flet.dev)
+[![Flet](https://img.shields.io/badge/Flet-1.0.0-blue)](https://flet.dev)
 [![Python](https://img.shields.io/badge/Python-3.12%2B-green)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
@@ -18,7 +18,7 @@
 ## 环境要求
 
 - Python >= 3.13
-- flet[all] >= 0.85.6
+- flet[all] >= 1.0.0
 - flet-code-editor
 - flet-charts
 

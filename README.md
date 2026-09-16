@@ -14,7 +14,7 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 ## Requirements
 
 - Python >= 3.13
-- flet[all] >= 0.85.6
+- flet[all] >= 1.0.0
 - flet-code-editor
 - flet-charts
 
