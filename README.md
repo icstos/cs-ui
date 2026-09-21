@@ -8,15 +8,17 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 - **Inheritance-based** — all components directly subclass Flet native controls (e.g., `Button(ft.Button)`, `Text(ft.Text)`)
 - **Smart defaults** — components come with sensible styling defaults (colors, sizes, border-radius, etc.) for rapid prototyping
 - **Categorized modules** — components organized by function: chart, display, feedback, input, layout, navigation
-- **Route system** — built-in `App` class with auto-routing support
-- **Charts** — Bar, Line, Area, and Scatter chart wrappers via `flet-charts`
+- **Declarative routing** — view-stack routing via `ft.Router(manage_views=True)` + `page.render_views`
+- **Two component paradigms** — stateless controls subclass native Flet controls; stateful ones are `@ft.observable` objects with a `ui()` renderer
+- **Charts** — Bar, Line, Area, and Scatter chart wrappers via `flet-charts`, with both numeric and categorical x-axes
 
 ## Requirements
 
-- Python >= 3.13
+- Python >= 3.12
 - flet[all] >= 1.0.0
 - flet-code-editor
 - flet-charts
+- flet-video / flet-audio / flet-webview
 
 ## Installation
 
@@ -37,130 +39,159 @@ pip install -e .
 ```python
 import flet as ft
 from ui import (
-    App,
     Button,
     Card,
     Checkbox,
     Column,
     Container,
     Divider,
+    Input,
+    Router,
+    Route,
     Row,
-    Switch,
     Text,
-    TextField,
 )
 
 
-def main(page: ft.Page):
-    page.title = "CS UI Demo"
-    page.bgcolor = "#f8fafc"
+@ft.component
+def HomePage() -> ft.View:
+    name = ft.use_ref(lambda: Input(label="Name", value="Shawn", width=260)).current
+    agree = ft.use_ref(lambda: Checkbox(label="I have read the terms")).current
 
-    card = Card(
-        elevation=4,
-        content=Container(
-            padding=24,
-            border_radius=16,
-            content=Column(
-                controls=[
-                    Text("CS UI 框架示例", size=24, weight="bold"),
-                    Text("基于 Flet 风格构建的组件体系。", size=14, color="#6b7280"),
-                    Divider(),
-                    TextField(
-                        label="输入内容",
-                        hint_text="按回车提交",
-                        width=320,
-                    ),
-                    Row(
+    return ft.View(
+        route="/",
+        appbar=ft.AppBar(title=Text("CS UI Demo")),
+        controls=[
+            Card(
+                elevation=4,
+                content=Container(
+                    padding=24,
+                    border_radius=16,
+                    content=Column(
                         controls=[
-                            Checkbox(label="我已阅读"),
-                            Switch(label="开关示例"),
+                            Text("CS UI declarative demo", size=24, weight=ft.FontWeight.BOLD),
+                            Text("Built on flet 1.0.0.", size=14, color="#6b7280"),
+                            Divider(),
+                            name.ui(),
+                            Row(
+                                spacing=20,
+                                controls=[agree.ui(), ft.Switch(label="A switch")],
+                            ),
+                            Button("Click me", on_click=lambda _: print("clicked!")),
                         ],
-                        spacing=20,
+                        spacing=16,
                     ),
-                    Button(label="点我", on_click=lambda e: print("clicked!")),
-                ],
-                spacing=16,
-            ),
-        ),
+                ),
+            )
+        ],
     )
-    page.add(card)
+
+
+@ft.component
+def App() -> ft.Control:
+    return Router([Route(index=True, component=HomePage)], manage_views=True)
+
+
+def main(page: ft.Page) -> None:
+    page.title = "CS UI Demo"
+    page.render_views(App)
 
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.run(main)
 ```
+
+> Migration notes: `ft.app(main)` → `ft.run(main)`; `page.add(...)` → `page.render(Component)`;
+> `page.go(route)` → `page.navigate(route)`; hand-maintained `page.views` → `ft.Router(manage_views=True)`.
+> The bundled `ui.Button` takes its text as `content` (not `label`).
+>
+> Components come in two flavors: **stateless controls** (`Button` / `Table` / `ECharts` …) subclass
+> Flet controls and are usable immediately; **stateful components** (`Input` / `Checkbox` / `Switch` /
+> `SelectBox` …) are `@ft.observable` data objects that must be constructed and then rendered via
+> `.ui()` — putting the object itself in the widget tree yields a blank or grey box.
 
 ## Package Structure
 
 ```
 src/ui/
-├── __init__.py          # re-exports from flet + all subpackages
-├── app.py               # App class with routing
-├── ft_init.py           # Flet initialization
-├── chart/               # Charts
-│   ├── bar_chart.py     #   BarChart
-│   ├── line_chart.py    #   LineChart
-│   ├── rea_chart.py     #   AreaChart
-│   └── scatter_chart.py #   ScatterChart
-├── core/                # Core utilities
-│   ├── config.py
-│   ├── constants.py
-│   ├── form.py
-│   └── language.py
-├── data/                # Static assets (fonts, images)
-├── display/             # Display components
-│   ├── image.py         #   Image
-│   ├── image_gridview.py#   ImageGridView
-│   ├── list_tile.py     #   ListTile
-│   ├── log_container.py #   LogContainer
-│   └── text.py          #   Text
-├── feedback/            # Feedback & overlays
-│   ├── alert_dialog.py  #   AlertDialog
-│   ├── loading.py       #   Loading
-│   ├── message.py       #   Message
-│   ├── progress_bar.py  #   ProgressBar
-│   └── toast.py         #   SnackBar (toast)
-├── input/               # Form inputs
+├── __init__.py              # re-exports all of flet + every CS UI component (617 names)
+├── app.py                   # legacy-style App entry point
+├── ft_init.py               # Flet initialization
+├── theme.py                 # theme / palette
+├── cli.py                   # CLI entry point
+├── chart/                   # Charts (via flet-charts)
+│   ├── _data.py             #   shared data parsing + palette (numeric / categorical axes)
+│   ├── bar_chart.py         #   BarChart
+│   ├── line_chart.py        #   LineChart
+│   ├── rea_chart.py         #   AreaChart
+│   └── scatter_chart.py     #   ScatterChart
+├── components/              # Reusable generic controls
+│   └── icon_button.py       #   IconButton
+├── core/                    # Core utilities
+│   ├── config.py            #   configuration
+│   ├── constants.py         #   StyleType / FeedbackStyle / ButtonShape …
+│   ├── language.py          #   i18n
+│   ├── logger.py            #   logging
+│   └── styles.py            #   shared style helpers
+├── data/                    # Static assets (fonts, images)
+├── display/                 # Display components
+│   ├── echarts.py           #   ECharts (embedded WebView)
+│   ├── image.py             #   Image
+│   ├── image_gridview.py    #   ImageGridView
+│   ├── list_tile.py         #   ListTile
+│   ├── log_container.py     #   LogContainer
+│   ├── text.py              #   Text / Header_1..5 / Quote / Link / Code / Markdown / Json
+│   └── media/               #   Media
+│       ├── audio.py         #     Audio / AudioPlayer
+│       ├── pdf.py           #     Pdf
+│       └── video.py         #     Video
+├── feedback/                # Feedback & overlays
+│   ├── alert_dialog.py      #   AlertDialog
+│   ├── loading.py           #   Loading
+│   ├── message.py           #   Message
+│   ├── progress_bar.py      #   ProgressBar
+│   └── toast.py             #   Toast / toast_success / toast_error …
+├── input/                   # Form inputs
 │   ├── button.py            #   Button
-│   ├── checkbox.py          #   Checkbox
+│   ├── checkbox.py          #   Checkbox / CheckboxGroup
 │   ├── chip.py              #   Chip
 │   ├── color_picker.py      #   ColorPicker
 │   ├── date_input.py        #   DateInput
 │   ├── datetime_input.py    #   DateTimeInput
-│   ├── file_picker.py       #   FilePicker
+│   ├── file_picker.py       #   FilePicker / DirPicker
 │   ├── image_picker.py      #   ImagePicker
-│   ├── input.py             #   TextField
+│   ├── input.py             #   Input (data_type: str/int/float/file/dir)
 │   ├── multi_select.py      #   MultiSelect
 │   ├── radio.py             #   RadioGroup
 │   ├── rating.py            #   Rating
 │   ├── search_bar.py        #   SearchBar
 │   ├── segmented_button.py  #   SegmentedButton
-│   ├── select_box.py        #   Dropdown
-│   └── slider.py            #   Slider
+│   ├── select_box.py        #   SelectBox
+│   ├── slider.py            #   Slider
 │   └── switch.py            #   Switch
-├── layout/              # Layout & containers
-│   ├── card.py          #   Card
-│   ├── column.py        #   Column
-│   ├── container.py     #   Container
-│   ├── divider.py       #   Divider
-│   ├── expander.py      #   Expander
-│   ├── grid_view.py     #   GridView
-│   ├── list_view.py     #   ListView
-│   ├── page.py          #   Page
-│   ├── row.py           #   Row
-│   ├── stack.py         #   Stack
-│   ├── table.py         #   Table
-│   ├── tabs.py          #   Tabs
-│   ├── time_line.py     #   Timeline
-│   └── view.py          #   View
-├── navigation/          # Navigation
-│   ├── app_bar.py       #   AppBar
-│   ├── bread_crumb.py   #   BreadCrumb
-│   └── paging.py        #   NavigationBar
-└── utils/               # Utilities
-    ├── code_editor.py   #   CodeEditor
-    ├── code_view.py     #   CodeView
-    └── componts.py      #   Helper components
+├── layout/                  # Layout & containers
+│   ├── card.py              #   Card
+│   ├── column.py            #   Column
+│   ├── container.py         #   Container
+│   ├── divider.py           #   Divider
+│   ├── expander.py          #   Expander
+│   ├── grid_view.py         #   GridView
+│   ├── list_view.py         #   ListView
+│   ├── page.py              #   PageLayout
+│   ├── row.py               #   Row
+│   ├── stack.py             #   Stack
+│   ├── table.py             #   Table (with paging)
+│   ├── tabs.py              #   Tabs / Tab / TabBar / TabBarView
+│   ├── time_line.py         #   Timeline / TimelineItem
+│   └── view.py              #   View
+├── navigation/              # Navigation
+│   ├── app_bar.py           #   AppBar
+│   ├── bread_crumb.py       #   BreadCrumb / Crumb
+│   └── paging.py            #   Paging / PagingState
+└── utils/                   # Utilities
+    ├── code_editor.py       #   Code
+    ├── code_view.py         #   CodeView
+    └── componts.py          #   Helper components
 ```
 
 ## Component Overview
@@ -168,18 +199,23 @@ src/ui/
 | Category | Components |
 |----------|-----------|
 | **Chart** | BarChart, LineChart, AreaChart, ScatterChart |
-| **Display** | Image, ImageGridView, ListTile, LogContainer, Text |
-| **Feedback** | AlertDialog, Loading, Message, ProgressBar, SnackBar |
-| **Input** | Button, Checkbox, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker, ImagePicker, TextField, MultiSelect, RadioGroup, Rating, SearchBar, SegmentedButton, Dropdown, Slider, Switch |
-| **Layout** | Card, Column, Container, Divider, Expander, GridView, ListView, Page, Row, Stack, Table, Tabs, Timeline, View |
-| **Navigation** | AppBar, BreadCrumb, NavigationBar |
+| **Display** | ECharts, Image, ImageGridView, ListTile, LogContainer, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display / Media** | Audio, AudioPlayer, Video, Pdf |
+| **Feedback** | AlertDialog, Loading, Message, ProgressBar, Toast |
+| **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch |
+| **Layout** | Card, Column, Container, Divider, Expander, GridView, ListView, PageLayout, Row, Stack, Table, Tabs, Timeline, View |
+| **Navigation** | AppBar, BreadCrumb, Paging |
+
+**Two paradigms**:
+- **Stateless controls** (`Button` / `Table` / `ECharts` / `Rating` / `Timeline` / charts …) subclass Flet controls and are ready to use.
+- **Stateful components** (`Input` / `Checkbox` / `Switch` / `SelectBox` / `MultiSelect` …) are `@ft.observable` data objects; construct them and render with `.ui()`.
 
 ## Importing
 
 All components can be imported directly from `ui`:
 
 ```python
-from ui import App, Button, Card, Column, Container, Divider, Row, Text, TextField
+from ui import Button, Card, Column, Container, Divider, Row, Text, TextField
 ```
 
 Since `ui` re-exports Flet, you can also access Flet types directly:
@@ -193,11 +229,25 @@ from ui import Page, Colors, Icons, MainAxisAlignment, CrossAxisAlignment
 
 ## Examples
 
-Run the demo to see all components in action:
+Run the demo to see every component in action (11 category pages plus a 404 page):
 
 ```bash
 python examples/demo.py
 ```
+
+| Route | Contents |
+|-------|----------|
+| `/` | Home navigation (enter each category) |
+| `/general` | Text / buttons / icons / chips |
+| `/layout` | Containers / lists / tables / timeline |
+| `/navigation` | Breadcrumb / tabs / paging |
+| `/form` | Inputs / selectors / slider / rating |
+| `/upload` | Files / directories / save / images |
+| `/feedback` | Toast / message / dialog / progress |
+| `/display` | Logs / code / ECharts / images |
+| `/charts` | Line / area / bar / scatter charts |
+| `/media` | Audio / video / PDF |
+| `/about` | Migration cheat-sheet and design notes |
 
 Additional test files:
 
@@ -208,3 +258,4 @@ Additional test files:
 - `examples/test_line_chart.py` — line chart
 - `examples/test_button.py` — button variants
 - `examples/test_minimal.py` / `test_simple.py` — minimal examples
+- `examples/my_control.py` — custom control example

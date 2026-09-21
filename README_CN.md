@@ -12,15 +12,17 @@
 - **继承原生控件** — 所有组件直接继承 Flet 原生控件（如 `Button(ft.Button)`、`Text(ft.Text)`）
 - **智能默认值** — 组件自带合理的样式默认值（颜色、尺寸、圆角等），加速原型开发
 - **模块分类** — 组件按功能分类：chart / display / feedback / input / layout / navigation
-- **路由系统** — 内置 `App` 类，支持自动路由
-- **图表支持** — 通过 `flet-charts` 封装 Bar / Line / Area / Scatter 图表
+- **声明式路由** — 基于 `ft.Router(manage_views=True)` + `page.render_views` 的视图栈路由
+- **双范式组件** — 无状态控件继承原生控件；有状态组件用 `@ft.observable` + `ui()` 函数
+- **图表支持** — 通过 `flet-charts` 封装 Bar / Line / Area / Scatter 图表，x 轴数值 / 分类通吃
 
 ## 环境要求
 
-- Python >= 3.13
+- Python >= 3.12
 - flet[all] >= 1.0.0
 - flet-code-editor
 - flet-charts
+- flet-video / flet-audio / flet-webview
 
 ## 安装
 
@@ -41,130 +43,161 @@ pip install -e .
 ```python
 import flet as ft
 from ui import (
-    App,
     Button,
     Card,
     Checkbox,
     Column,
     Container,
     Divider,
+    Input,
+    Router,
+    Route,
     Row,
-    Switch,
     Text,
-    TextField,
 )
 
 
-def main(page: ft.Page):
-    page.title = "CS UI Demo"
-    page.bgcolor = "#f8fafc"
+@ft.component
+def HomePage() -> ft.View:
+    name = ft.use_ref(lambda: Input(label="姓名", value="Shawn", width=260)).current
+    agree = ft.use_ref(lambda: Checkbox(label="我已阅读")).current
 
-    card = Card(
-        elevation=4,
-        content=Container(
-            padding=24,
-            border_radius=16,
-            content=Column(
-                controls=[
-                    Text("CS UI 框架示例", size=24, weight="bold"),
-                    Text("基于 Flet 风格构建的组件体系。", size=14, color="#6b7280"),
-                    Divider(),
-                    TextField(
-                        label="输入内容",
-                        hint_text="按回车提交",
-                        width=320,
-                    ),
-                    Row(
+    return ft.View(
+        route="/",
+        appbar=ft.AppBar(title=Text("CS UI Demo")),
+        controls=[
+            Card(
+                elevation=4,
+                content=Container(
+                    padding=24,
+                    border_radius=16,
+                    content=Column(
                         controls=[
-                            Checkbox(label="我已阅读"),
-                            Switch(label="开关示例"),
+                            Text("CS UI 声明式示例", size=24, weight=ft.FontWeight.BOLD),
+                            Text("基于 flet 1.0.0 构建的组件体系。", size=14, color="#6b7280"),
+                            Divider(),
+                            name.ui(),
+                            Row(
+                                spacing=20,
+                                controls=[agree.ui(), ft.Switch(label="开关示例")],
+                            ),
+                            Button(
+                                "点我",
+                                on_click=lambda _: print("clicked!"),
+                            ),
                         ],
-                        spacing=20,
+                        spacing=16,
                     ),
-                    Button(label="点我", on_click=lambda e: print("clicked!")),
-                ],
-                spacing=16,
-            ),
-        ),
+                ),
+            )
+        ],
     )
-    page.add(card)
+
+
+@ft.component
+def App() -> ft.Control:
+    return Router([Route(index=True, component=HomePage)], manage_views=True)
+
+
+def main(page: ft.Page) -> None:
+    page.title = "CS UI Demo"
+    page.render_views(App)
 
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.run(main)
 ```
+
+> 迁移提示：`ft.app(main)` → `ft.run(main)`；`page.add(...)` → `page.render(Component)`；
+> `page.go(route)` → `page.navigate(route)`；`page.views` 手工维护 → `ft.Router(manage_views=True)`。
+> 项目内置的 `ui.Button` 用 `content` 传文字（不是 `label`）。
+>
+> 组件分两类：**无状态控件**（`Button` / `Table` / `ECharts` … 直接继承 Flet 控件）直接构造即可；
+> **有状态组件**（`Input` / `Checkbox` / `Switch` / `SelectBox` … 由 `@ft.observable` 数据对象 +
+> `@ft.component ui()` 组成）必须构造后再调用 `.ui()` 放进控件树，否则只会得到一块空白或灰块。
 
 ## 包结构
 
 ```
 src/ui/
-├── __init__.py          # 导出 flet + 所有子包
-├── app.py               # App 类（含路由）
-├── ft_init.py           # Flet 初始化
-├── chart/               # 图表
-│   ├── bar_chart.py     #   BarChart
-│   ├── line_chart.py    #   LineChart
-│   ├── rea_chart.py     #   AreaChart
-│   └── scatter_chart.py #   ScatterChart
-├── core/                # 核心工具
-│   ├── config.py
-│   ├── constants.py
-│   ├── form.py
-│   └── language.py
-├── data/                # 静态资源（字体、图片）
-├── display/             # 展示组件
-│   ├── image.py         #   Image
-│   ├── image_gridview.py#   ImageGridView
-│   ├── list_tile.py     #   ListTile
-│   ├── log_container.py #   LogContainer
-│   └── text.py          #   Text
-├── feedback/            # 反馈 & 浮层
-│   ├── alert_dialog.py  #   AlertDialog
-│   ├── loading.py       #   Loading
-│   ├── message.py       #   Message
-│   ├── progress_bar.py  #   ProgressBar
-│   └── toast.py         #   SnackBar
-├── input/               # 表单输入
+├── __init__.py              # 导出 flet 全部内容 + 所有 CS UI 组件（617 个名字）
+├── app.py                   # 传统式 App 入口
+├── ft_init.py               # Flet 初始化
+├── theme.py                 # 主题 / 配色
+├── cli.py                   # 命令行入口
+├── chart/                   # 图表（基于 flet-charts）
+│   ├── _data.py             #   共享数据解析 + 配色（数值轴 / 分类轴）
+│   ├── bar_chart.py         #   BarChart
+│   ├── line_chart.py        #   LineChart
+│   ├── rea_chart.py         #   AreaChart
+│   └── scatter_chart.py     #   ScatterChart
+├── components/              # 通用可复用控件
+│   └── icon_button.py       #   IconButton
+├── core/                    # 核心工具
+│   ├── config.py            #   配置
+│   ├── constants.py         #   StyleType / FeedbackStyle / ButtonShape …
+│   ├── language.py          #   多语言
+│   ├── logger.py            #   日志
+│   └── styles.py            #   统一样式助手
+├── data/                    # 静态资源（字体、图片）
+├── display/                 # 展示组件
+│   ├── echarts.py           #   ECharts（WebView 内嵌）
+│   ├── image.py             #   Image
+│   ├── image_gridview.py    #   ImageGridView
+│   ├── list_tile.py         #   ListTile
+│   ├── log_container.py     #   LogContainer
+│   ├── text.py              #   Text / Header_1..5 / Quote / Link / Code / Markdown / Json
+│   └── media/               #   媒体
+│       ├── audio.py         #     Audio / AudioPlayer
+│       ├── pdf.py           #     Pdf
+│       └── video.py         #     Video
+├── feedback/                # 反馈 & 浮层
+│   ├── alert_dialog.py      #   AlertDialog
+│   ├── loading.py           #   Loading
+│   ├── message.py           #   Message
+│   ├── progress_bar.py      #   ProgressBar
+│   └── toast.py             #   Toast / toast_success / toast_error …
+├── input/                   # 表单输入
 │   ├── button.py            #   Button
-│   ├── checkbox.py          #   Checkbox
+│   ├── checkbox.py          #   Checkbox / CheckboxGroup
 │   ├── chip.py              #   Chip
 │   ├── color_picker.py      #   ColorPicker
 │   ├── date_input.py        #   DateInput
 │   ├── datetime_input.py    #   DateTimeInput
-│   ├── file_picker.py       #   FilePicker
+│   ├── file_picker.py       #   FilePicker / DirPicker
 │   ├── image_picker.py      #   ImagePicker
-│   ├── input.py             #   TextField
+│   ├── input.py             #   Input（data_type: str/int/float/file/dir）
 │   ├── multi_select.py      #   MultiSelect
 │   ├── radio.py             #   RadioGroup
 │   ├── rating.py            #   Rating
 │   ├── search_bar.py        #   SearchBar
 │   ├── segmented_button.py  #   SegmentedButton
-│   ├── select_box.py        #   Dropdown
+│   ├── select_box.py        #   SelectBox
 │   ├── slider.py            #   Slider
 │   └── switch.py            #   Switch
-├── layout/              # 布局 & 容器
-│   ├── card.py          #   Card
-│   ├── column.py        #   Column
-│   ├── container.py     #   Container
-│   ├── divider.py       #   Divider
-│   ├── expander.py      #   Expander
-│   ├── grid_view.py     #   GridView
-│   ├── list_view.py     #   ListView
-│   ├── page.py          #   Page
-│   ├── row.py           #   Row
-│   ├── stack.py         #   Stack
-│   ├── table.py         #   Table
-│   ├── tabs.py          #   Tabs
-│   ├── time_line.py     #   Timeline
-│   └── view.py          #   View
-├── navigation/          # 导航
-│   ├── app_bar.py       #   AppBar
-│   ├── bread_crumb.py   #   BreadCrumb
-│   └── paging.py        #   NavigationBar
-└── utils/               # 工具
-    ├── code_editor.py   #   CodeEditor
-    ├── code_view.py     #   CodeView
-    └── componts.py      #   辅助组件
+├── layout/                  # 布局 & 容器
+│   ├── card.py              #   Card
+│   ├── column.py            #   Column
+│   ├── container.py         #   Container
+│   ├── divider.py           #   Divider
+│   ├── expander.py          #   Expander
+│   ├── grid_view.py         #   GridView
+│   ├── list_view.py         #   ListView
+│   ├── page.py              #   PageLayout
+│   ├── row.py               #   Row
+│   ├── stack.py             #   Stack
+│   ├── table.py             #   Table（含分页）
+│   ├── tabs.py              #   Tabs / Tab / TabBar / TabBarView
+│   ├── time_line.py         #   Timeline / TimelineItem
+│   └── view.py              #   View
+├── navigation/              # 导航
+│   ├── app_bar.py           #   AppBar
+│   ├── bread_crumb.py       #   BreadCrumb / Crumb
+│   └── paging.py            #   Paging / PagingState
+└── utils/                   # 工具
+    ├── code_editor.py       #   Code
+    ├── code_view.py         #   CodeView
+    └── componts.py          #   辅助组件
 ```
 
 ## 组件概况
@@ -172,18 +205,23 @@ src/ui/
 | 分类 | 组件 |
 |------|------|
 | **Chart 图表** | BarChart、LineChart、AreaChart、ScatterChart |
-| **Display 展示** | Image、ImageGridView、ListTile、LogContainer、Text |
-| **Feedback 反馈** | AlertDialog、Loading、Message、ProgressBar、SnackBar |
-| **Input 输入** | Button、Checkbox、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker、ImagePicker、TextField、MultiSelect、RadioGroup、Rating、SearchBar、SegmentedButton、Dropdown、Slider、Switch |
-| **Layout 布局** | Card、Column、Container、Divider、Expander、GridView、ListView、Page、Row、Stack、Table、Tabs、Timeline、View |
-| **Navigation 导航** | AppBar、BreadCrumb、NavigationBar |
+| **Display 展示** | ECharts、Image、ImageGridView、ListTile、LogContainer、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display 媒体** | Audio、AudioPlayer、Video、Pdf |
+| **Feedback 反馈** | AlertDialog、Loading、Message、ProgressBar、Toast |
+| **Input 输入** | Button、Checkbox / CheckboxGroup、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker / DirPicker、ImagePicker、Input、MultiSelect、RadioGroup、Rating、SearchBar、SegmentedButton、SelectBox、Slider、Switch |
+| **Layout 布局** | Card、Column、Container、Divider、Expander、GridView、ListView、PageLayout、Row、Stack、Table、Tabs、Timeline、View |
+| **Navigation 导航** | AppBar、BreadCrumb、Paging |
+
+**双范式**：
+- **无状态控件**（`Button` / `Table` / `ECharts` / `Rating` / `Timeline` / 图表 …）直接继承 Flet 控件，构造即用。
+- **有状态组件**（`Input` / `Checkbox` / `Switch` / `SelectBox` / `MultiSelect` …）是 `@ft.observable` 数据对象，需构造后调用 `.ui()` 放进控件树。
 
 ## 导入方式
 
 所有组件均可从 `ui` 直接导入：
 
 ```python
-from ui import App, Button, Card, Column, Container, Divider, Row, Text, TextField
+from ui import Button, Card, Column, Container, Divider, Row, Text, TextField
 ```
 
 由于 `ui` 重新导出了 Flet，你也可以直接使用 Flet 类型：
@@ -202,16 +240,30 @@ from ui import Page, Colors, Icons, MainAxisAlignment, CrossAxisAlignment
 - 包内代码对外尽量无依赖
 - 事件处理函数命名：`on_xx`
 - 所有组件采用绝对路径导入
-- 基于 Python 3.13+ 语法实现
+- 基于 Python 3.12+ 语法实现
 - 参考 Flet 最新版本特性进行优化
 
 ## 示例
 
-运行演示程序查看所有组件效果：
+运行演示程序查看所有组件效果（11 个分类页 + 404 页）：
 
 ```bash
 python examples/demo.py
 ```
+
+| 路由 | 内容 |
+|------|------|
+| `/` | 首页导航（按分类进入各页） |
+| `/general` | 文本 / 按钮 / 图标 / 标签 |
+| `/layout` | 容器 / 列表 / 表格 / 时间线 |
+| `/navigation` | 面包屑 / 标签页 / 分页 |
+| `/form` | 输入框 / 选择器 / 滑块 / 评分 |
+| `/upload` | 文件 / 目录 / 保存 / 图片 |
+| `/feedback` | Toast / 消息 / 对话框 / 进度 |
+| `/display` | 日志 / 代码 / ECharts / 图片 |
+| `/charts` | 折线 / 面积 / 柱状 / 散点图 |
+| `/media` | 音频 / 视频 / PDF |
+| `/about` | 迁移速查与设计说明 |
 
 其他测试文件：
 
@@ -222,6 +274,7 @@ python examples/demo.py
 - `examples/test_line_chart.py` — 折线图
 - `examples/test_button.py` — 按钮变体
 - `examples/test_minimal.py` / `test_simple.py` — 最小示例
+- `examples/my_control.py` — 自定义控件示例
 
 ## 参考资料
 

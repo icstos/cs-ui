@@ -1,4 +1,7 @@
-from .app_bar import AppBar
-from .paging import Paging
+"""导航类组件：应用栏、面包屑、分页。"""
 
-__all__ = ["AppBar", "Paging"]
+from .app_bar import AppBar
+from .bread_crumb import BreadCrumb, Crumb
+from .paging import Paging, PagingState
+
+__all__ = ["AppBar", "BreadCrumb", "Crumb", "Paging", "PagingState"]

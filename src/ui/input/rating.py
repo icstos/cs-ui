@@ -1,5 +1,7 @@
-import flet as ft
 from collections.abc import Callable
+from dataclasses import field
+
+import flet as ft
 
 
 @ft.control
@@ -7,7 +9,9 @@ class Rating(ft.Row):
     value: int | None = None
     elements: int = 5
     readonly: bool = False
-    disabled: bool = False
+    # disabled 继承自 ft.Row 的 kw_only 字段，重新声明时必须显式 kw_only=True，
+    # 否则它会变成第 0 个位置参数（详见 ui.input.button.Button）。
+    disabled: bool = field(default=False, kw_only=True)
     on_change: Callable | None = None
 
     def init(self):

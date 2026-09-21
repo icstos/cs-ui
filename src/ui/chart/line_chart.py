@@ -12,33 +12,26 @@
 """
 
 import math
-from collections.abc import Sequence
-from typing import cast
 
 import flet as ft
 import flet_charts as ftc
 
-# 内置美观配色方案
-LINE_COLORS = [
-    "#1f6feb",  # 蓝色
-    "#10b981",  # 绿色
-    "#f59e0b",  # 橙色
-    "#ef4444",  # 红色
-    "#8b5cf6",  # 紫色
-    "#ec4899",  # 粉色
-    "#06b6d4",  # 青色
-    "#f97316",  # 深橙
-]
-
-type DataRow = dict[str, int | float] | tuple | list
-type DataInput = (
-    list[DataRow]
-    | dict[str, list[int | float]]
-    | list[int | float]
-    | tuple[int | float, ...]
-    | list[tuple | list]
+from ui.chart._data import (
+    CHART_COLORS,
+    DataInput,
+    Series,
+    parse_data,
+    resolve_colors,
+    resolve_x_labels,
+    x_axis_label_size,
+    x_axis_labels,
+    y_axis_label_size,
 )
-type SeriesData = list[tuple[str, list[tuple[float, float]]]]
+
+# 内置美观配色方案（与其他图表共享同一套配色）
+LINE_COLORS = CHART_COLORS
+
+type SeriesData = list[Series]
 
 
 class LineChart(ftc.LineChart):
@@ -84,6 +77,8 @@ class LineChart(ftc.LineChart):
             是否显示数据点标记。默认为 False。
         interactive : bool, optional
             是否支持交互。默认为 True。
+        show_x_labels : bool, optional
+            是否显示 x 轴标签（数值轴显示刻度，分类轴显示原始文本）。默认为 True。
         **kwargs : dict
             其他传递给 flet_charts.LineChart 的参数。
 
@@ -129,14 +124,17 @@ class LineChart(ftc.LineChart):
         stroke_width: int | float = 2.0,
         show_points: bool = False,
         interactive: bool = True,
+        show_x_labels: bool = True,
         **kwargs,
     ) -> None:
         colors = self._resolve_colors(color, 1)
+        x_labels: list[tuple[float, str]] = []
 
         if data is not None:
             parsed_data, series_names = self._parse_data(data, x, y)
             n_series = len(series_names) or 1
             colors = self._resolve_colors(color, n_series)
+            x_labels = x_axis_labels(parsed_data, resolve_x_labels(data, x))
 
             data_series = [
                 ftc.LineChartData(
@@ -169,10 +167,30 @@ class LineChart(ftc.LineChart):
                 }
             ),
             left_axis=ftc.ChartAxis(
-                show_labels=True, labels=[], title=None, title_size=12
+                show_labels=True,
+                labels=[],
+                title=None,
+                title_size=12,
+                label_size=y_axis_label_size(parsed_data),
+                # 自动刻度已覆盖数据范围，再画极值标签会与之重叠
+                show_min=False,
+                show_max=False,
             ),
             bottom_axis=ftc.ChartAxis(
-                show_labels=True, labels=[], title=None, title_size=12
+                show_labels=show_x_labels,
+                labels=(
+                    [
+                        ftc.ChartAxisLabel(value=v, label=text)
+                        for v, text in x_labels
+                    ]
+                    if show_x_labels
+                    else []
+                ),
+                title=None,
+                title_size=12,
+                label_size=x_axis_label_size(x_labels),
+                show_min=False,
+                show_max=False,
             ),
             horizontal_grid_lines=self._build_grid_lines(show_grid),
             vertical_grid_lines=self._build_grid_lines(show_grid),
@@ -238,7 +256,7 @@ class LineChart(ftc.LineChart):
         )
 
     # ------------------------------------------------------------------
-    # 数据解析
+    # 数据解析（具体实现复用 ui.chart._data，见该模块文档）
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -246,131 +264,12 @@ class LineChart(ftc.LineChart):
         data: DataInput, x: str | None, y: str | list[str] | None
     ) -> tuple[SeriesData, list[str]]:
         """解析数据，返回 (series_list, series_names)。"""
-        match data:
-            case dict():
-                return LineChart._parse_dict_data(data, x, y)
-            case [dict(), *_]:
-                return LineChart._parse_dict_list_data(cast(list[dict], data), x, y)
-            case [(list() | tuple()), *_]:
-                return LineChart._parse_tuple_list_data(cast(list[tuple | list], data))
-            case [int() | float(), *_] | (int() | float(), *_):
-                return LineChart._parse_value_list_data(
-                    cast(Sequence[int | float], data)
-                )
-            case _:
-                return [], []
-
-    @staticmethod
-    def _resolve_y_keys(
-        keys: list[str], x_key: str, y: str | list[str] | None
-    ) -> list[str]:
-        """统一解析 y 轴列名。"""
-        match y:
-            case str():
-                return [y]
-            case list():
-                return y
-            case _:
-                return [k for k in keys if k != x_key]
-
-    @staticmethod
-    def _parse_dict_data(
-        data: dict[str, list[int | float]],
-        x: str | None,
-        y: str | list[str] | None,
-    ) -> tuple[SeriesData, list[str]]:
-        """解析列字典格式: {"x": [1,2,3], "y": [4,5,6]}。"""
-        keys = list(data.keys())
-        if not keys:
-            return [], []
-
-        x_key = x or keys[0]
-        x_values = data.get(x_key, [])
-        if not x_values:
-            return [], []
-
-        y_keys = LineChart._resolve_y_keys(keys, x_key, y)
-        result = [
-            (
-                y_key,
-                [
-                    (float(x_values[i]), float(data[y_key][i]))
-                    for i in range(min(len(x_values), len(data[y_key])))
-                ],
-            )
-            for y_key in y_keys
-            if y_key in data
-        ]
-        return result, [y_key for y_key in y_keys if y_key in data]
-
-    @staticmethod
-    def _parse_dict_list_data(
-        data: list[dict[str, int | float]],
-        x: str | None,
-        y: str | list[str] | None,
-    ) -> tuple[SeriesData, list[str]]:
-        """解析字典列表格式: [{"x":1,"y":2}, {"x":2,"y":3}]。"""
-        if not data:
-            return [], []
-
-        keys = list(data[0].keys())
-        x_key = x or keys[0]
-        y_keys = LineChart._resolve_y_keys(keys, x_key, y)
-
-        if not y_keys:
-            return [], []
-
-        result = [
-            (
-                y_key,
-                [
-                    (float(row[x_key]), float(row[y_key]))
-                    for row in data
-                    if x_key in row and y_key in row
-                ],
-            )
-            for y_key in y_keys
-        ]
-        return result, y_keys
-
-    @staticmethod
-    def _parse_tuple_list_data(
-        data: list[tuple | list],
-    ) -> tuple[SeriesData, list[str]]:
-        """解析元组/列表列表: [(1,2), (2,3)]。"""
-        points = [
-            (float(item[0]), float(item[1]))
-            for item in data
-            if isinstance(item, (list, tuple)) and len(item) >= 2
-        ]
-        return [("series", points)], ["series"]
-
-    @staticmethod
-    def _parse_value_list_data(
-        data: Sequence[int | float],
-    ) -> tuple[SeriesData, list[str]]:
-        """解析数值列表: [1, 2, 3, 4, 5]。"""
-        points = [(float(i), float(val)) for i, val in enumerate(data)]
-        return [("series", points)], ["series"]
-
-    # ------------------------------------------------------------------
-    # 颜色解析
-    # ------------------------------------------------------------------
+        return parse_data(data, x, y)
 
     @staticmethod
     def _resolve_colors(color: str | list[str] | None, count: int) -> list[str]:
         """解析并分配颜色。"""
-        match color:
-            case str():
-                return [color] * count
-            case list():
-                return (
-                    color[:count]
-                    if len(color) >= count
-                    else color + LINE_COLORS[count - len(color) :]
-                )
-            case _:
-                return LINE_COLORS[:count]
+        return resolve_colors(color, count)
 
 
 # ======================================================================

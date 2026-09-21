@@ -5,6 +5,8 @@ from collections.abc import Callable
 from enum import Enum
 from dataclasses import dataclass
 
+from ui.core.styles import outline_input
+
 
 class BorderRadiusSize(Enum):
     # https://fluent2.microsoft.design/shapes
@@ -23,8 +25,10 @@ ICON_HOVER_COLOR = ft.Colors.BLUE_100
 
 @ft.control
 class NowPageButton(ft.Button):
-    width: int = ICON_WIDTH
-    height: int = ICON_HEIGHT
+    # width/height 在基类中是 kw_only 字段；重新声明时必须显式 kw_only=True，
+    # 否则会变成第 0 个位置参数，抢占 content 的位置（详见 ui.input.button.Button）。
+    width: int = field(default=ICON_WIDTH, kw_only=True)
+    height: int = field(default=ICON_HEIGHT, kw_only=True)
     style: ft.ButtonStyle = field(
         default_factory=lambda: ft.ButtonStyle(
             color=ft.Colors.BLUE,
@@ -41,8 +45,8 @@ class NowPageButton(ft.Button):
 
 @ft.control
 class OtherPageButton(ft.Button):
-    width: int = ICON_WIDTH
-    height: int = ICON_HEIGHT
+    width: int = field(default=ICON_WIDTH, kw_only=True)
+    height: int = field(default=ICON_HEIGHT, kw_only=True)
     style: ft.ButtonStyle = field(
         default_factory=lambda: ft.ButtonStyle(
             color={ft.ControlState.DEFAULT: ft.Colors.BLACK},
@@ -58,8 +62,8 @@ class OtherPageButton(ft.Button):
 @ft.control
 class PrevNextPageButton(ft.IconButton):
     icon_size: int = 20
-    width: int = ICON_WIDTH
-    height: int = ICON_HEIGHT
+    width: int = field(default=ICON_WIDTH, kw_only=True)
+    height: int = field(default=ICON_HEIGHT, kw_only=True)
     style: ft.ButtonStyle = field(
         default_factory=lambda: ft.ButtonStyle(
             color={
@@ -225,7 +229,7 @@ def Paging(state: PagingState):
         height=32,
         text_align=ft.TextAlign.CENTER,
         content_padding=0,
-        border_color=ft.Colors.GREY_300,
+        border=outline_input(4, ft.Colors.GREY_300, ft.Colors.BLUE),
     )
     v_num_of_row_changer_field = ft.Dropdown(
         options=[ft.DropdownOption(_) for _ in [5, 10, 15, 20, 30, 40, 50]],
@@ -233,7 +237,7 @@ def Paging(state: PagingState):
         width=88,
         dense=True,
         content_padding=0,
-        border_color=ft.Colors.GREY_300,
+        border=outline_input(4, ft.Colors.GREY_300, ft.Colors.BLUE),
         scale=0.9,
         on_select=state.handle_change_per_page_nums,
     )
