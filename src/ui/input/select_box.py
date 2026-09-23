@@ -1,6 +1,7 @@
 import flet as ft
 from dataclasses import dataclass, field
 from collections.abc import Callable
+from ui.core.styles import outline_input
 from ui.input.input import Label
 
 ICON_SIZE = 18
@@ -52,11 +53,8 @@ class SelectBox(Label):
             filled=self.filled,
             # editable=self.editable,
             content_padding=ft.Padding.only(left=PADDING),
-            border_color=ft.Colors.GREY_200,
             bgcolor=ft.Colors.GREY_200,
-            border_width=1,
-            border_radius=6,
-            focused_border_color=ft.Colors.BLUE,
+            border=outline_input(6, ft.Colors.GREY_200, ft.Colors.BLUE),
             on_change=_on_select,
             height=INPUT_HEIGHT,
         )

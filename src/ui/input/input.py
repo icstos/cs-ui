@@ -3,6 +3,8 @@ from decimal import Decimal
 from pathlib import Path
 from dataclasses import dataclass
 
+from ui.core.styles import outline_input
+
 ICON_SIZE = 16
 FONT_SIZE = 16
 BORDER_RADIUS = 8
@@ -228,14 +230,10 @@ class Input(Label):
         v_ui = ft.TextField(
             value=str(self.value) if self.value is not None else "",
             cursor_color=ft.Colors.BLUE,
-            focused_border_color=ft.Colors.BLUE,
             selection_color=ft.Colors.GREY_400,
             fill_color=ft.Colors.WHITE,
             hover_color=ft.Colors.BLUE_50,
-            border_radius=ft.BorderRadius.all(BORDER_RADIUS),
-            border=ft.InputBorder.OUTLINE,
-            border_color=ft.Colors.GREY_300,
-            border_width=1,
+            border=outline_input(BORDER_RADIUS, ft.Colors.GREY_300, ft.Colors.BLUE),
             cursor_width=1,
             hint_text=self.hint_text,
             multiline=self.multiline,

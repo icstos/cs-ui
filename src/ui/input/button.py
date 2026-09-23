@@ -1,3 +1,5 @@
+from dataclasses import field
+
 import flet as ft
 from ui.core.constants import StyleType, FeedbackStyle, ButtonShape
 
@@ -8,11 +10,16 @@ BUTTON_HEIGHT = 36
 
 @ft.control
 class Button(ft.Button):
+    # 注意（flet 1.0.0）：基类的 height 是 kw_only 字段；子类若用裸注解重新声明，
+    # dataclasses 会把它换成 kw_only=False 的新 Field，而位置仍沿用基类顺序 ——
+    # 结果是 height 抢到第 0 个位置参数，Button("文字") 会把文字塞进 height。
+    # 因此重新声明继承字段时必须显式 kw_only=True。
+    height: int = field(default=BUTTON_HEIGHT, kw_only=True)
+
     style_type: StyleType = StyleType.DEFAULT
     shape: ButtonShape = ButtonShape.ROUND
     plain: bool = False  # 中心是否镂空
     is_primary: bool = False
-    height: int = BUTTON_HEIGHT
 
     def init(self):
         if self.is_primary:
