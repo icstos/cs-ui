@@ -120,7 +120,7 @@ async def probe(page: ft.Page) -> None:
             "/navigation": {"BreadCrumb", "Crumb", "Tab", "NavigationBarDestination"},
             "/form": {"TextField", "Checkbox", "Dropdown", "Radio", "Rating", "Segment"},
             "/feedback": {"ProgressBar", "Button"},
-            "/display": {"ECharts", "CodeEditor", "Image"},
+            "/display": {"CodeEditor", "Image", "ListTile"},
             "/charts": {"LineChart", "AreaChart", "BarChart", "ScatterChart"},
         }
         print()
