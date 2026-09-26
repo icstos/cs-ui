@@ -8,7 +8,9 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 - **Inheritance-based** — all components directly subclass Flet native controls (e.g., `Button(ft.Button)`, `Text(ft.Text)`)
 - **Smart defaults** — components come with sensible styling defaults (colors, sizes, border-radius, etc.) for rapid prototyping
 - **Categorized modules** — components organized by function: chart, display, feedback, input, layout, navigation
-- **Declarative routing** — view-stack routing via `ft.Router(manage_views=True)` + `page.render_views`
+- **Declarative routing** — root-view routing via `ft.Router(routes, manage_views=False)` + `page.render`
+- **Working page overlays** — under the root-view path, `page.overlay` / `page.show_dialog` actually
+  render, so dropdown panels such as `MultiSelect` can truly float above the content
 - **Two component paradigms** — stateless controls subclass native Flet controls; stateful ones are `@ft.observable` objects with a `ui()` renderer
 - **Charts** — Bar, Line, Area, and Scatter chart wrappers via `flet-charts`, with both numeric and categorical x-axes
 
@@ -54,61 +56,90 @@ from ui import (
 
 
 @ft.component
-def HomePage() -> ft.View:
+def HomePage() -> ft.Control:
     name = ft.use_ref(lambda: Input(label="Name", value="Shawn", width=260)).current
     agree = ft.use_ref(lambda: Checkbox(label="I have read the terms")).current
 
-    return ft.View(
-        route="/",
-        appbar=ft.AppBar(title=Text("CS UI Demo")),
-        controls=[
-            Card(
-                elevation=4,
-                content=Container(
-                    padding=24,
-                    border_radius=16,
-                    content=Column(
-                        controls=[
-                            Text("CS UI declarative demo", size=24, weight=ft.FontWeight.BOLD),
-                            Text("Built on flet 1.0.0.", size=14, color="#6b7280"),
-                            Divider(),
-                            name.ui(),
-                            Row(
-                                spacing=20,
-                                controls=[agree.ui(), ft.Switch(label="A switch")],
-                            ),
-                            Button("Click me", on_click=lambda _: print("clicked!")),
-                        ],
-                        spacing=16,
+    # Pages return plain controls and draw their own top bar — see the notes below
+    return Container(
+        expand=True,
+        content=Column(
+            spacing=0,
+            controls=[
+                Container(
+                    height=56,
+                    bgcolor=ft.Colors.WHITE,
+                    padding=ft.Padding.symmetric(horizontal=14),
+                    content=Row(
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[Text("CS UI Demo", size=17, weight=ft.FontWeight.W_600)],
                     ),
                 ),
-            )
-        ],
+                Card(
+                    elevation=4,
+                    content=Container(
+                        padding=24,
+                        border_radius=16,
+                        content=Column(
+                            controls=[
+                                Text("CS UI declarative demo", size=24, weight=ft.FontWeight.BOLD),
+                                Text("Built on flet 1.0.0.", size=14, color="#6b7280"),
+                                Divider(),
+                                name.ui(),
+                                Row(
+                                    spacing=20,
+                                    controls=[agree.ui(), ft.Switch(label="A switch")],
+                                ),
+                                Button("Click me", on_click=lambda _: print("clicked!")),
+                            ],
+                            spacing=16,
+                        ),
+                    ),
+                ),
+            ],
+        ),
     )
 
 
 @ft.component
 def App() -> ft.Control:
-    return Router([Route(index=True, component=HomePage)], manage_views=True)
+    return Router([Route(index=True, component=HomePage)], manage_views=False)
 
 
 def main(page: ft.Page) -> None:
     page.title = "CS UI Demo"
-    page.render_views(App)
+    page.render(App)
 
 
 if __name__ == "__main__":
     ft.run(main)
 ```
 
-> Migration notes: `ft.app(main)` → `ft.run(main)`; `page.add(...)` → `page.render(Component)`;
-> `page.go(route)` → `page.navigate(route)`; hand-maintained `page.views` → `ft.Router(manage_views=True)`.
-> The bundled `ui.Button` takes its text as `content` (not `label`).
+> **Render path: use `page.render` + `Router(manage_views=False)`, not `page.render_views`.**
 >
-> Components come in two flavors: **stateless controls** (`Button` / `Table` / `ECharts` …) subclass
+> Two pitfalls we hit for real:
+>
+> 1. `page.render_views` (the view stack behind `Router(manage_views=True)`) **covers the entire page
+>    overlay layer** — anything appended to `page.overlay` renders zero pixels, and `page.show_dialog`
+>    is just as dead. It does **not** raise: `len(page.overlay)` is correct and callbacks still fire.
+>    Floating `MultiSelect` panels, toasts and dialogs all silently break.
+> 2. **`ft.View` cannot be used as an ordinary control.** Under the root-view path, putting a `View`
+>    into the widget tree makes Flutter throw `Bad state: No element` on repeat and the whole page
+>    turns into a grey box. Likewise `ft.AppBar` is an `AdaptiveControl`: it only fits `View.appbar`
+>    and cannot go into `Column.controls` — draw the top bar with `Container` + `Row` instead.
+>
+> Migration notes: `ft.app(main)` → `ft.run(main)`; `page.add(...)` → `page.render(Component)`;
+> `page.go(route)` → `page.navigate(route)`; hand-maintained `page.views` →
+> `ft.Router(routes, manage_views=False)`. The bundled `ui.Button` takes its text as `content` (not `label`).
+>
+> Components come in two flavors: **stateless controls** (`Button` / `Table` / `Rating` …) subclass
 > Flet controls and are usable immediately; **stateful components** (`Input` / `Checkbox` / `Switch` /
-> `SelectBox` …) are `@ft.observable` data objects that must be constructed and then rendered via
-> `.ui()` — putting the object itself in the widget tree yields a blank or grey box.
+> `SelectBox` / `MultiSelect` …) are `@ft.observable` data objects that must be constructed and then
+> rendered via `.ui()` — putting the object itself in the widget tree yields a blank or grey box.
+>
+> If the host app has to keep the view stack (`manage_views=True`), `MultiSelect` automatically
+> degrades to **in-flow expansion** (the panel takes layout height and pushes content down); pass
+> `float_panel=False` to opt out of the overlay explicitly.
 
 ## Package Structure
 
@@ -130,6 +161,7 @@ src/ui/
 ├── core/                    # Core utilities
 │   ├── config.py            #   configuration
 │   ├── constants.py         #   StyleType / FeedbackStyle / ButtonShape …
+│   ├── float_layer.py       #   page overlay: overlay_usable / use_float_layer
 │   ├── language.py          #   i18n
 │   ├── logger.py            #   logging
 │   └── styles.py            #   shared style helpers

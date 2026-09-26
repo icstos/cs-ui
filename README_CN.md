@@ -12,7 +12,9 @@
 - **继承原生控件** — 所有组件直接继承 Flet 原生控件（如 `Button(ft.Button)`、`Text(ft.Text)`）
 - **智能默认值** — 组件自带合理的样式默认值（颜色、尺寸、圆角等），加速原型开发
 - **模块分类** — 组件按功能分类：chart / display / feedback / input / layout / navigation
-- **声明式路由** — 基于 `ft.Router(manage_views=True)` + `page.render_views` 的视图栈路由
+- **声明式路由** — `ft.Router(routes, manage_views=False)` + `page.render` 的根视图路由
+- **页面浮层可用** — 根视图路径下 `page.overlay` / `page.show_dialog` 正常渲染，
+  `MultiSelect` 这类下拉面板可以真正"悬挂"在内容之上
 - **双范式组件** — 无状态控件继承原生控件；有状态组件用 `@ft.observable` + `ui()` 函数
 - **图表支持** — 通过 `flet-charts` 封装 Bar / Line / Area / Scatter 图表，x 轴数值 / 分类通吃
 
@@ -58,63 +60,91 @@ from ui import (
 
 
 @ft.component
-def HomePage() -> ft.View:
+def HomePage() -> ft.Control:
     name = ft.use_ref(lambda: Input(label="姓名", value="Shawn", width=260)).current
     agree = ft.use_ref(lambda: Checkbox(label="我已阅读")).current
 
-    return ft.View(
-        route="/",
-        appbar=ft.AppBar(title=Text("CS UI Demo")),
-        controls=[
-            Card(
-                elevation=4,
-                content=Container(
-                    padding=24,
-                    border_radius=16,
-                    content=Column(
-                        controls=[
-                            Text("CS UI 声明式示例", size=24, weight=ft.FontWeight.BOLD),
-                            Text("基于 flet 1.0.0 构建的组件体系。", size=14, color="#6b7280"),
-                            Divider(),
-                            name.ui(),
-                            Row(
-                                spacing=20,
-                                controls=[agree.ui(), ft.Switch(label="开关示例")],
-                            ),
-                            Button(
-                                "点我",
-                                on_click=lambda _: print("clicked!"),
-                            ),
-                        ],
-                        spacing=16,
+    # 页面返回普通控件，顶栏自绘 —— 根视图模式下 ft.View / ft.AppBar 不可用（见下）
+    return Container(
+        expand=True,
+        content=Column(
+            spacing=0,
+            controls=[
+                Container(
+                    height=56,
+                    bgcolor=ft.Colors.WHITE,
+                    padding=ft.Padding.symmetric(horizontal=14),
+                    content=Row(
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[Text("CS UI Demo", size=17, weight=ft.FontWeight.W_600)],
                     ),
                 ),
-            )
-        ],
+                Card(
+                    elevation=4,
+                    content=Container(
+                        padding=24,
+                        border_radius=16,
+                        content=Column(
+                            controls=[
+                                Text("CS UI 声明式示例", size=24, weight=ft.FontWeight.BOLD),
+                                Text("基于 flet 1.0.0 构建的组件体系。", size=14, color="#6b7280"),
+                                Divider(),
+                                name.ui(),
+                                Row(
+                                    spacing=20,
+                                    controls=[agree.ui(), ft.Switch(label="开关示例")],
+                                ),
+                                Button(
+                                    "点我",
+                                    on_click=lambda _: print("clicked!"),
+                                ),
+                            ],
+                            spacing=16,
+                        ),
+                    ),
+                ),
+            ],
+        ),
     )
 
 
 @ft.component
 def App() -> ft.Control:
-    return Router([Route(index=True, component=HomePage)], manage_views=True)
+    return Router([Route(index=True, component=HomePage)], manage_views=False)
 
 
 def main(page: ft.Page) -> None:
     page.title = "CS UI Demo"
-    page.render_views(App)
+    page.render(App)
 
 
 if __name__ == "__main__":
     ft.run(main)
 ```
 
-> 迁移提示：`ft.app(main)` → `ft.run(main)`；`page.add(...)` → `page.render(Component)`；
-> `page.go(route)` → `page.navigate(route)`；`page.views` 手工维护 → `ft.Router(manage_views=True)`。
-> 项目内置的 `ui.Button` 用 `content` 传文字（不是 `label`）。
+> **渲染路径：请用 `page.render` + `Router(manage_views=False)`，不要用 `page.render_views`。**
 >
-> 组件分两类：**无状态控件**（`Button` / `Table` / `ECharts` … 直接继承 Flet 控件）直接构造即可；
-> **有状态组件**（`Input` / `Checkbox` / `Switch` / `SelectBox` … 由 `@ft.observable` 数据对象 +
+> 两个实测过的坑：
+>
+> 1. `page.render_views`（`Router(manage_views=True)` 的视图栈）会把**整个页面浮层盖住** ——
+>    `page.overlay` 里挂任何东西都是零像素、`page.show_dialog` 同样失效，
+>    而且**不报错**（Python 侧 `len(page.overlay)` 正确、回调照常触发）。
+>    `MultiSelect` 的悬浮面板、Toast、Dialog 都会因此失灵。
+> 2. **`ft.View` 不能当普通控件用**。根视图模式下把一个 `View` 塞进控件树，
+>    Flutter 侧会反复抛 `Bad state: No element`，整页渲染成灰块。
+>    同理 `ft.AppBar` 是 `AdaptiveControl`，只能挂在 `View.appbar` 上，
+>    进不了 `Column.controls` —— 顶栏请用 `Container` + `Row` 自绘。
+>
+> 迁移提示：`ft.app(main)` → `ft.run(main)`；`page.add(...)` → `page.render(Component)`；
+> `page.go(route)` → `page.navigate(route)`；`page.views` 手工维护 →
+> `ft.Router(routes, manage_views=False)`。项目内置的 `ui.Button` 用 `content` 传文字（不是 `label`）。
+>
+> 组件分两类：**无状态控件**（`Button` / `Table` / `Rating` … 直接继承 Flet 控件）直接构造即可；
+> **有状态组件**（`Input` / `Checkbox` / `Switch` / `SelectBox` / `MultiSelect` … 由 `@ft.observable` 数据对象 +
 > `@ft.component ui()` 组成）必须构造后再调用 `.ui()` 放进控件树，否则只会得到一块空白或灰块。
+>
+> 若宿主必须用视图栈（`manage_views=True`），`MultiSelect` 会自动降级为**流内展开**
+> （面板占布局高度、会把下方内容推下去）；也可用 `float_panel=False` 显式关闭浮层。
 
 ## 包结构
 
@@ -136,6 +166,7 @@ src/ui/
 ├── core/                    # 核心工具
 │   ├── config.py            #   配置
 │   ├── constants.py         #   StyleType / FeedbackStyle / ButtonShape …
+│   ├── float_layer.py       #   页面浮层：overlay_usable / use_float_layer
 │   ├── language.py          #   多语言
 │   ├── logger.py            #   日志
 │   └── styles.py            #   统一样式助手
