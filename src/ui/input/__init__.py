@@ -3,6 +3,7 @@
 from .button import Button
 from .checkbox import Checkbox, CheckboxGroup
 from .chip import Chip
+from .color_picker import ColorPicker
 from .date_input import DateInput
 from .datetime_input import DateTimeInput
 from .file_picker import DirPicker, FilePicker, FileSaver
@@ -22,6 +23,7 @@ __all__ = [
     "Checkbox",
     "CheckboxGroup",
     "Chip",
+    "ColorPicker",
     "DateInput",
     "DateTimeInput",
     "DirPicker",

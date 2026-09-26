@@ -108,6 +108,7 @@ from ui import (  # noqa: E402
     Checkbox,
     CheckboxGroup,
     Chip,
+    ColorPicker,
     DateInput,
     DateTimeInput,
     DirPicker,
@@ -1167,6 +1168,20 @@ def FormPage() -> ft.Control:
             on_click=lambda e: print(f"[SearchBar] 选择 {e.control.data}"),
         )
     )
+    brand_color = state(lambda: ColorPicker(label="品牌色", value="#1F6FEB"))
+    overlay_color = state(
+        lambda: ColorPicker(
+            label="叠加层",
+            value="#7C3AEDB3",  # 8 位十六进制按 CSS 顺序（末尾两位是透明度）
+            default="#7C3AED",
+            preset_cols=8,
+        )
+    )
+    locked_color = state(
+        lambda: ColorPicker(
+            label="禁用", value="#94A3B8", disabled=True, clearable=False
+        )
+    )
 
     def dump_values(_):
         # Rating 内部按 0 计数，对外展示统一 +1 还原为「几颗星」
@@ -1174,7 +1189,8 @@ def FormPage() -> ft.Control:
         message = (
             f"姓名={name.value} | 年龄={age.value} | 城市={city.value} | 标签={tags.value} "
             f"| 音量={volume.value} | 评分={stars} "
-            f"| 生日={birthday.value} | 会议={meeting.value} | 打卡={checkin.value}"
+            f"| 生日={birthday.value} | 会议={meeting.value} | 打卡={checkin.value} "
+            f"| 品牌色={brand_color.value} | 叠加层={overlay_color.value}"
         )
         toast_info(message, page=page)
 
@@ -1237,6 +1253,16 @@ def FormPage() -> ft.Control:
             "网格快速跨年；DateTimeInput 面板是「月历 + 时/分/秒轮盘」并排，点日期不收起"
             "（可接着调时间），滚轮或 ▲▼ 步进，点「完成」收起。",
             Column(spacing=12, controls=[birthday.ui(), meeting.ui(), checkin.ui()]),
+        ),
+        section(
+            "ColorPicker 颜色选择器",
+            "点框体挂出取色面板（悬浮、不推下方内容）：左上拖动改饱和 / 明度，右侧色相条、"
+            "下沿透明度条都能拖；十六进制框与 R/G/B/A 数值框实时联动，右上角按钮切 RGB / HSL，"
+            "最左的原 / 新对比块点左半即还原。value 是 flet 原生色串，可直接喂给任意控件。",
+            Column(
+                spacing=12,
+                controls=[brand_color.ui(), overlay_color.ui(), locked_color.ui()],
+            ),
         ),
         section(
             "SearchBar 搜索栏",
