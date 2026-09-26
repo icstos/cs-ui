@@ -1190,7 +1190,9 @@ def FormPage() -> ft.Control:
         ),
         section(
             "DateInput / DateTimeInput",
-            "纯 Python 实现的日期时间选择器，不依赖平台原生弹层。",
+            "DateInput 点框体挂出悬浮月历（不占布局高度），点标题可切年月网格快速跨年，"
+            "框内支持直接键入 2026-09-26 / 20260926 / 2026年9月26日；"
+            "DateTimeInput 在其基础上补时 / 分（可选秒）。",
             Column(spacing=12, controls=[birthday.ui(), meeting.ui()]),
         ),
         section(

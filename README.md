@@ -10,7 +10,9 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 - **Categorized modules** — components organized by function: chart, display, feedback, input, layout, navigation
 - **Declarative routing** — root-view routing via `ft.Router(routes, manage_views=False)` + `page.render`
 - **Working page overlays** — under the root-view path, `page.overlay` / `page.show_dialog` actually
-  render, so dropdown panels such as `MultiSelect` can truly float above the content
+  render, so the `MultiSelect` dropdown and the `DateInput` calendar can truly float above the
+  content (a collapsed field is all the layout height the widget takes; opening it never pushes
+  the content below)
 - **Two component paradigms** — stateless controls subclass native Flet controls; stateful ones are `@ft.observable` objects with a `ui()` renderer
 - **Charts** — Bar, Line, Area, and Scatter chart wrappers via `flet-charts`, with both numeric and categorical x-axes
 
