@@ -207,7 +207,10 @@ def state(factory):
 
 
 def section(
-    title: str, hint: str | None = None, *controls: ft.Control
+    title: str,
+    hint: str | None = None,
+    *controls: ft.Control,
+    stretch: bool = False,
 ) -> ft.Control:
     """带标题与说明的演示分组。
 
@@ -215,6 +218,10 @@ def section(
         title: 分组标题。
         hint: 标题下一行的灰色说明文字，可为 ``None``。
         *controls: 分组正文控件。
+        stretch: 让正文横向撑满。**只有需要横向约束的控件才开**
+            （``Timeline`` 就是 —— 它是 Column，交叉轴不拉伸时里面的
+            ``Row`` 会 shrink-wrap，内容列被压成 0 宽）。默认 False，
+            免得把 Button 之类的子项也拉成整行宽。
 
     注意：这里刻意做了类型校验。控件列表里混入裸字符串时，Flutter 侧不会抛
     Python 异常，只会把整块内容渲染成一个灰块 —— 极难排查，所以在构造期就拦住。
@@ -235,7 +242,15 @@ def section(
     if hint:
         body.append(ft.Text(hint, size=12, color=MUTED))
     body.extend(controls)
-    return Column(controls=[Divider(color=BORDER, height=26), *body], spacing=10)
+    return Column(
+        controls=[Divider(color=BORDER, height=26), *body],
+        spacing=10,
+        horizontal_alignment=(
+            ft.CrossAxisAlignment.STRETCH
+            if stretch
+            else ft.CrossAxisAlignment.START
+        ),
+    )
 
 
 def panel(*controls: ft.Control, padding: int = 12, height: int | None = None) -> ft.Control:
@@ -779,15 +794,32 @@ def LayoutPage() -> ft.Control:
 
     timeline_section = section(
         "Timeline 时间线",
-        "垂直时间线：左侧轨道 + 右侧内容，done=True 自动使用对勾图标。",
+        "轴在左、时间戳独立成列，节点与标题垂直居中；type 给语义色（success / "
+        "warning / danger / info），done=True 自动用对勾 + 绿点，pending 在末尾"
+        "挂一个「进行中」空心环。第二例是左右交替（mode=\"alternate\"）并让末段"
+        "轴线渐隐。",
         Timeline(
             items=[
                 TimelineItem("提交申请", "09:12", "材料已上传完成", done=True),
-                TimelineItem("部门审批", "10:30", "审核人：张工", done=True),
-                TimelineItem("财务复核", "14:05", "等待财务确认", color="#f59e0b"),
-                TimelineItem("归档", "", "完成后自动归档"),
+                TimelineItem("部门审批", "10:30", "审核人：张工", type="warning"),
+                TimelineItem("财务复核", "14:05", "等待财务确认", type="info"),
+                TimelineItem("归档", "—", "完成后自动归档"),
+            ],
+            pending="待发起",
+            on_item_click=lambda item: print(f"[Timeline] 点击 {item.title}"),
+        ),
+        Timeline(
+            mode="alternate",
+            line_fade=True,
+            density="compact",
+            time_position="hidden",
+            items=[
+                TimelineItem("上午 9:00", "", "晨会同步进度", type="info"),
+                TimelineItem("上午 11:30", "", "完成接口联调", done=True),
+                TimelineItem("下午 18:20", "", "提交测试版本", done=True),
             ],
         ),
+        stretch=True,
     )
 
     table_control = state(lambda: Table(data_table=_build_data_table(), rows_per_page=8))

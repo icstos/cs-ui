@@ -54,6 +54,30 @@
       `2026年9月26日 9时30分` / `09:30`；**只给日期则保留原时间、只给时间则保留原日期**。
       关键技术点：`GestureDetector.on_scroll` 在 flet 1.0.0 真机可用（`ScrollEvent.scroll_delta`
       是 `ft.Offset`，取值用 `getattr(delta, "y", 0)`），且普通非滚动容器上也能收到滚轮
+- [x] 2026-09-26：`Timeline` 从「垂直单侧、固定样式」重构为**桌面级时间线**
+      （`layout/time_line.py` 218 → 727 行）。对齐收敛为 `mode` 三档
+      （轴在左 / 轴在右 / 左右交替中轴居中）；时间戳 `time_position` 四档 ——
+      **`opposite` 走对侧独立成列**（默认，VS Code 时间线 / GitHub 提交列表的形态）、
+      `top`（标题上方，Element Plus 形态）、`inline`（同行分居两端，旧版行为）、`hidden`；
+      节点用 `type` 给语义色（primary / success / warning / danger / info / neutral）、
+      `variant` 给形态（filled / outlined / plain）、`size` 给三档（18 / 26 / 34），
+      每项都可在 `TimelineItem` 上单独覆盖；`done=True` 是「对勾 + 绿点」的语法糖，
+      `pending` 在末尾挂空心环「进行中」节点；`density` 三档调节奏，`reverse` 倒序
+      （pending 仍在末尾），`line_fade` 让末段渐隐，`line_style="none"` 去掉线只留节点，
+      富内容走 `item.content`。交互：整行可点（`on_item_click` / `item.on_click`），
+      `disabled` 置灰且不响应。
+      三个关键技术点（都是真机踩出来的，见 MEMORY）：
+      ① 每行是 `Row` 但**必须开 `intrinsic_height=True`** —— 否则父级给的是**无界高度**，
+      `STRETCH` 会把整行拉到无限高（第一行占满整屏、后面全被挤出视口）；开了之后 Row
+      先用「固有高度」量一遍（轴轨那条 `Stack` 的固有高度是 0，行高因此完全由内容决定），
+      再以 tight 约束下发，`STRETCH` 才能把轴轨拉到与内容等高。
+      ② 轴轨用 `Stack` + `Container(left/top/bottom/width)` **绝对定位**画线，
+      **不能**用 `Column([线, 节点, 线])` + `线.expand=True`（同 ①，垂直无界时 expand 会撑爆）；
+      ③ `@ft.component` 构建出的控件树是 **frozen** 的，`on_hover` 回写 `bgcolor` 会抛
+      `RuntimeError: Frozen control cannot be updated.` —— 悬停高亮与点击水波纹一律交给
+      Material 的 `Container.ink` / `ink_color` 绘制（不重绘、不掉帧）。
+      轴轨宽度与「首行行盒」都取**最大节点**口径算一次（`_dot_max` / `_node_h`），
+      所以混排 18 / 26 / 34 三档尺寸时节点仍共用同一条中轴、且各自与标题垂直居中。
 
 # TODO
 - [ ] 2026-09-02：添加全局主题切换：暗黑模式

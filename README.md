@@ -15,6 +15,13 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
   the content below)
 - **Two component paradigms** — stateless controls subclass native Flet controls; stateful ones are `@ft.observable` objects with a `ui()` renderer
 - **Charts** — Bar, Line, Area, and Scatter chart wrappers via `flet-charts`, with both numeric and categorical x-axes
+- **Desktop-grade timeline** — `Timeline` supports three alignments (rail on the left / rail on the
+  right / alternating around a centered rail); the timestamp can sit in its own column on the
+  opposite side (the default, VS Code style), above the title, inline, or be hidden. Dots come with
+  semantic colors, three variants (filled / outlined / plain) and three sizes; `done` turns into a
+  check mark automatically and `pending` appends an "in progress" hollow ring. Rows are clickable
+  end to end — hover highlight and click ripple are painted by Material's `ink`, so nothing is
+  re-rendered from Python and long lists stay smooth
 
 ## Requirements
 
