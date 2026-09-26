@@ -51,10 +51,11 @@ def Contact():
 def Template():
     outlet = ft.use_route_outlet()
 
-    # # 最大化
-    return ft.View(
-        route="/", controls=[ft.Container(content=outlet, expand=True, padding=20)]
-    )
+    # 注意：这里返回普通控件而不是 ft.View。根视图模式（page.render +
+    # Router(manage_views=False)）下，View 被当成普通控件渲染会让整页变灰块
+    # （Flutter 抛 Bad state: No element）。而这正是为了让页面浮层
+    # （page.overlay / show_dialog）可用的唯一路径，详见 ui.core.float_layer。
+    return ft.Container(content=outlet, expand=True, padding=20)
 
 
 @ft.component
@@ -144,6 +145,7 @@ class App:
         # page.bgcolor = ft.Colors.GREY_400
         # page = ft.context.page
         page = ft.context.page
+        page.title = self.name
         page.fonts = FONTS
         page.theme_mode = ft.ThemeMode.LIGHT
         page.theme = ft.Theme(
@@ -178,7 +180,11 @@ class App:
         )
         if self.with_auto_routing:
             self.auto_routing()
-        return ft.Router([self.route], not_found=NotFoundView, manage_views=True)
+        # 用 manage_views=False + page.render（根视图）：
+        # manage_views=True 的视图栈会盖住页面浮层（page.overlay / show_dialog
+        # 都不渲染），MultiSelect 这类需要悬挂面板的组件会失效。
+        # 相应地，页面组件必须返回普通控件而不是 ft.View。
+        return ft.Router([self.route], not_found=NotFoundView, manage_views=False)
 
     def add_route(self, route: ft.Route | list[ft.Route]):
         if isinstance(route, ft.Route):
@@ -212,7 +218,7 @@ class App:
     def run(self):
         try:
             ft.run(
-                lambda page: page.render_views(self._app),
+                lambda page: page.render(self._app),
                 name=self.name,
                 host=self.host,
                 port=self.port,

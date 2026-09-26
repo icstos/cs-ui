@@ -164,6 +164,7 @@ src/ui/
 │   ├── float_layer.py       #   page overlay: overlay_usable / use_float_layer
 │   ├── language.py          #   i18n
 │   ├── logger.py            #   logging
+│   ├── snackbar.py          #   content guard for SnackBar-based components
 │   └── styles.py            #   shared style helpers
 ├── data/                    # Static assets (fonts, images)
 ├── display/                 # Display components

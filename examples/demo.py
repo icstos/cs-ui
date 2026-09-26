@@ -1261,7 +1261,9 @@ def FeedbackPage() -> ft.Control:
 
     def make_toast(style_type: StyleType, text: str):
         def _show(_):
-            Toast(content=text, style_type=style_type).show(page)
+            # page 必须用关键字传：第一个位置参数是 content，
+            # 写成 .show(page) 会让 content 指向页面本身并构成环形引用。
+            Toast(content=text, style_type=style_type).show(page=page)
 
         return _show
 

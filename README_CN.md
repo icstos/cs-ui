@@ -169,6 +169,7 @@ src/ui/
 │   ├── float_layer.py       #   页面浮层：overlay_usable / use_float_layer
 │   ├── language.py          #   多语言
 │   ├── logger.py            #   日志
+│   ├── snackbar.py          #   SnackBar 类组件的 content 守卫
 │   └── styles.py            #   统一样式助手
 ├── data/                    # 静态资源（字体、图片）
 ├── display/                 # 展示组件
