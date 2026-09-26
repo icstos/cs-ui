@@ -14,19 +14,33 @@
 旧版 (0.x)                    新版 (1.0.0)                       说明
 ============================  ================================  ============================
 ``ft.app(main)``              ``ft.run(main)``                   入口重命名
-``page.add(...)``             ``page.render(component)``         组件式渲染
+``page.add(...)``             ``page.render(component)``         根视图渲染
 ``page.go(route)``            ``page.navigate(route)``           导航 API
-``page.views`` 手动维护        ``ft.Router(manage_views=True)``   声明式路由 + 视图栈
-``page.overlay.append(...)``  ``page.show_dialog(...)``          弹层统一入口
+``page.views`` 手动维护        ``ft.Router(ROUTES)``              声明式路由
+``page.overlay.append(...)``  ``page.overlay.append(...)``       不变（浮层的唯一可用通道）
+``ft.View(appbar=AppBar())``  ``Container + Row`` 自绘顶栏        见下「两个坑」
 命令式 class 组件              ``@ft.component`` + hooks          函数式组件 + 状态
 ``Tooltip(content=...)``      ``control.tooltip=Tooltip(...)``   Tooltip 变成装饰值
 ``Badge(badge_value=...)``    ``Badge(label=...)``               字段重命名
 ============================  ================================  ============================
 
+两个必须知道的坑
+----------------
+1. **``page.render`` 与 ``page.render_views`` 不等价。** 后者走视图栈，
+   会把**整个页面浮层盖住** —— ``page.overlay`` 里挂什么都是零像素，
+   连 ``page.show_dialog`` 也一样，而且**不报错**。需要"悬挂面板"的组件
+   （如 ``MultiSelect``）因此失效。本 demo 统一用 ``page.render`` +
+   ``Router(manage_views=False)``。
+2. **``ft.View`` 不能当普通控件用。** 在 ``manage_views=False``（router 不进
+   视图栈）时把一个 ``View`` 塞进控件树，Flutter 侧会连续抛
+   ``Bad state: No element``，整页渲染成灰块。所以本 demo 的页面统一返回
+   ``Container``，顶栏由 :func:`top_bar` 自绘（``ft.AppBar`` 是
+   ``AdaptiveControl``，只能挂在 ``View.appbar``，进不了 ``Column.controls``）。
+
 组件库中的两类组件
 ------------------
 1. **无状态控件**（``@ft.control`` 继承原生控件）：直接构造即可，如 ``Button``、
-   ``AppBar``、``Table``、``Expander``、``ImageGridView``。
+   ``Table``、``Expander``、``ImageGridView``。
 2. **有状态组件**（``@ft.observable`` 数据对象 + ``@ft.component ui()``）：
    必须在 ``@ft.component`` 内部构造，并用 :func:`state` 固定实例，
    否则父组件每次重渲染都会重建对象、表单状态随之丢失。
@@ -130,7 +144,6 @@ from ui import (  # noqa: E402
     TimelineItem,
     VerticalDivider,
     # ---- navigation ----
-    AppBar,
     BreadCrumb,
     Crumb,
     Paging,
@@ -258,7 +271,7 @@ def labeled(label: str, control: ft.Control) -> ft.Control:
 
 @ft.component
 def ThemeToggle() -> ft.Control:
-    """AppBar 右侧的明暗主题切换。"""
+    """顶栏右侧的明暗主题切换。"""
     page = ft.context.page
     is_dark, set_dark = ft.use_state(page.theme_mode == ft.ThemeMode.DARK)
 
@@ -275,53 +288,92 @@ def ThemeToggle() -> ft.Control:
     )
 
 
+def top_bar(
+    title: str,
+    *,
+    leading: ft.Control | None = None,
+    actions: list[ft.Control] | None = None,
+) -> ft.Control:
+    """自绘顶栏。
+
+    为什么不用 ``ft.AppBar``：它是 ``AdaptiveControl``，只能挂在 ``ft.View``
+    的 ``appbar`` 字段上，不能塞进 ``Column.controls``。而本项目用
+    ``page.render`` 渲染根视图（原因见 :func:`main`），页面不再返回
+    ``ft.View``，因此这里用 ``Container + Row`` 画一条等价的顶栏。
+    """
+    return Container(
+        height=56,
+        bgcolor=ft.Colors.WHITE,
+        padding=ft.Padding.symmetric(horizontal=14),
+        border=ft.Border(bottom=ft.BorderSide(1, BORDER)),
+        content=Row(
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                Row(
+                    spacing=6,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        *([leading] if leading is not None else []),
+                        ft.Text(title, size=17, weight=ft.FontWeight.W_600),
+                    ],
+                ),
+                Row(
+                    spacing=6,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[ThemeToggle(), *(actions or [])],
+                ),
+            ],
+        ),
+    )
+
+
 def page_shell(
-    route: str,
     title: str,
     hint: str,
     *controls: ft.Control,
     actions: list[ft.Control] | None = None,
-    index: bool = False,
-) -> ft.View:
-    """统一页面骨架：AppBar + 可滚动内容区。
+) -> ft.Control:
+    """统一页面骨架：顶栏 + 可滚动内容区。
+
+    返回**普通控件**而不是 ``ft.View`` —— 根视图模式下 ``View`` 无法作为
+    控件渲染。
 
     注意：``ft.context.page`` 在回调执行期未必可用，因此这里在渲染期就把它
     取出来闭包捕获，供「返回首页」按钮使用。
     """
     current_page = ft.context.page
-    return ft.View(
-        route=route,
-        appbar=AppBar(
-            title=ft.Text(title, size=17, weight=ft.FontWeight.W_600),
-            bgcolor=ft.Colors.WHITE,
-            color=ft.Colors.ON_SURFACE,
-            elevation=1,
-            leading=None
-            if index
-            else ft.IconButton(
-                icon=ft.Icons.ARROW_BACK,
-                tooltip="返回首页",
-                on_click=lambda _: current_page.navigate("/"),
-            ),
-            actions=[ThemeToggle(), *(actions or [])],
-        ),
-        controls=[
-            Container(
-                expand=True,
-                padding=ft.Padding.symmetric(vertical=18, horizontal=22),
-                content=Column(
-                    expand=True,
-                    scroll=ft.ScrollMode.AUTO,
-                    spacing=16,
-                    controls=[
-                        ft.Text(hint, size=12, color=MUTED),
-                        *controls,
-                    ],
-                ),
-            )
-        ],
-        padding=0,
+    return Container(
+        expand=True,
         bgcolor=PAGE_BG,
+        content=Column(
+            expand=True,
+            spacing=0,
+            controls=[
+                top_bar(
+                    title,
+                    leading=ft.IconButton(
+                        icon=ft.Icons.ARROW_BACK,
+                        tooltip="返回首页",
+                        on_click=lambda _: current_page.navigate("/"),
+                    ),
+                    actions=actions,
+                ),
+                Container(
+                    expand=True,
+                    padding=ft.Padding.symmetric(vertical=18, horizontal=22),
+                    content=Column(
+                        expand=True,
+                        scroll=ft.ScrollMode.AUTO,
+                        spacing=16,
+                        controls=[
+                            ft.Text(hint, size=12, color=MUTED),
+                            *controls,
+                        ],
+                    ),
+                ),
+            ],
+        ),
     )
 
 
@@ -331,7 +383,7 @@ def page_shell(
 
 
 @ft.component
-def HomePage() -> ft.View:
+def HomePage() -> ft.Control:
     page = ft.context.page
 
     def nav_card(route: str, title: str, desc: str, icon: ft.IconData) -> ft.Control:
@@ -368,63 +420,60 @@ def HomePage() -> ft.View:
             ),
         )
 
-    return ft.View(
-        route="/",
-        appbar=AppBar(
-            title=ft.Text("CS UI 组件库 Demo", size=17, weight=ft.FontWeight.W_600),
-            bgcolor=ft.Colors.WHITE,
-            color=ft.Colors.ON_SURFACE,
-            elevation=1,
-            actions=[ThemeToggle()],
-        ),
-        controls=[
-            Container(
-                expand=True,
-                padding=ft.Padding.symmetric(vertical=18, horizontal=22),
-                content=Column(
-                    expand=True,
-                    scroll=ft.ScrollMode.AUTO,
-                    spacing=14,
-                    controls=[
-                        ft.Text(
-                            "基于 flet 1.0.0 的声明式组件库",
-                            size=26,
-                            weight=ft.FontWeight.BOLD,
-                        ),
-                        ft.Text(
-                            "全部组件已适配 flet 1.0.0：@ft.component + hooks 函数式组件、"
-                            "ft.Router 声明式路由、page.render_views 视图栈管理。",
-                            size=13,
-                            color=MUTED,
-                        ),
-                        Row(
-                            spacing=10,
-                            wrap=True,
-                            controls=[
-                                _pill("flet >= 1.0.0", ACCENT, "#e8f0fe"),
-                                _pill("10 个分类 · 60+ 组件", "#10b981", "#e7f7ee"),
-                                _pill("点击卡片进入分类", "#f59e0b", "#fef4e3"),
-                            ],
-                        ),
-                        Divider(color=BORDER, height=26),
-                        ft.Text("组件分类", size=17, weight=ft.FontWeight.W_600),
-                        GridView(
-                            height=500,
-                            runs_count=3,
-                            spacing=12,
-                            run_spacing=12,
-                            child_aspect_ratio=3.1,
-                            controls=[
-                                nav_card(route, title, desc, icon)
-                                for route, title, desc, icon in NAV_ITEMS
-                            ],
-                        ),
-                    ],
-                ),
-            )
-        ],
-        padding=0,
+    return Container(
+        expand=True,
         bgcolor=PAGE_BG,
+        content=Column(
+            expand=True,
+            spacing=0,
+            controls=[
+                top_bar("CS UI 组件库 Demo"),
+                Container(
+                    expand=True,
+                    padding=ft.Padding.symmetric(vertical=18, horizontal=22),
+                    content=Column(
+                        expand=True,
+                        scroll=ft.ScrollMode.AUTO,
+                        spacing=14,
+                        controls=[
+                            ft.Text(
+                                "基于 flet 1.0.0 的声明式组件库",
+                                size=26,
+                                weight=ft.FontWeight.BOLD,
+                            ),
+                            ft.Text(
+                                "全部组件已适配 flet 1.0.0：@ft.component + hooks 函数式组件、"
+                                "ft.Router 声明式路由、根视图渲染与页面浮层。",
+                                size=13,
+                                color=MUTED,
+                            ),
+                            Row(
+                                spacing=10,
+                                wrap=True,
+                                controls=[
+                                    _pill("flet >= 1.0.0", ACCENT, "#e8f0fe"),
+                                    _pill("10 个分类 · 60+ 组件", "#10b981", "#e7f7ee"),
+                                    _pill("点击卡片进入分类", "#f59e0b", "#fef4e3"),
+                                ],
+                            ),
+                            Divider(color=BORDER, height=26),
+                            ft.Text("组件分类", size=17, weight=ft.FontWeight.W_600),
+                            GridView(
+                                height=500,
+                                runs_count=3,
+                                spacing=12,
+                                run_spacing=12,
+                                child_aspect_ratio=3.1,
+                                controls=[
+                                    nav_card(route, title, desc, icon)
+                                    for route, title, desc, icon in NAV_ITEMS
+                                ],
+                            ),
+                        ],
+                    ),
+                ),
+            ],
+        ),
     )
 
 
@@ -443,7 +492,7 @@ def _pill(text: str, color: str, bgcolor: str) -> ft.Control:
 
 
 @ft.component
-def GeneralPage() -> ft.View:
+def GeneralPage() -> ft.Control:
     text_section = section(
         "文本 Text",
         "Header_1 ~ Header_5 对应 Material 的 5 级标题；Quote / Link 为常用变体。",
@@ -590,7 +639,6 @@ def GeneralPage() -> ft.View:
     )
 
     return page_shell(
-        "/general",
         "通用 General",
         "文本、按钮、图标、标签、图片等基础展示与交互元素。",
         text_section,
@@ -608,7 +656,7 @@ def GeneralPage() -> ft.View:
 
 
 @ft.component
-def LayoutPage() -> ft.View:
+def LayoutPage() -> ft.Control:
     flex_section = section(
         "Row / Column / Container / Stack",
         "布局基元；Stack 用相对定位把红色角标压在头像右下角。",
@@ -778,7 +826,6 @@ def LayoutPage() -> ft.View:
     )
 
     return page_shell(
-        "/layout",
         "布局 Layout",
         "布局基元、列表网格、折叠面板、时间线、数据表格与页面骨架。",
         flex_section,
@@ -844,7 +891,7 @@ def _build_data_table() -> ft.DataTable:
 
 
 @ft.component
-def NavigationPage() -> ft.View:
+def NavigationPage() -> ft.Control:
     page = ft.context.page
 
     breadcrumb_section = section(
@@ -964,7 +1011,6 @@ def NavigationPage() -> ft.View:
     )
 
     return page_shell(
-        "/navigation",
         "导航 Navigation",
         "面包屑、标签页、底部 / 侧边导航与分页器。",
         breadcrumb_section,
@@ -989,7 +1035,7 @@ def NavigationPage() -> ft.View:
 
 
 @ft.component
-def FormPage() -> ft.View:
+def FormPage() -> ft.Control:
     page = ft.context.page
 
     name = state(lambda: Input(label="姓名", value="Shawn", width=260))
@@ -1091,7 +1137,6 @@ def FormPage() -> ft.View:
         toast_info(message, page=page)
 
     return page_shell(
-        "/form",
         "表单 Form",
         "表单类组件遵循 observable 数据对象 + ui() 组件模式，实例用 ft.use_ref 固定，"
         "父组件重渲染不会丢状态。",
@@ -1117,7 +1162,8 @@ def FormPage() -> ft.View:
         ),
         section(
             "SelectBox / MultiSelect",
-            "SelectBox 基于 DropdownM2；MultiSelect 用 Chip 汇总已选并支持全选。",
+            "SelectBox 基于 DropdownM2；MultiSelect 是折叠式多选下拉框，"
+            "面板挂在页面浮层上（不占布局高度、不推下方内容），点外部或「完成」收起。",
             Column(spacing=12, controls=[city.ui(), tags.ui()]),
         ),
         section(
@@ -1162,7 +1208,7 @@ def FormPage() -> ft.View:
 
 
 @ft.component
-def UploadPage() -> ft.View:
+def UploadPage() -> ft.Control:
     page = ft.context.page
 
     file_picker = state(lambda: FilePicker(allowed_extensions=["png", "jpg", "pdf"]))
@@ -1178,7 +1224,6 @@ def UploadPage() -> ft.View:
         )
 
     return page_shell(
-        "/upload",
         "文件 Upload",
         "文件类组件同样是 observable 数据对象，value 即最终选中的结果。",
         section(
@@ -1211,7 +1256,7 @@ def UploadPage() -> ft.View:
 
 
 @ft.component
-def FeedbackPage() -> ft.View:
+def FeedbackPage() -> ft.Control:
     page = ft.context.page
 
     def make_toast(style_type: StyleType, text: str):
@@ -1250,7 +1295,6 @@ def FeedbackPage() -> ft.View:
         page.run_task(_pump)
 
     return page_shell(
-        "/feedback",
         "反馈 Feedback",
         "弹层统一走 page.show_dialog / page.pop_dialog；"
         "SnackBar 与 Toast 已包装成一行调用。",
@@ -1356,7 +1400,7 @@ def FeedbackPage() -> ft.View:
 
 
 @ft.component
-def DisplayPage() -> ft.View:
+def DisplayPage() -> ft.Control:
     page = ft.context.page
 
     logs = state(
@@ -1392,7 +1436,6 @@ def DisplayPage() -> ft.View:
     )
 
     return page_shell(
-        "/display",
         "展示 Display",
         "日志、代码、列表项与图片网格。",
         section(
@@ -1460,9 +1503,8 @@ def DisplayPage() -> ft.View:
 
 
 @ft.component
-def ChartsPage() -> ft.View:
+def ChartsPage() -> ft.Control:
     return page_shell(
-        "/charts",
         "图表 Charts",
         "四个图表统一基于 flet_charts 封装，参数参考 Streamlit 风格"
         "（data / x / y），自动配色与坐标轴。",
@@ -1503,14 +1545,13 @@ def ChartsPage() -> ft.View:
 
 
 @ft.component
-def MediaPage() -> ft.View:
+def MediaPage() -> ft.Control:
     # flet 1.0.0 起 Audio 是 ft.Service（不是 ft.Control）：放进控件树会被
     # Flutter 判为 "Unknown control: Audio"。Service 在构造时自动注册到
     # page 的服务注册表，所以这里用 state() 固定实例、只持有引用不挂进树。
     audio_service = state(lambda: Audio(src=SAMPLE_AUDIO))
 
     return page_shell(
-        "/media",
         "媒体 Media",
         "基于 flet-audio / flet-video / flet-webview 的媒体组件（示例资源来自网络）。",
         section(
@@ -1557,7 +1598,7 @@ def MediaPage() -> ft.View:
 
 
 @ft.component
-def AboutPage() -> ft.View:
+def AboutPage() -> ft.Control:
     stats = [
         ("通用", "10", ACCENT),
         ("布局", "12", "#10b981"),
@@ -1568,7 +1609,6 @@ def AboutPage() -> ft.View:
     ]
 
     return page_shell(
-        "/about",
         "关于 About",
         "cs-ui · 基于 flet 1.0.0 的 Python UI 组件库。",
         section(
@@ -1596,15 +1636,18 @@ def AboutPage() -> ft.View:
         ),
         section(
             "flet 1.0.0 迁移速查",
-            "本次适配中改动最密集的一批 API 对照。",
+            "本次适配中改动最密集的一批 API 对照。两个坑：page.render_views 会"
+            "屏蔽页面浮层（overlay / show_dialog 都零渲染且不报错）；ft.View "
+            "在根视图模式下不能当普通控件用（整页灰块）。",
             Markdown(
                 "| 旧 API (0.x) | 新 API (1.0.0) |\n"
                 "| --- | --- |\n"
                 "| `ft.app(main)` | `ft.run(main)` |\n"
                 "| `page.add(...)` | `page.render(Component)` |\n"
-                "| `page.views.append(...)` | `ft.Router(manage_views=True)` + `page.render_views` |\n"
+                "| `page.views.append(...)` | `ft.Router(ROUTES, manage_views=False)` + `page.render` |\n"
                 "| `page.go(route)` | `page.navigate(route)` |\n"
                 "| `page.overlay.append(dlg); dlg.open = True` | `page.show_dialog(dlg)` |\n"
+                "| `ft.View(appbar=ft.AppBar(…))` | `Container` + 自绘顶栏（`View` 不再是控件） |\n"
                 "| `TextField(border_radius=…, border_color=…)` | `TextField(border=ft.OutlineInputBorder(...))` |\n"
                 "| `Tooltip(content=…)` | `control.tooltip = ft.Tooltip(message=…)` |\n"
                 "| `Badge(badge_value=…)` | `Badge(label=…)` |\n"
@@ -1639,10 +1682,8 @@ def AboutPage() -> ft.View:
 def NotFoundPage() -> ft.Control:
     """404 页面内容。
 
-    注意：flet 的 ``Router`` 在 ``manage_views=True`` 时会自己包一层
-    ``View(route=当前路径, controls=[not_found()])``，所以 ``not_found`` 必须返回
-    **控件**而不是 ``ft.View`` —— 返回 View 只会得到「View 套 View」的嵌套结构，
-    页面内容渲染不出来。标题栏因此由本组件自行绘制。
+    注意：``not_found`` 必须返回**控件**而不是 ``ft.View`` —— 根视图模式下
+    ``View`` 不能作为控件渲染（整页灰块）。顶栏因此由 :func:`top_bar` 自绘。
     """
     page = ft.context.page
     return Container(
@@ -1652,18 +1693,7 @@ def NotFoundPage() -> ft.Control:
             expand=True,
             spacing=0,
             controls=[
-                Container(
-                    bgcolor=ft.Colors.WHITE,
-                    padding=ft.Padding.symmetric(vertical=10, horizontal=22),
-                    content=Row(
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        controls=[
-                            ft.Text("页面不存在", size=17, weight=ft.FontWeight.W_600),
-                            ThemeToggle(),
-                        ],
-                    ),
-                ),
+                top_bar("页面不存在"),
                 Container(
                     expand=True,
                     alignment=ft.Alignment.CENTER,
@@ -1711,7 +1741,7 @@ ROUTES: list[ft.Route] = [
 def App() -> ft.Control:
     """应用根组件：配置主题 + 声明式路由。"""
     _configure_page(ft.context.page)
-    return ft.Router(ROUTES, not_found=NotFoundPage, manage_views=True)
+    return ft.Router(ROUTES, not_found=NotFoundPage, manage_views=False)
 
 
 def _configure_page(page: ft.Page) -> None:
@@ -1735,13 +1765,19 @@ def _configure_page(page: ft.Page) -> None:
 
 
 def main(page: ft.Page) -> None:
-    """flet 1.0.0 入口：把 Router 渲染为整页视图栈。"""
+    """flet 1.0.0 入口：把 Router 渲染进根视图。
+
+    用 ``page.render`` 而非 ``page.render_views``。后者会生成视图栈，
+    把**整个页面浮层盖住**（``page.overlay`` 与 ``page.show_dialog``
+    都不渲染，且不报错），MultiSelect 这类需要悬挂面板的组件就失效了。
+    这里用 ``Router(manage_views=False)`` + ``page.render``，路由能力不变。
+    """
     page.title = "CS UI Demo"
     page.window.width = 1180
     page.window.height = 840
     page.window.min_width = 900
     page.window.min_height = 640
-    page.render_views(App)
+    page.render(App)
 
 
 if __name__ == "__main__":

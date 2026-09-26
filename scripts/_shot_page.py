@@ -28,7 +28,7 @@ def main(page: ft.Page) -> None:
     page.window.width = 1180
     page.window.height = 840
     demo._configure_page(page)
-    page.render_views(lambda: getattr(demo, PAGE)())
+    page.render(lambda: getattr(demo, PAGE)())
 
 
 if __name__ == "__main__":

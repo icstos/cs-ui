@@ -80,13 +80,13 @@ def collect(node, out=None, depth=0):
 async def probe(page: ft.Page) -> None:
     results = []
     try:
-        page.render_views(App)
+        page.render(App)
         page.update()
         await asyncio.sleep(0.9)
 
         v = current_view(page)
         print(f"[init] route={page.route!r} view.route={getattr(v, 'route', None)!r}")
-        results.append(("/", getattr(v, "route", None)))
+        results.append(("/", page.route))
 
         for r in ROUTES:
             path = "/" + (r.path or "")
@@ -94,18 +94,31 @@ async def probe(page: ft.Page) -> None:
                 path = "/"
             page.navigate(path)
             await asyncio.sleep(0.9)
-            v = current_view(page)
-            got = getattr(v, "route", None)
+            # 断言 page.route：manage_views=False 下 Router 只替换
+            # views[0].controls，View.route 不随导航变化。
+            got = page.route
             ok = "OK " if got == path else "BAD"
-            print(f"[{ok}] navigate({path!r}) -> view.route={got!r} page.route={page.route!r}")
+            print(f"[{ok}] navigate({path!r}) -> page.route={got!r}")
             results.append((path, got))
 
-        # 404：Router 生成的 View.route 是请求路径本身
+        # 404：manage_views=False 时 Router 不再把请求路径注入 View.route，
+        # 改为断言 404 页面的文案确实渲染出来了。
         page.navigate("/definitely-not-a-route")
         await asyncio.sleep(0.9)
         v = current_view(page)
-        print(f"[404] view.route={getattr(v, 'route', None)!r}")
-        results.append(("/definitely-not-a-route", getattr(v, "route", None)))
+        blob = " ".join(
+            str(getattr(c, "value", ""))
+            for c in collect(v)
+            if isinstance(getattr(c, "value", None), str)
+        )
+        hit = "页面不存在" in blob
+        ok = "OK " if hit else "BAD"
+        print(
+            f"[{ok}] 404 -> view.route={getattr(v, 'route', None)!r} 文案命中={hit}"
+        )
+        results.append(
+            ("/definitely-not-a-route", "/definitely-not-a-route" if hit else None)
+        )
 
         bad = [p for p, g in results if g != p]
         print("\nSUMMARY: total=%d bad=%d" % (len(results), len(bad)))

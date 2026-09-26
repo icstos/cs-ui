@@ -9,6 +9,12 @@
     python scripts/_probe_demo.py --click 300,420 --sleep 2.0 --out /tmp/shot2.png
     python scripts/_probe_demo.py --click 300,420 --click 500,700 --sleep 1.5 --out /tmp/shot3.png
 
+需要"点击 → 滚动 → 再点击"这类有序交互时用 ``--do``（按给定顺序执行）::
+
+    python scripts/_probe_demo.py --once \
+        --do click:207,469 --do wheel:400,500,-14 \
+        --do shot:before --do click:300,600 --do shot:after
+
 坐标是**窗口客户区逻辑坐标**（flet 的 CSS 逻辑像素）。
 """
 
@@ -148,16 +154,18 @@ class INPUT(ctypes.Structure):
 MOUSEEVENTF_MOVE = 0x0001
 MOUSEEVENTF_LEFTDOWN = 0x0002
 MOUSEEVENTF_LEFTUP = 0x0004
+MOUSEEVENTF_WHEEL = 0x0800
+WHEEL_DELTA = 120
 INPUT_MOUSE = 0
 
 user32.SendInput.argtypes = [c_uint, ctypes.POINTER(INPUT), c_int]
 user32.SendInput.restype = c_uint
 
 
-def _send_mouse(flags: int, dx: int = 0, dy: int = 0) -> int:
+def _send_mouse(flags: int, dx: int = 0, dy: int = 0, data: int = 0) -> int:
     inp = INPUT()
     inp.type = INPUT_MOUSE
-    inp.mi = MOUSEINPUT(dx, dy, 0, flags, 0, None)
+    inp.mi = MOUSEINPUT(dx, dy, data, flags, 0, None)
     assert ctypes.sizeof(INPUT) == 40, ctypes.sizeof(INPUT)
     return user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
 
@@ -186,8 +194,13 @@ def _attach(hwnd: int):
     return attached, cur_thread, tgt_thread
 
 
-def click(hwnd: int, lx: int, ly: int) -> None:
-    """在窗口客户区逻辑坐标 (lx, ly) 处注入真实鼠标点击（SendInput）。"""
+def click(hwnd: int, lx: int, ly: int, repeat: int = 2) -> None:
+    """在窗口客户区逻辑坐标 (lx, ly) 处注入真实鼠标点击（SendInput）。
+
+    Args:
+        repeat: 连点次数。默认 2 次（第一次可能只被用于激活窗口）；
+            验证「切换类」交互（token 会被反转两次）时传 1。
+    """
     dpi = user32.GetDpiForWindow(hwnd) / 96.0
     _l, _t, _w, _h, ox, oy = window_geometry(hwnd)
     sx, sy = ox + int(lx * dpi), oy + int(ly * dpi)
@@ -206,7 +219,7 @@ def click(hwnd: int, lx: int, ly: int) -> None:
         user32.SetCursorPos(sx, sy)
         time.sleep(0.2)
 
-        for attempt in range(2):  # 第一次可能只用于激活窗口
+        for attempt in range(repeat):
             n1 = _send_mouse(MOUSEEVENTF_LEFTDOWN)
             time.sleep(0.06)
             n2 = _send_mouse(MOUSEEVENTF_LEFTUP)
@@ -238,7 +251,32 @@ def hover(hwnd: int, lx: int, ly: int) -> None:
     print(f"  hover local=({lx},{ly}) screen=({sx},{sy}) dpi={dpi}")
 
 
+def wheel(hwnd: int, lx: int, ly: int, notches: int) -> None:
+    """把光标移到 (lx, ly) 后滚动鼠标滚轮（正数向上 / 负数向下）。
+
+    用于把可滚动页面滚到目标控件处 —— 纯 SendInput 点击无法触达视口外的控件。
+    """
+    dpi = user32.GetDpiForWindow(hwnd) / 96.0
+    _l, _t, _w, _h, ox, oy = window_geometry(hwnd)
+    sx, sy = ox + int(lx * dpi), oy + int(ly * dpi)
+
+    force_foreground(hwnd)
+    time.sleep(0.3)
+    user32.SetCursorPos(sx, sy)
+    time.sleep(0.3)
+    step = 1 if notches >= 0 else -1
+    for _ in range(abs(notches)):
+        _send_mouse(MOUSEEVENTF_WHEEL, 0, 0, step * WHEEL_DELTA)
+        time.sleep(0.12)
+    print(f"  wheel local=({lx},{ly}) notches={notches}")
+
+
 def screenshot(hwnd: int, path: Path) -> None:
+    """抓取窗口位图。
+
+    注意：Flutter 的窗口用 ``PrintWindow`` 常常抓到**上一帧**（点击后立刻截图会
+    看到点击前的画面）。这里连抓两次，丢掉第一次、采用第二次，规避该滞后。
+    """
     from PIL import Image
 
     _l, _t, w, h, _ox, _oy = window_geometry(hwnd)
@@ -246,7 +284,10 @@ def screenshot(hwnd: int, path: Path) -> None:
     memdc = gdi32.CreateCompatibleDC(hdc)
     bmp = gdi32.CreateCompatibleBitmap(hdc, w, h)
     gdi32.SelectObject(memdc, bmp)
-    user32.PrintWindow(hwnd, memdc, 2)  # PW_RENDERFULLCONTENT
+
+    user32.PrintWindow(hwnd, memdc, 2)  # PW_RENDERFULLCONTENT（可能拿到旧帧）
+    time.sleep(0.25)
+    user32.PrintWindow(hwnd, memdc, 2)  # 再抓一次，拿到最新帧
 
     bmi = BITMAPINFOHEADER()
     bmi.biSize = ctypes.sizeof(BITMAPINFOHEADER)
@@ -270,12 +311,31 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--click", action="append", default=[], help="逻辑坐标 x,y（可重复）")
     parser.add_argument(
+        "--do",
+        action="append",
+        default=[],
+        help="按给定顺序执行动作（可重复），给了它就不再使用 --click/--hover/--wheel。"
+        "语法：click:x,y / wheel:x,y,notches / hover:x,y / shot:名字",
+    )
+    parser.add_argument(
         "--hover",
         action="append",
         default=[],
         help="逻辑坐标 x,y：只移动光标不点击（可重复），输出 <out>_hover<i>.png",
     )
+    parser.add_argument(
+        "--wheel",
+        action="append",
+        default=[],
+        help="x,y,notches：把光标放到 (x,y) 后滚动 notches 格（负=向下），"
+        "在 --click 之前依次执行",
+    )
     parser.add_argument("--sleep", type=float, default=1.2, help="每次点击后等待秒数")
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="每个 --click 只注入一次点击（默认连点两次；切换类交互必须用 --once）",
+    )
     parser.add_argument("--boot", type=float, default=6.0, help="启动后等待秒数")
     parser.add_argument("--out", default=str(ROOT / "output/_probe/probe.png"))
     parser.add_argument("--app", default=str(ROOT / "examples" / "demo.py"))
@@ -294,7 +354,8 @@ def main() -> None:
     env["PYTHONIOENCODING"] = "utf-8"
     log = open(ROOT / "output/_probe_app.log", "w", encoding="utf-8", errors="replace")
     proc = subprocess.Popen(
-        [sys.executable, args.app],
+        # -u：子进程 stdout 重定向到文件，不缓冲才能在 taskkill 前留下日志
+        [sys.executable, "-u", args.app],
         cwd=str(ROOT),
         stdout=log,
         stderr=subprocess.STDOUT,
@@ -341,16 +402,35 @@ def main() -> None:
             time.sleep(args.boot / 2)
             screenshot(hwnd, shot.with_name(f"{shot.stem}_repaint.png"))
 
-        for i, spec in enumerate(args.hover, start=1):
-            lx, ly = (int(v) for v in spec.split(","))
-            hover(hwnd, lx, ly)
-            screenshot(hwnd, shot.with_name(f"{shot.stem}_hover{i}.png"))
+        actions: list[str] = list(args.do)
+        if not actions:
+            actions = (
+                [f"hover:{s}" for s in args.hover]
+                + [f"wheel:{s}" for s in args.wheel]
+                + [f"click:{s}" for s in args.click]
+            )
 
-        for i, spec in enumerate(args.click, start=1):
-            lx, ly = (int(v) for v in spec.split(","))
-            force_foreground(hwnd)
-            time.sleep(0.3)
-            click(hwnd, lx, ly)
+        for i, spec in enumerate(actions, start=1):
+            kind, _, rest = spec.partition(":")
+            kind = kind.strip().lower()
+            if kind != "shot":
+                force_foreground(hwnd)
+                time.sleep(0.3)
+            if kind == "hover":
+                lx, ly = (int(v) for v in rest.split(","))
+                hover(hwnd, lx, ly)
+            elif kind == "wheel":
+                lx, ly, n = (int(v) for v in rest.split(","))
+                wheel(hwnd, lx, ly, n)
+            elif kind == "click":
+                lx, ly = (int(v) for v in rest.split(","))
+                click(hwnd, lx, ly, repeat=1 if args.once else 2)
+            elif kind == "shot":
+                screenshot(hwnd, shot.with_name(f"{shot.stem}_{rest}.png"))
+                continue
+            else:
+                print(f"  ! 未知动作 {spec!r}（支持 click:x,y / wheel:x,y,n / hover:x,y / shot:name）")
+                continue
             time.sleep(args.sleep)
             force_foreground(hwnd)
             time.sleep(0.3)
@@ -370,6 +450,8 @@ def main() -> None:
             text = app_log.read_text(encoding="utf-8", errors="replace")
             print("---- app log tail ----")
             print("\n".join(text.strip().splitlines()[-25:]))
+        # os._exit 不 flush，stdout 接管道时前面所有 print 都会丢
+        sys.stdout.flush()
         os._exit(0)
 
 

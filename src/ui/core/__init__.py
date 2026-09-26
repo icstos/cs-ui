@@ -8,6 +8,7 @@ from .constants import (
     SizeType,
     StyleType,
 )
+from .float_layer import overlay_usable, use_float_layer
 from .styles import INPUT_HEIGHT, INPUT_RADIUS, outline_input, underline_input
 
 __all__ = [
@@ -23,5 +24,7 @@ __all__ = [
     "config",
     "logger",
     "outline_input",
+    "overlay_usable",
     "underline_input",
+    "use_float_layer",
 ]
