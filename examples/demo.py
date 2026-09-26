@@ -1117,6 +1117,16 @@ def FormPage() -> ft.Control:
             minute_step=5,
         )
     )
+    checkin = state(
+        lambda: DateTimeInput(
+            label="打卡时刻",
+            value=dt.datetime(2026, 3, 18, 9, 30, 15),
+            with_seconds=True,
+            hour_step=1,
+            second_step=5,
+            clearable=False,
+        )
+    )
     search = state(
         lambda: SearchBar(
             options=["北京", "上海", "广州", "深圳", "杭州"],
@@ -1132,7 +1142,7 @@ def FormPage() -> ft.Control:
         message = (
             f"姓名={name.value} | 年龄={age.value} | 城市={city.value} | 标签={tags.value} "
             f"| 音量={volume.value} | 评分={stars} "
-            f"| 生日={birthday.value} | 会议={meeting.value}"
+            f"| 生日={birthday.value} | 会议={meeting.value} | 打卡={checkin.value}"
         )
         toast_info(message, page=page)
 
@@ -1190,10 +1200,11 @@ def FormPage() -> ft.Control:
         ),
         section(
             "DateInput / DateTimeInput",
-            "DateInput 点框体挂出悬浮月历（不占布局高度），点标题可切年月网格快速跨年，"
-            "框内支持直接键入 2026-09-26 / 20260926 / 2026年9月26日；"
-            "DateTimeInput 在其基础上补时 / 分（可选秒）。",
-            Column(spacing=12, controls=[birthday.ui(), meeting.ui()]),
+            "两者点框体都挂出悬浮面板（不占布局高度、不推下方内容），框内可直接键入 "
+            "2026-09-26 / 20260926 / 2026年9月26日 / 09:30。DateInput 点标题可切年月"
+            "网格快速跨年；DateTimeInput 面板是「月历 + 时/分/秒轮盘」并排，点日期不收起"
+            "（可接着调时间），滚轮或 ▲▼ 步进，点「完成」收起。",
+            Column(spacing=12, controls=[birthday.ui(), meeting.ui(), checkin.ui()]),
         ),
         section(
             "SearchBar 搜索栏",

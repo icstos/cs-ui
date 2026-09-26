@@ -103,17 +103,17 @@ s = DateInput(value=datetime.date(2026, 9, 10))
 s.open()
 check("open 后 is_open", s.is_open, True)
 check("open 同步视图月份", (s._view_year, s._view_month), (2026, 9))
-s._toggle_mode()
+s._cal_toggle_mode()
 check("切到年月网格", s._mode, "month")
-s._shift_year(2)
+s._cal_shift_year(2)
 check("网格里翻年", s._view_year, 2028)
-s._select_month(3)
+s._cal_select_month(3)
 check("选月回到月历", (s._mode, s._view_month), ("day", 3))
-s._shift_month(11)
+s._cal_shift_month(11)
 check("跨年翻月", (s._view_year, s._view_month), (2029, 2))
-s._shift_month(-14)
+s._cal_shift_month(-14)
 check("反向跨年翻月", (s._view_year, s._view_month), (2027, 12))
-s._shift_month(-12)
+s._cal_shift_month(-12)
 check("回到 2026-12", (s._view_year, s._view_month), (2026, 12))
 s.close()
 check("close 后 is_open", s.is_open, False)
@@ -126,12 +126,12 @@ check("空值时 open 落在今天", (s2._view_year, s2._view_month),
 print("\n== 网格起点（周一为首日）==")
 g = DateInput()
 g._view_year, g._view_month = 2026, 9
-check("2026-09 网格起点 = 2026-08-31", g._grid_start(), datetime.date(2026, 8, 31))
+check("2026-09 网格起点 = 2026-08-31", g._cal_grid_start(), datetime.date(2026, 8, 31))
 g.first_day_weekday = 6
-check("周日起头 → 2026-08-30", g._grid_start(), datetime.date(2026, 8, 30))
-check("周日起头的表头", g._weekday_sequence(), ["日", "一", "二", "三", "四", "五", "六"])
+check("周日起头 → 2026-08-30", g._cal_grid_start(), datetime.date(2026, 8, 30))
+check("周日起头的表头", g._cal_weekday_sequence(), ["日", "一", "二", "三", "四", "五", "六"])
 g.first_day_weekday = 0
-check("周一为表头首列", g._weekday_sequence(), ["一", "二", "三", "四", "五", "六", "日"])
+check("周一为表头首列", g._cal_weekday_sequence(), ["一", "二", "三", "四", "五", "六", "日"])
 
 print("\n== on_change 去重 ==")
 seen: list = []
@@ -154,7 +154,7 @@ check("键入非法保留上一个合法值", e1.value, datetime.date(2026, 10, 
 
 print("\n== 自定义星期标签 ==")
 w = DateInput(weekday_labels=("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"))
-check("英文标签不改语义", w._weekday_sequence(),
+check("英文标签不改语义", w._cal_weekday_sequence(),
       ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"])
 
 print("\nRESULT:", "ALL PASS" if ok else "HAS FAILURES")

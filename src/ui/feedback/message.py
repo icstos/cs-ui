@@ -1,5 +1,6 @@
 import flet as ft
 from ui.core.constants import StyleType, FeedbackStyle
+from ui.core.snackbar import ensure_snackbar_content
 from dataclasses import field
 
 
@@ -25,6 +26,9 @@ class Message(ft.SnackBar):
         self.close_icon_color = ft.Colors.WHITE
 
     def set_content(self, content):
+        # 拦住 content=ft.Page：它会与 page._dialogs 构成环形引用，
+        # 配置控件树时永不终止，最终在随机位置抛 RecursionError。
+        ensure_snackbar_content(content, where="Message")
         if isinstance(content, str):
             self.content = ft.Row(
                 controls=[
@@ -38,13 +42,32 @@ class Message(ft.SnackBar):
         else:
             self.content = content
 
-    def show(self, content: ft.StrOrControl | None = None, style_type=None, page=None):
-        ft.context.page.pop_dialog()
+    def show(
+        self,
+        content: ft.StrOrControl | None = None,
+        *,
+        style_type: StyleType | None = None,
+        page: ft.Page | None = None,
+    ) -> None:
+        """显示消息，并先收起当前最上层的弹层。
+
+        Args:
+            content: 临时替换的提示内容（``str`` 或控件）。**不要**把 ``page``
+                传在这个位置 —— ``content`` 才是第一个位置参数，写成
+                ``.show(page)`` 会与 ``page._dialogs`` 构成环形引用并抛
+                ``RecursionError``；目标页面请用 ``page=`` 传。
+            style_type: 临时覆盖的语义类型。
+            page: 目标页面，默认取当前上下文页。
+        """
+        # 注意：page 以前是"声明了但没用"的死参数，这里修好——否则
+        # Message(...).show(page) 只能把页面错误地绑到 content 上。
+        page = page or ft.context.page
+        page.pop_dialog()
         if style_type is not None:
             self.set_theme(style_type=style_type)
         if content is not None:
             self.set_content(content=content)
-        ft.context.page.show_dialog(self)
+        page.show_dialog(self)
 
 
 @ft.component

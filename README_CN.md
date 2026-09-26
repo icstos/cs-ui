@@ -14,7 +14,8 @@
 - **模块分类** — 组件按功能分类：chart / display / feedback / input / layout / navigation
 - **声明式路由** — `ft.Router(routes, manage_views=False)` + `page.render` 的根视图路由
 - **页面浮层可用** — 根视图路径下 `page.overlay` / `page.show_dialog` 正常渲染，
-  `MultiSelect` 的下拉面板、`DateInput` 的月历可以真正"悬挂"在内容之上
+  `MultiSelect` 的下拉面板、`DateInput` 的月历、`DateTimeInput` 的「月历 + 时间轮盘」
+  可以真正"悬挂"在内容之上
   （折叠态占用高度即整个组件高度，展开不推动下方内容）
 - **双范式组件** — 无状态控件继承原生控件；有状态组件用 `@ft.observable` + `ui()` 函数
 - **图表支持** — 通过 `flet-charts` 封装 Bar / Line / Area / Scatter 图表，x 轴数值 / 分类通吃
