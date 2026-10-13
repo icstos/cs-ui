@@ -78,12 +78,76 @@
       Material 的 `Container.ink` / `ink_color` 绘制（不重绘、不掉帧）。
       轴轨宽度与「首行行盒」都取**最大节点**口径算一次（`_dot_max` / `_node_h`），
       所以混排 18 / 26 / 34 三档尺寸时节点仍共用同一条中轴、且各自与标题垂直居中。
+- [x] 2026-09-27：新增**设计令牌 + Material 3 主题运行时**（`src/ui/core/tokens.py` +
+      `src/ui/core/theme.py`），并接入 demo 全部 11 个页面。
+      - **令牌层**：组件里不再出现裸色值 / 裸圆角 / 裸字号。间距 4pt 阶梯
+        （`SPACE`，15 档）、`RADIUS` 七档、`FONT_SIZE` 七档、`DURATION` 四档；
+        主题感知令牌直接用 `ft.Colors` 角色名（Flutter 绘制时解析，切主题**零 Python
+        重渲染**）；框架补齐 M3 缺失的语义色、elevation 五档、overlay/scrim/hairline。
+      - **主题层**：`ft.Theme(color_scheme_seed=...)` 让**一个品牌色种子**推导出整套 M3
+        色板（52 个 `ColorScheme` 角色）→ 换主色只改一个字符串；`ThemeProvider` /
+        `ThemeSwitcher` / `use_theme()` / `theme_state()` 构成运行时，支持
+        system / light / dark 三档与 8 个品牌种子。
+      - **WCAG 修正（真缺陷）**：原语义色 `#10B981` 对白底仅 **2.54:1**、`#F59E0B` 仅
+        **2.15:1** —— 压白字同样只有 2.54 / 2.15，徽标文字读不出来。解法不是调断言而是
+        **把语义色拆三档**：`SEMANTIC`（实心填充）/ `SEMANTIC_ON`（填充上的前景）/
+        `SEMANTIC_TEXT`（页面文字），三档在明暗下各自 ≥ 4.5:1，`scripts/_theme_logic.py`
+        有断言守着。
+      - **关键技术点（血泪）**：flet 1.0.4 **读 observable 字段不会订阅**。订阅只发生在
+        三处：组件参数是 `Observable`、`use_state`、`use_context`。原先
+        `use_theme()` 写成"读一次字段"，点击回调照跑、状态照改、**界面零重渲染**。
+        正确解法是 `ft.use_context(ft.create_context(default_value=state))`
+        （flet 会自动给 Observable 类型的 context 值挂订阅），并把 `state` 作为
+        **Observable 组件参数**传进内部 bridge 组件。
+      - **切主题不清空表单**：`ThemeProvider` 用 `use_memo(build, [])` 构建子树，
+        切主题不重建控件树；真机日志确认切到暗色后 `use_state` 的值完好。
+      - 顺带修好一个长期坏掉的东西：`display/media/pdf.py` 在 git 里一直是空文件，
+        却一直被 `__init__` 导出、被 demo import → **`from ui import Pdf` 早就是坏的、
+        demo 长期跑不起来**。本轮从 0 实现（纯声明式函数组件，`WebView` 是 `Control`
+        可进控件树；进度条**压**在正文区上沿不占高度，避免加载完文档区跳动）。
+      - 验证：`_theme_logic.py` 125 断言全过；smoke 12 路由 `ok=12 fail=0`；
+        `_visual_check.py` 12 页灰块检测全绿（灰占比 0.000~0.014，阈值 0.55）；
+        真机三张截图像素量测确认主色种子生效（pill 底色 `#D9E2FF`→`#2D4578`→`#4F3D74`）。
+- [x] 2026-09-27：`pyproject.toml` 收紧 flet 到 `~=1.0.4`（声明式 API 在 1.0.x 内仍有
+      差异，`>=1.0.0` 会静默升到不兼容版本），补上漏声明的 `flet-webview` 依赖，
+      版本号 0.0.5 → 0.1.0。
+- [x] 2026-09-27：README / README_CN 同步：新增「设计令牌与主题」章节（双语）、
+      `Pdf` 恢复到组件清单、下线的 `ECharts` 从清单与包结构树移除、
+      双范式描述改为「静态组件 / 交互式组件」、flet 版本 1.0.0 → 1.0.4。
+
+- [x] 2026-10-12：`Table` 从 `@ft.control` 子类重写为 `@ft.component` 函数组件
+      （用户报的 `RuntimeError: Frozen control cannot be updated.`）。
+      **根因**：`set_page()` 用 `self.update()` 换页，而 demo 走 `page.render(App)` 根视图路径，
+      flet 1.0.4 把整棵树标记 frozen，`update()` 第一件事就查 `_frozen` → 点「下一页」必崩。
+      代码里原有的 `# TODO: bad design: need add TableState` 就是当时的自述。
+      - 新增 `TableState`（`@ft.observable @dataclass`）：承载数据与页码，
+        抽出它才能让调用方在组件外读页码；**必须是 observable** —— 否则表格翻页了、
+        旁读 `state.current_page` 的标题还停在旧值（真机踩到）。
+      - 抽出纯函数 `page_slice()` / `columns()` / `build_rows()` / `clamp_page()`，
+        全部无头可测 → 新增 `scripts/_table_logic.py`（34 条断言）。
+      - **顺带修掉 `Paging` 的下拉缺陷**：候选只有 5/10/15/20/30/40/50，
+        而 `Table` 用 `rows_per_page=8` → Flutter 匹配不到 value，下拉框显示空白。
+        现在会把当前值补进候选并按数值排序。
+      - **踩到的三个真坑（已写进记忆）**：
+        ① `use_state(初值)` 的**初值参数每次渲染都求值**，不能让它跟着外部 observable 漂移
+        —— 用 `use_ref` 锁死首次值，否则出现"没人点、页码自己往上跳"的渲染循环；
+        ② 回写外部 observable 必须放 `use_effect` **且只在值真的不同时写**，
+        无条件写会让订阅者重渲染、带动本组件重建，形成循环；
+        ③ `@ft.component` **不保留自身类型**，渲染出来的是它 return 的控件 →
+        `_demo_route_probe` 里 `/layout` 期望的 `Table` 要改成 `Card` + `DataTable`。
+      - `demo.py` 里 `state(lambda: Table(...))` 的 `use_ref` 包装不再需要（纯函数组件），
+        直接 `Table(...)` 即可。
+      - 验证：34 条逻辑断言全过；真机点击序列 `1→2→1→2→4` 与末页 `6`（编号 41-43）
+        全部正确且静置无循环；`_visual_check` LayoutPage / NavigationPage 灰占比 0.001。
 
 # TODO
-- [ ] 2026-09-02：添加全局主题切换：暗黑模式
-- [ ] 2026-09-02：添加全局主颜色切换
-- [ ] 2026-09-02：标准组件样式，统一风格
-- [ ] 添加全局主颜色切换（当前仅明暗切换）
-- [ ] 标准组件样式，统一风格
-- [ ] 将 `_probe_*` / `_audit` 等验证脚本收敛为 `tests/` 下的正式测试
+- [ ] 声明式范式收敛：把仍用 `@ft.observable` + `.ui()` 的组件（`Input` / `Checkbox` /
+      `Switch` / `SelectBox` / `MultiSelect` …）迁到 `@ft.component` + hooks 风格，
+      统一成一套心智模型
+- [ ] 补齐数据展示类控件：Descriptions / Statistic / Empty / Result / Skeleton / Avatar / Badge
+- [ ] 补齐导航与输入类控件：Tree / Dropdown 菜单 / Transfer / Cascader / AutoComplete
+- [ ] `src/ui/core/constants.py` 的 `StyleType` 仍在用不随主题走的 M2 硬色
+      （`ft.Colors.BLUE` / `GREEN` / `RED` / `YELLOW_600`），迁到语义色三档
+- [ ] `src/ui/display/media/audio.py` 有未提交的遗留改动，需复核后决定去留
+- [ ] 将 `_probe_*` / `_audit` / `_theme_logic` 等验证脚本收敛为 `tests/` 下的正式测试
 - [ ] README 组件清单与 API 文档自动生成（当前手工维护）

@@ -127,9 +127,15 @@ async def probe(page: ft.Page) -> None:
 
         # 各页关键控件（按**渲染后**的真实类型断言；
         # 注意 ui 中的 observable 组件（如 Input/MultiSelect）渲染出的是 ft.TextField 等原生控件）
+        #
+        # ⚠️ `@ft.component` 函数组件**不保留自身类型** —— 渲染出来的是它返回的控件
+        # （Table → Card + DataTable，Pdf → WebView…）。所以这类组件不能按类型名断言，
+        # 要按它渲染出的**真实控件**来断言。
         expect: dict[str, set[str]] = {
             "/general": {"Header_1", "Quote", "Link", "Chip"},
-            "/layout": {"PageLayout", "Table", "Timeline", "Expander", "Card"},
+            # Table 自 2026-10 起从 `@ft.control` 子类改为 `@ft.component` 函数组件，
+            # 树里不再有 `Table` 类型，改断言它渲染出的 Card + DataTable。
+            "/layout": {"PageLayout", "Timeline", "Expander", "Card", "DataTable"},
             "/navigation": {"BreadCrumb", "Crumb", "Tab", "NavigationBarDestination"},
             # /form 页的下拉类控件来自 SelectBox（底层 ft.DropdownM2）；
             # DateTimeInput 自 2026-09 起改为「月历 + 时间轮盘」，不再用 ft.Dropdown。

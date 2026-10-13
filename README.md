@@ -5,7 +5,10 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 ## Features
 
 - **Batteries included** — `from ui import *` re-exports everything from Flet plus all CS UI components
-- **Inheritance-based** — all components directly subclass Flet native controls (e.g., `Button(ft.Button)`, `Text(ft.Text)`)
+- **Design tokens + Material 3 theming** — no raw color / radius / font-size literals inside
+  components. A single brand seed (`color_scheme_seed`) derives the whole M3 color scheme, so
+  light/dark and brand-color switching are **framework-level** operations, not per-widget recoloring
+- **Inheritance-based** — static components subclass Flet native controls (e.g., `Button(ft.Button)`, `Text(ft.Text)`)
 - **Smart defaults** — components come with sensible styling defaults (colors, sizes, border-radius, etc.) for rapid prototyping
 - **Categorized modules** — components organized by function: chart, display, feedback, input, layout, navigation
 - **Declarative routing** — root-view routing via `ft.Router(routes, manage_views=False)` + `page.render`
@@ -13,7 +16,8 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
   render, so the `MultiSelect` dropdown, the `DateInput` calendar, and the `DateTimeInput`
   calendar-plus-time-wheel panel can truly float above the content (a collapsed field is all the layout height the widget takes; opening it never pushes
   the content below)
-- **Two component paradigms** — stateless controls subclass native Flet controls; stateful ones are `@ft.observable` objects with a `ui()` renderer
+- **Two component paradigms** — static components subclass native Flet controls; interactive ones are
+  `@ft.component` functions whose state is declared with hooks (`use_state` / `use_memo` / `use_effect`)
 - **Charts** — Bar, Line, Area, and Scatter chart wrappers via `flet-charts`, with both numeric and categorical x-axes
 - **Desktop-grade timeline** — `Timeline` supports three alignments (rail on the left / rail on the
   right / alternating around a centered rail); the timestamp can sit in its own column on the
@@ -26,7 +30,7 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 ## Requirements
 
 - Python >= 3.12
-- flet[all] >= 1.0.0
+- flet[all] ~= 1.0.4
 - flet-code-editor
 - flet-charts
 - flet-video / flet-audio / flet-webview
@@ -174,10 +178,11 @@ src/ui/
 │   ├── language.py          #   i18n
 │   ├── logger.py            #   logging
 │   ├── snackbar.py          #   content guard for SnackBar-based components
-│   └── styles.py            #   shared style helpers
+│   ├── styles.py            #   shared style helpers
+│   ├── theme.py             #   ThemeProvider / ThemeSwitcher / use_theme
+│   └── tokens.py            #   design tokens: SPACE / RADIUS / FONT_SIZE / semantic colors
 ├── data/                    # Static assets (fonts, images)
 ├── display/                 # Display components
-│   ├── echarts.py           #   ECharts (embedded WebView)
 │   ├── image.py             #   Image
 │   ├── image_gridview.py    #   ImageGridView
 │   ├── list_tile.py         #   ListTile
@@ -240,8 +245,9 @@ src/ui/
 
 | Category | Components |
 |----------|-----------|
+| **Core** | ThemeProvider, ThemeSwitcher, `use_theme`, `theme_state` |
 | **Chart** | BarChart, LineChart, AreaChart, ScatterChart |
-| **Display** | ECharts, Image, ImageGridView, ListTile, LogContainer, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display** | Image, ImageGridView, ListTile, LogContainer, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display / Media** | Audio, AudioPlayer, Video, Pdf |
 | **Feedback** | AlertDialog, Loading, Message, ProgressBar, Toast |
 | **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch |
@@ -249,8 +255,109 @@ src/ui/
 | **Navigation** | AppBar, BreadCrumb, Paging |
 
 **Two paradigms**:
-- **Stateless controls** (`Button` / `Table` / `ECharts` / `Rating` / `Timeline` / charts …) subclass Flet controls and are ready to use.
-- **Stateful components** (`Input` / `Checkbox` / `Switch` / `SelectBox` / `MultiSelect` …) are `@ft.observable` data objects; construct them and render with `.ui()`.
+- **Static components** (`Button` / `Table` / `Rating` / `Timeline` / charts …) subclass Flet controls and are ready to use.
+- **Interactive components** (`Input` / `Checkbox` / `Switch` / `SelectBox` / `MultiSelect` / `Pdf` …) are
+  `@ft.component` functions; their state is declared with hooks and the return value goes straight into the tree.
+
+## Design Tokens and Theming
+
+Components never contain raw color / radius / font-size literals — everything comes from
+`ui.core.tokens`. Switching theme and brand color is therefore a **framework-level**
+operation rather than per-widget recoloring.
+
+### Apply a theme
+
+Wrap the root view in `ThemeProvider`; `build` returns your router:
+
+```python
+import flet as ft
+from ui import ThemeProvider
+
+def App() -> ft.Control:
+    return ThemeProvider(
+        build=lambda: ft.Router(ROUTES, not_found=NotFoundPage, manage_views=False)
+    )
+
+def main(page: ft.Page):
+    page.render(App)
+```
+
+`ThemeProvider` builds the subtree with `use_memo(build, [])` — **switching the theme does not
+rebuild the widget tree**, so values already typed into a form survive the switch
+(verified on a real device: after switching to dark, the `use_state` value is intact).
+
+### Light/dark and brand color
+
+```python
+from ui import use_theme, ThemeSwitcher, PRIMARY_SEEDS
+
+@ft.component
+def TopBar() -> ft.Control:
+    state = use_theme()                    # subscribe (must be called inside a component)
+    ft.Button("toggle", on_click=lambda e: state.toggle_mode())
+    ft.Button("recolor", on_click=lambda e: state.set_primary(PRIMARY_SEEDS["violet"]))
+```
+
+`ThemeSwitcher` is a ready-made top-bar control (brand palette + light/dark switch).
+`ThemeState` exposes three distinct behaviors:
+
+| Method | Behavior |
+|--------|----------|
+| `toggle_mode()` | always jump to the opposite of what is **currently visible** (for a ☀/🌙 button, so a click always shows a change) |
+| `cycle_mode()` | `system → light → dark → system` (for a dropdown) |
+| `set_mode(name)` | go straight to a mode; `"system"` follows the platform brightness |
+| `set_primary(hex)` | swap the brand seed; the whole M3 scheme is re-derived |
+
+### Tokens
+
+**Theme-aware tokens** are `ft.Colors` role names resolved by Flutter at paint time, so a theme
+switch costs **zero Python re-renders**:
+
+```python
+ft.Colors.PRIMARY, ft.Colors.SURFACE_CONTAINER_LOWEST, ft.Colors.ON_SURFACE_VARIANT
+```
+
+**Framework-resolved tokens** cover the semantic roles M3 does not ship (`ui.core.tokens`):
+
+```python
+from ui import SPACE, RADIUS, FONT_SIZE, GAP, PAD, elevation, overlay, hairline
+
+SPACE["4"]          # 16 — a 4pt scale: (0,1,2,3,4,5,6,8,10,12,16,20,24,32,40)
+RADIUS["lg"]        # 8
+FONT_SIZE["body"]   # 13
+elevation(2)        # five shadow levels, tinted with the 'shadow' role so it follows light/dark
+overlay(0.06)       # 'onsurface,0.06' — a translucent scrim that adapts automatically
+hairline()          # 1px divider
+```
+
+**Semantic colors come in three tiers** — one value cannot serve every use:
+
+| Function | Use | Light | Dark |
+|----------|-----|-------|------|
+| `semantic("success")` | solid fill (badge background, status dot, progress segment) | `#047857` | `#34D399` |
+| `on_semantic("success")` | foreground on that fill | `#FFFFFF` | `#04231A` |
+| `semantic_text("success")` | text / icons / hairlines on the page | `#047857` | `#34D399` |
+
+Why: measured WCAG contrast, the previous `#10B981` is only **2.54:1** on white and `#F59E0B`
+only **2.15:1** — white text on them is equally unreadable at 2.54 / 2.15. Each tier now clears
+4.5:1, guarded by assertions in `scripts/_theme_logic.py`.
+
+**Available roles**: `success` / `warning` / `danger` / `info` / `neutral`.
+
+### One important trap
+
+In flet 1.0.4, **reading a field of an observable does not subscribe to it**. Subscription only
+happens in three places: the component argument is an `Observable`, `use_state`, or `use_context`.
+
+```python
+state = theme_state()
+mode = state.mode          # ❌ just a read; nothing re-renders
+state = use_theme()        # ✅ use_context(theme_context); flet attaches the subscription
+```
+
+Relatedly, theme-aware role names and Python-computed colors have very different costs: role
+names are resolved by Flutter (free on theme switch), whereas a hex computed by
+`semantic("success")` only updates if the component itself subscribed to the theme.
 
 ## Importing
 
@@ -286,7 +393,7 @@ python examples/demo.py
 | `/form` | Inputs / selectors / slider / rating |
 | `/upload` | Files / directories / save / images |
 | `/feedback` | Toast / message / dialog / progress |
-| `/display` | Logs / code / ECharts / images |
+| `/display` | Logs / code / images |
 | `/charts` | Line / area / bar / scatter charts |
 | `/media` | Audio / video / PDF |
 | `/about` | Migration cheat-sheet and design notes |

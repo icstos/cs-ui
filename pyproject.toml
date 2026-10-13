@@ -1,16 +1,17 @@
 [project]
 name = "ui"
-version = "0.0.5"
+version = "0.1.0"
 description = "A Python UI framework inspired by Flet"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Shawn Chen", email = "cs@cstos.com" }]
 dependencies = [
-    "flet[all]>=1.0.0",
+    "flet[all]==1.0.4",
     "flet-code-editor",
     "flet-charts",
     "flet-video",
     "flet-audio",
+    "flet-webview",
 ]
 
 [project.urls]

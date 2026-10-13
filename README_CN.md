@@ -1,6 +1,6 @@
 # CS-UI
 
-[![Flet](https://img.shields.io/badge/Flet-1.0.0-blue)](https://flet.dev)
+[![Flet](https://img.shields.io/badge/Flet-1.0.4-blue)](https://flet.dev)
 [![Python](https://img.shields.io/badge/Python-3.12%2B-green)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
@@ -9,7 +9,10 @@
 ## 特点
 
 - **开箱即用** — `from ui import *` 直接导出 Flet 全部内容 + 所有 CS UI 组件
-- **继承原生控件** — 所有组件直接继承 Flet 原生控件（如 `Button(ft.Button)`、`Text(ft.Text)`）
+- **设计令牌 + Material 3 主题** — 组件里不出现裸色值/裸圆角/裸字号；
+  一个品牌色种子（`color_scheme_seed`）推导出整套 M3 色板，
+  明暗模式与主色切换是**框架级**的，不靠逐组件改颜色
+- **继承原生控件** — 静态组件直接继承 Flet 原生控件（如 `Button(ft.Button)`、`Text(ft.Text)`）
 - **智能默认值** — 组件自带合理的样式默认值（颜色、尺寸、圆角等），加速原型开发
 - **模块分类** — 组件按功能分类：chart / display / feedback / input / layout / navigation
 - **声明式路由** — `ft.Router(routes, manage_views=False)` + `page.render` 的根视图路由
@@ -17,7 +20,8 @@
   `MultiSelect` 的下拉面板、`DateInput` 的月历、`DateTimeInput` 的「月历 + 时间轮盘」
   可以真正"悬挂"在内容之上
   （折叠态占用高度即整个组件高度，展开不推动下方内容）
-- **双范式组件** — 无状态控件继承原生控件；有状态组件用 `@ft.observable` + `ui()` 函数
+- **双范式组件** — 静态组件继承原生控件；交互式组件是 `@ft.component` 函数，
+  内部用 `use_state` / `use_memo` / `use_effect` 等 hooks 声明状态与副作用
 - **图表支持** — 通过 `flet-charts` 封装 Bar / Line / Area / Scatter 图表，x 轴数值 / 分类通吃
 - **桌面级时间线** — `Timeline` 三种对齐（轴在左 / 轴在右 / 左右交替），时间戳可放
   对侧独立成列（默认，VS Code 时间线那种形态）/ 标题上方 / 同行 / 隐藏；
@@ -28,7 +32,7 @@
 ## 环境要求
 
 - Python >= 3.12
-- flet[all] >= 1.0.0
+- flet[all] ~= 1.0.4
 - flet-code-editor
 - flet-charts
 - flet-video / flet-audio / flet-webview
@@ -177,10 +181,11 @@ src/ui/
 │   ├── language.py          #   多语言
 │   ├── logger.py            #   日志
 │   ├── snackbar.py          #   SnackBar 类组件的 content 守卫
-│   └── styles.py            #   统一样式助手
+│   ├── styles.py            #   统一样式助手
+│   ├── theme.py             #   ThemeProvider / ThemeSwitcher / use_theme
+│   └── tokens.py            #   设计令牌：SPACE / RADIUS / FONT_SIZE / 语义色
 ├── data/                    # 静态资源（字体、图片）
 ├── display/                 # 展示组件
-│   ├── echarts.py           #   ECharts（WebView 内嵌）
 │   ├── image.py             #   Image
 │   ├── image_gridview.py    #   ImageGridView
 │   ├── list_tile.py         #   ListTile
@@ -243,8 +248,9 @@ src/ui/
 
 | 分类 | 组件 |
 |------|------|
+| **Core 核心** | ThemeProvider、ThemeSwitcher、`use_theme`、`theme_state` |
 | **Chart 图表** | BarChart、LineChart、AreaChart、ScatterChart |
-| **Display 展示** | ECharts、Image、ImageGridView、ListTile、LogContainer、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display 展示** | Image、ImageGridView、ListTile、LogContainer、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display 媒体** | Audio、AudioPlayer、Video、Pdf |
 | **Feedback 反馈** | AlertDialog、Loading、Message、ProgressBar、Toast |
 | **Input 输入** | Button、Checkbox / CheckboxGroup、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker / DirPicker、ImagePicker、Input、MultiSelect、RadioGroup、Rating、SearchBar、SegmentedButton、SelectBox、Slider、Switch |
@@ -252,8 +258,107 @@ src/ui/
 | **Navigation 导航** | AppBar、BreadCrumb、Paging |
 
 **双范式**：
-- **无状态控件**（`Button` / `Table` / `ECharts` / `Rating` / `Timeline` / 图表 …）直接继承 Flet 控件，构造即用。
-- **有状态组件**（`Input` / `Checkbox` / `Switch` / `SelectBox` / `MultiSelect` …）是 `@ft.observable` 数据对象，需构造后调用 `.ui()` 放进控件树。
+- **静态组件**（`Button` / `Table` / `Rating` / `Timeline` / 图表 …）直接继承 Flet 控件，构造即用。
+- **交互式组件**（`Input` / `Checkbox` / `Switch` / `SelectBox` / `MultiSelect` / `Pdf` …）
+  是 `@ft.component` 函数组件，状态用 hooks 声明，返回值直接进控件树。
+
+## 设计令牌与主题
+
+组件内部不写裸色值 / 裸圆角 / 裸字号 —— 全部取自 `ui.core.tokens`。
+这样"换主题"和"换主色"是**框架级**操作，不需要逐个组件改颜色。
+
+### 一、应用主题
+
+用 `ThemeProvider` 包住根视图，`build` 返回你的路由：
+
+```python
+import flet as ft
+from ui import ThemeProvider, Router, Route
+
+def App() -> ft.Control:
+    return ThemeProvider(
+        build=lambda: ft.Router(ROUTES, not_found=NotFoundPage, manage_views=False)
+    )
+
+def main(page: ft.Page):
+    page.render(App)
+```
+
+`ThemeProvider` 用 `use_memo(build, [])` 构建子树 —— **切主题不会重建控件树**，
+所以表单里已输入的内容不会丢（这一点有真机日志佐证：切到暗色后 `use_state` 的值完好）。
+
+### 二、明暗模式与主色
+
+```python
+from ui import theme_state, use_theme, ThemeSwitcher, PRIMARY_SEEDS
+
+@ft.component
+def TopBar() -> ft.Control:
+    state = use_theme()                    # 订阅全局主题（必须在组件体内）
+    ft.Button("切换明暗", on_click=lambda e: state.toggle_mode())
+    ft.Button("换主色", on_click=lambda e: state.set_primary(PRIMARY_SEEDS["violet"]))
+```
+
+`ThemeSwitcher` 是一个现成的顶栏控件（主色色板 + 明暗开关），可以直接放进去。
+`ThemeState` 的三档语义：
+
+| 方法 | 行为 |
+|------|------|
+| `toggle_mode()` | 永远切到与**当前可见**相反的那档（☀/🌙 按钮用这个，点了必定看得见变化） |
+| `cycle_mode()` | `system → light → dark → system` 三态循环（下拉选择用这个） |
+| `set_mode(name)` | 直接落到指定档；`"system"` 跟随系统亮度 |
+| `set_primary(hex)` | 换品牌色种子，整套 M3 色板重新推导 |
+
+### 三、令牌
+
+**主题感知令牌**（值是 `ft.Colors` 的角色名，由 Flutter 在绘制时解析，
+换主题**零 Python 重渲染成本**）：
+
+```python
+ft.Colors.PRIMARY, ft.Colors.SURFACE_CONTAINER_LOWEST, ft.Colors.ON_SURFACE_VARIANT
+```
+
+**框架解析令牌**（M3 没有的语义角色，由 `ui.core.tokens` 补齐）：
+
+```python
+from ui import SPACE, RADIUS, FONT_SIZE, GAP, PAD, elevation, overlay, hairline
+
+SPACE["4"]          # 16 —— 4pt 阶梯，(0,1,2,3,4,5,6,8,10,12,16,20,24,32,40)
+RADIUS["lg"]        # 8
+FONT_SIZE["body"]   # 13
+elevation(2)        # 五档阴影，阴影色用 'shadow,0.1' 角色名，自动跟随明暗
+overlay(0.06)       # 'onsurface,0.06' —— 半透明遮罩，明暗自适应
+hairline()          # 1px 分隔线
+```
+
+**语义色三档**（重要）：一个语义色不能一个值用到底，必须拆成
+
+| 函数 | 用途 | 浅色 | 暗色 |
+|------|------|------|------|
+| `semantic("success")` | 实心填充（徽标底 / 状态点 / 进度段） | `#047857` | `#34D399` |
+| `on_semantic("success")` | 该填充上的前景文字 | `#FFFFFF` | `#04231A` |
+| `semantic_text("success")` | 页面上的文字 / 图标 / 细边框 | `#047857` | `#34D399` |
+
+原因：WCAG 对比度实测，原先的 `#10B981` 对白底只有 **2.54:1**、`#F59E0B` 只有 **2.15:1** ——
+压白字同样只有 2.54 / 2.15，徽标文字根本读不出来。现在三档各自都 ≥ 4.5:1
+（`scripts/_theme_logic.py` 里有断言守着）。
+
+**可用语义角色**：`success` / `warning` / `danger` / `info` / `neutral`。
+
+### 四、一个重要陷阱
+
+在 flet 1.0.4 里，**读取 observable 对象的字段并不会订阅它**。
+订阅只发生在三处：组件参数是 `Observable`、`use_state`、`use_context`。
+
+```python
+state = theme_state()
+mode = state.mode          # ❌ 只是读了一次，不会触发重渲染
+state = use_theme()        # ✅ use_context(theme_context)，flet 自动挂订阅
+```
+
+同理，**主题感知色（角色名）与 Python 侧算出的色值，代价完全不同**：
+角色名交给 Flutter 解析 → 切主题不需要 Python 参与；
+而 `semantic("success")` 这类算出来的 hex，组件自己订阅了主题才会更新。
 
 ## 导入方式
 
@@ -275,12 +380,14 @@ from ui import Page, Colors, Icons, MainAxisAlignment, CrossAxisAlignment
 ## 设计原则
 
 - 基于 Flet 原生控件继承，`from ui import *` 即可使用
+- 颜色 / 圆角 / 间距 / 字号一律取自设计令牌，不写字面值
+- 语义色必须三档（填充 / 填充上的前景 / 页面文字），保证明暗都过 WCAG AA
 - 以包的形式组织代码，一个 `.py` 一般只实现一个控件
 - 包内代码对外尽量无依赖
 - 事件处理函数命名：`on_xx`
 - 所有组件采用绝对路径导入
 - 基于 Python 3.12+ 语法实现
-- 参考 Flet 最新版本特性进行优化
+- 优先使用 flet 1.0.4 声明式 API（`@ft.component` + hooks），少用命令式 `update()`
 
 ## 示例
 
@@ -299,7 +406,7 @@ python examples/demo.py
 | `/form` | 输入框 / 选择器 / 滑块 / 评分 |
 | `/upload` | 文件 / 目录 / 保存 / 图片 |
 | `/feedback` | Toast / 消息 / 对话框 / 进度 |
-| `/display` | 日志 / 代码 / ECharts / 图片 |
+| `/display` | 日志 / 代码 / 图片 |
 | `/charts` | 折线 / 面积 / 柱状 / 散点图 |
 | `/media` | 音频 / 视频 / PDF |
 | `/about` | 迁移速查与设计说明 |

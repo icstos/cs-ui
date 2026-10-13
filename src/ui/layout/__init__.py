@@ -10,7 +10,7 @@ from .list_view import ListView
 from .page import PageLayout
 from .row import Row
 from .stack import Stack
-from .table import Table
+from .table import Table, TableState
 from .tabs import Tab, TabBar, TabBarView, Tabs
 from .time_line import Timeline, TimelineItem
 from .view import View
@@ -30,6 +30,7 @@ __all__ = [
     "TabBar",
     "TabBarView",
     "Table",
+    "TableState",
     "Tabs",
     "Timeline",
     "TimelineItem",

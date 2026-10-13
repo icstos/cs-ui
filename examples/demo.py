@@ -69,7 +69,13 @@ from ui import (  # noqa: E402
     # ---- core ----
     ButtonShape,
     LayoutType,
+    PRIMARY_SEEDS,
     StyleType,
+    ThemeProvider,
+    semantic,
+    semantic_text,
+    theme_state,
+    use_theme,
     # ---- display ----
     Audio,
     AudioPlayer,
@@ -158,10 +164,12 @@ from ui import (  # noqa: E402
 FONT_FILE = ROOT / "src" / "ui" / "data" / "fonts" / "AlibabaPuHuiTi-3-55-Regular.otf"
 LOGO_FILE = ROOT / "src" / "ui" / "data" / "images" / "logo.png"
 
-PAGE_BG = "#f6f8fb"
-BORDER = "#e5e7eb"
-MUTED = "#6b7280"
-ACCENT = "#1f6feb"
+# 页面骨架的配色一律走 Material 3 角色（由 Flutter 按当前主题解析），
+# 不写死具体色值 —— 写死的话明暗主题下必然有一半读不清。
+PAGE_BG = ft.Colors.SURFACE_CONTAINER_LOWEST
+BORDER = ft.Colors.OUTLINE_VARIANT
+MUTED = ft.Colors.ON_SURFACE_VARIANT
+ACCENT = PRIMARY_SEEDS["blue"]
 
 SAMPLE_AUDIO = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 SAMPLE_VIDEO = "https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4"
@@ -255,9 +263,9 @@ def section(
 
 
 def panel(*controls: ft.Control, padding: int = 12, height: int | None = None) -> ft.Control:
-    """白底描边面板，用于承载表格 / 列表等控件。"""
+    """描边面板，用于承载表格 / 列表等控件。"""
     return Container(
-        bgcolor=ft.Colors.WHITE,
+        bgcolor=ft.Colors.SURFACE,
         border=ft.Border.all(1, BORDER),
         border_radius=8,
         padding=padding,
@@ -287,20 +295,63 @@ def labeled(label: str, control: ft.Control) -> ft.Control:
 
 @ft.component
 def ThemeToggle() -> ft.Control:
-    """顶栏右侧的明暗主题切换。"""
-    page = ft.context.page
-    is_dark, set_dark = ft.use_state(page.theme_mode == ft.ThemeMode.DARK)
+    """顶栏右侧的明暗 / 主色切换。
 
-    def toggle(_):
-        next_dark = not is_dark
-        set_dark(next_dark)
-        page.theme_mode = ft.ThemeMode.DARK if next_dark else ft.ThemeMode.LIGHT
-        page.update()
+    用 :func:`use_theme` **订阅**全局主题：这里读一次 ``mode`` / ``primary``
+    就登记了依赖，主题一变本组件自动重绘，不需要手动 ``page.update()``
+    （声明式下那既多余又危险 —— 控件树是 frozen 的）。
+    """
+    th = use_theme()
 
     return ft.IconButton(
-        icon=ft.Icons.DARK_MODE if not is_dark else ft.Icons.LIGHT_MODE,
-        tooltip="切换明暗主题",
-        on_click=toggle,
+        icon=ft.Icons.DARK_MODE if th.mode_name == "light" else ft.Icons.LIGHT_MODE,
+        tooltip=(
+            f"明暗：{'深色' if th.mode_name == 'light' else '浅色'}"
+            f"（当前 {'跟随系统' if th.mode == 'system' else th.mode}）"
+        ),
+        on_click=lambda _: th.toggle_mode(),
+    )
+
+
+@ft.component
+def PrimaryPicker() -> ft.Control:
+    """顶栏右侧的主色切换：一排色块，点一下就换整套 Material 3 色板。
+
+    只改一个字符串（``color_scheme_seed``），Flutter 负责推导出 52 个角色色 ——
+    这就是"全局换色"不需要维护调色板表的原因。
+    """
+    th = use_theme()
+
+    return ft.Container(
+        height=32,
+        padding=ft.Padding.symmetric(horizontal=6),
+        border_radius=ft.BorderRadius.all(6),
+        bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
+        content=ft.Row(
+            spacing=4,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                *(
+                    ft.Container(
+                        width=18,
+                        height=18,
+                        tooltip=f"主色 · {name}",
+                        border_radius=ft.BorderRadius.all(4),
+                        bgcolor=hex_value,
+                        border=ft.Border.all(
+                            2,
+                            (
+                                ft.Colors.ON_SURFACE
+                                if th.primary.lower() == hex_value.lower()
+                                else ft.Colors.TRANSPARENT
+                            ),
+                        ),
+                        on_click=lambda _e, v=hex_value: th.set_primary(v),
+                    )
+                    for name, hex_value in PRIMARY_SEEDS.items()
+                ),
+            ],
+        ),
     )
 
 
@@ -316,10 +367,13 @@ def top_bar(
     的 ``appbar`` 字段上，不能塞进 ``Column.controls``。而本项目用
     ``page.render`` 渲染根视图（原因见 :func:`main`），页面不再返回
     ``ft.View``，因此这里用 ``Container + Row`` 画一条等价的顶栏。
+
+    底色走 ``SURFACE_CONTAINER`` 而不是 ``WHITE`` —— 写死白色的话暗色主题下
+    顶栏会是一块大白条，是"半迁移"最典型的破绽。
     """
     return Container(
         height=56,
-        bgcolor=ft.Colors.WHITE,
+        bgcolor=ft.Colors.SURFACE_CONTAINER,
         padding=ft.Padding.symmetric(horizontal=14),
         border=ft.Border(bottom=ft.BorderSide(1, BORDER)),
         content=Row(
@@ -337,7 +391,7 @@ def top_bar(
                 Row(
                     spacing=6,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    controls=[ThemeToggle(), *(actions or [])],
+                    controls=[PrimaryPicker(), ThemeToggle(), *(actions or [])],
                 ),
             ],
         ),
@@ -405,7 +459,7 @@ def HomePage() -> ft.Control:
     def nav_card(route: str, title: str, desc: str, icon: ft.IconData) -> ft.Control:
         return Card(
             elevation=1,
-            bgcolor=ft.Colors.WHITE,
+            bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
             border_radius=10,
             content=Container(
                 padding=14,
@@ -418,9 +472,10 @@ def HomePage() -> ft.Control:
                             width=38,
                             height=38,
                             border_radius=8,
-                            bgcolor="#e8f0fe",
+                            bgcolor=ft.Colors.PRIMARY_CONTAINER,
                             alignment=ft.Alignment.CENTER,
-                            content=ft.Icon(icon, size=20, color=ACCENT),
+                            content=ft.Icon(icon, size=20,
+                                            color=ft.Colors.ON_PRIMARY_CONTAINER),
                         ),
                         Column(
                             expand=True,
@@ -430,7 +485,8 @@ def HomePage() -> ft.Control:
                                 ft.Text(desc, size=12, color=MUTED),
                             ],
                         ),
-                        ft.Icon(ft.Icons.CHEVRON_RIGHT, color="#c1c7d0", size=18),
+                        ft.Icon(ft.Icons.CHEVRON_RIGHT,
+                                    color=ft.Colors.OUTLINE, size=18),
                     ],
                 ),
             ),
@@ -467,9 +523,9 @@ def HomePage() -> ft.Control:
                                 spacing=10,
                                 wrap=True,
                                 controls=[
-                                    _pill("flet >= 1.0.0", ACCENT, "#e8f0fe"),
-                                    _pill("10 个分类 · 60+ 组件", "#10b981", "#e7f7ee"),
-                                    _pill("点击卡片进入分类", "#f59e0b", "#fef4e3"),
+                                    _pill("flet >= 1.0.0"),
+                                    _pill("10 个分类 · 60+ 组件", "success"),
+                                    _pill("点击卡片进入分类", "warning"),
                                 ],
                             ),
                             Divider(color=BORDER, height=26),
@@ -493,12 +549,27 @@ def HomePage() -> ft.Control:
     )
 
 
-def _pill(text: str, color: str, bgcolor: str) -> ft.Control:
+@ft.component
+def _pill(text: str, role: str = "primary") -> ft.Control:
+    """状态胶囊。
+
+    **刻意做成组件**而不是普通函数：它的颜色是 Python 侧算出来的
+    （M3 没有 success / warning 这些角色），必须由 :func:`use_theme` 订阅、
+    在主题变化时重绘。写成普通函数的话，颜色会在父组件渲染那一刻被定死，
+    切主题后文字就留在旧配色上（实测踩过：暗色下仍是浅色档的深绿）。
+    """
+    use_theme()
+    if role == "primary":
+        bgcolor, fg = ft.Colors.PRIMARY_CONTAINER, ft.Colors.ON_PRIMARY_CONTAINER
+    else:
+        # 底色是该语义色的淡染，与文字同源 —— 否则"绿字压蓝底"这种错配很容易发生
+        bgcolor = ft.Colors.with_opacity(0.16, semantic(role))
+        fg = semantic_text(role)
     return Container(
         padding=ft.Padding.symmetric(vertical=6, horizontal=12),
         border_radius=20,
         bgcolor=bgcolor,
-        content=ft.Text(text, size=12, color=color),
+        content=ft.Text(text, size=12, color=fg),
     )
 
 
@@ -576,7 +647,7 @@ def GeneralPage() -> ft.Control:
                 Container(
                     padding=ft.Padding.symmetric(vertical=8, horizontal=14),
                     border_radius=6,
-                    bgcolor=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.SURFACE,
                     border=ft.Border.all(1, BORDER),
                     content=ft.Text("悬停查看富文本提示", size=13, color=ACCENT),
                     tooltip=ft.Tooltip(
@@ -693,7 +764,7 @@ def LayoutPage() -> ft.Control:
                     ],
                 ),
                 Container(
-                    bgcolor="#e8f0fe",
+                    bgcolor=ft.Colors.PRIMARY_CONTAINER,
                     padding=14,
                     border_radius=8,
                     content=ft.Text("Container：内边距 + 圆角 + 背景", size=13),
@@ -704,7 +775,7 @@ def LayoutPage() -> ft.Control:
                             width=72,
                             height=72,
                             border_radius=36,
-                            bgcolor="#dbeafe",
+                            bgcolor=ft.Colors.SECONDARY_CONTAINER,
                             alignment=ft.Alignment.CENTER,
                             content=ft.Icon(ft.Icons.PERSON, size=36, color=ACCENT),
                         ),
@@ -732,7 +803,7 @@ def LayoutPage() -> ft.Control:
                     height=190,
                     width=260,
                     border_radius=8,
-                    bgcolor=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.SURFACE,
                     border=ft.Border.all(1, BORDER),
                     content=ListView(
                         expand=True,
@@ -750,7 +821,7 @@ def LayoutPage() -> ft.Control:
                     height=190,
                     expand=True,
                     border_radius=8,
-                    bgcolor=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.SURFACE,
                     border=ft.Border.all(1, BORDER),
                     padding=8,
                     content=GridView(
@@ -761,7 +832,7 @@ def LayoutPage() -> ft.Control:
                         child_aspect_ratio=1.6,
                         controls=[
                             Container(
-                                bgcolor="#e8f0fe",
+                                bgcolor=ft.Colors.PRIMARY_CONTAINER,
                                 border_radius=6,
                                 alignment=ft.Alignment.CENTER,
                                 content=ft.Text(f"{i + 1}", size=13, color=ACCENT),
@@ -823,12 +894,10 @@ def LayoutPage() -> ft.Control:
         stretch=True,
     )
 
-    table_control = state(lambda: Table(data_table=_build_data_table(), rows_per_page=8))
-
     table_section = section(
         "Table 数据表格",
         "封装 DataTable + 分页器，自动补「编号」列并给行加悬停色。",
-        table_control,
+        Table(data_table=_build_data_table(), rows_per_page=8),
     )
 
     skeleton_section = section(
@@ -875,7 +944,7 @@ def _stat(label: str, value: str, color: str) -> ft.Control:
         width=96,
         padding=10,
         border_radius=8,
-        bgcolor=ft.Colors.WHITE,
+        bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
         border=ft.Border.all(1, BORDER),
         content=Column(
             spacing=2,
@@ -946,7 +1015,7 @@ def NavigationPage() -> ft.Control:
         Container(
             height=200,
             border_radius=8,
-            bgcolor=ft.Colors.WHITE,
+            bgcolor=ft.Colors.SURFACE,
             border=ft.Border.all(1, BORDER),
             content=Tabs(
                 length=3,
@@ -988,7 +1057,7 @@ def NavigationPage() -> ft.Control:
             controls=[
                 Container(
                     width=360,
-                    bgcolor=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.SURFACE,
                     border_radius=10,
                     border=ft.Border.all(1, BORDER),
                     content=ft.NavigationBar(
@@ -1006,7 +1075,7 @@ def NavigationPage() -> ft.Control:
                 ),
                 Container(
                     height=200,
-                    bgcolor=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.SURFACE,
                     border_radius=10,
                     border=ft.Border.all(1, BORDER),
                     content=ft.NavigationRail(
@@ -1521,14 +1590,14 @@ def DisplayPage() -> ft.Control:
                     leading=ft.Icon(ft.Icons.PEOPLE_OUTLINE, color=ACCENT),
                     trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT),
                 ),
-                Divider(height=1, color="#eef0f4"),
+                Divider(height=1),
                 ListTile(
                     title="系统设置",
                     subtitle="配置系统参数",
                     leading=ft.Icon(ft.Icons.SETTINGS_OUTLINED, color="#10b981"),
                     trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT),
                 ),
-                Divider(height=1, color="#eef0f4"),
+                Divider(height=1),
                 ListTile(
                     title="操作日志",
                     subtitle="查看历史操作记录",
@@ -1812,29 +1881,22 @@ ROUTES: list[ft.Route] = [
 
 @ft.component
 def App() -> ft.Control:
-    """应用根组件：配置主题 + 声明式路由。"""
-    _configure_page(ft.context.page)
-    return ft.Router(ROUTES, not_found=NotFoundPage, manage_views=False)
+    """应用根组件：声明式路由 + 主题下发。
+
+    ``ThemeProvider`` 必须包在**最外层**：它要写 ``page.theme``，
+    放在页面组件里会晚一帧，表现为"切模式闪一下旧配色"。
+    """
+    return ThemeProvider(build=lambda: ft.Router(
+        ROUTES, not_found=NotFoundPage, manage_views=False
+    ))
 
 
 def _configure_page(page: ft.Page) -> None:
-    """统一页面级主题（字体 / 配色 / 过渡动画）。"""
-    has_font = FONT_FILE.exists()
-    if has_font:
+    """页面级设置（字体）。**主题不在这里设** —— 交给 ``ThemeProvider``，
+    否则会出现"两处都能改主题、谁最后生效说不清"的问题。"""
+    if FONT_FILE.exists():
         page.fonts = {"AlibabaPuHuiTi": str(FONT_FILE)}
-    page.theme_mode = page.theme_mode or ft.ThemeMode.LIGHT
-    page.theme = ft.Theme(
-        color_scheme_seed=ACCENT,
-        font_family="AlibabaPuHuiTi" if has_font else None,
-        use_material3=True,
-        page_transitions=ft.PageTransitionsTheme(
-            android=ft.PageTransitionTheme.NONE,
-            ios=ft.PageTransitionTheme.NONE,
-            macos=ft.PageTransitionTheme.NONE,
-            windows=ft.PageTransitionTheme.NONE,
-            linux=ft.PageTransitionTheme.NONE,
-        ),
-    )
+        theme_state().font_family = "AlibabaPuHuiTi"
 
 
 def main(page: ft.Page) -> None:
@@ -1850,6 +1912,7 @@ def main(page: ft.Page) -> None:
     page.window.height = 840
     page.window.min_width = 900
     page.window.min_height = 640
+    _configure_page(page)
     page.render(App)
 
 

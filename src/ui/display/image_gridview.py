@@ -81,6 +81,10 @@ class ImageGridView:
 
     # ------------------------------------------------------------------
     # 状态变更
+    #
+    # 本类是 `@ft.observable`，**给字段赋值本身就会通知订阅者重渲染**，
+    # 不需要（也不能）再调 `self.notify()` —— flet 1.0.4 的 Control 上
+    # 压根没有这个方法，旧代码里的 `self.notify()` 是 AttributeError。
     # ------------------------------------------------------------------
 
     def _set_page(self, page: str | int | None = None) -> None:
@@ -89,7 +93,6 @@ class ImageGridView:
         except (TypeError, ValueError):
             return
         self.current_page = value if 1 <= value <= self.num_pages else 1
-        self.notify()  # type: ignore[attr-defined]
 
     def _set_num_item_per_page(self, per_page: int | str) -> None:
         try:
@@ -99,11 +102,9 @@ class ImageGridView:
         if 1 <= value <= max(self.num_items, 1):
             self.num_item_per_page = value
         self.current_page = 1
-        self.notify()  # type: ignore[attr-defined]
 
     def _set_img_size(self, e: ft.ControlEvent) -> None:
         self.img_size = int(float(e.control.value))
-        self.notify()  # type: ignore[attr-defined]
 
     # ------------------------------------------------------------------
     # UI

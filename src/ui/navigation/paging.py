@@ -1,3 +1,4 @@
+import os
 from dataclasses import field
 
 import flet as ft
@@ -153,6 +154,12 @@ def Paging(state: PagingState):
 
     v_count = ft.Text(value=f"共 {state.sum_data_nums} {state.data_unit}")
     rst_controls = []
+    if os.environ.get("CS_UI_DEBUG_PAGING"):
+        print(
+            f"[Paging] render current_page={state.current_page} "
+            f"pages={state.sum_page_nums}",
+            flush=True,
+        )
 
     first_page_btn = PrevNextPageButton(
         icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_LEFT,
@@ -231,9 +238,17 @@ def Paging(state: PagingState):
         content_padding=0,
         border=outline_input(4, ft.Colors.GREY_300, ft.Colors.BLUE),
     )
+    # 每页条数的候选。**当前值不在候选里时要补进去** ——
+    # 否则 Flutter 侧匹配不到 value，下拉框显示空白且点不开。
+    # （真机踩到：Table 用 rows_per_page=8，Paging 的候选只有 5/10/15/20/30/40/50。）
+    per_page_options = [5, 10, 15, 20, 30, 40, 50]
+    current_per_page = state.data_per_page_nums
+    if current_per_page not in per_page_options:
+        per_page_options = sorted({*per_page_options, current_per_page})
+
     v_num_of_row_changer_field = ft.Dropdown(
-        options=[ft.DropdownOption(_) for _ in [5, 10, 15, 20, 30, 40, 50]],
-        value=str(state.data_per_page_nums),
+        options=[ft.DropdownOption(str(_)) for _ in per_page_options],
+        value=str(current_per_page),
         width=88,
         dense=True,
         content_padding=0,
@@ -241,6 +256,12 @@ def Paging(state: PagingState):
         scale=0.9,
         on_select=state.handle_change_per_page_nums,
     )
+    if os.environ.get("CS_UI_DEBUG_PAGING"):
+        print(
+            f"[Paging] dropdown value={current_per_page!r} "
+            f"options={[o.key for o in v_num_of_row_changer_field.options]}",
+            flush=True,
+        )
     return ft.Row(
         controls=[
             v_count,
