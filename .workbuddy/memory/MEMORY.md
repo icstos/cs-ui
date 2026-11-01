@@ -128,6 +128,21 @@ python scripts/_probe_demo.py --app <宿主> --title "<宿主设的 page.title>"
 ② 之后用 `scripts/_locate.py --buttons`：先找**当前页按钮的蓝色边框**
    （分页器里唯一的蓝色）定出行的 y，再按白色块外推等距按钮 —— 页面怎么滚都不用重估。
 
+## ui-mcp（2026-11-01）：给 AI agent 的组件库 MCP 服务
+`src/ui_mcp/`（独立顶层包，`ui` 不依赖它）。形态照 flet-mcp，但**索引靠运行时内省**
+（`@ft.control` 拍平构造器、`@ft.observable` 造代理类，静态扫描看不见真实签名）。
+`ui-mcp build` 时 import 一次 `ui` → `data/{api,examples,docs}.json`；**服务期不 import ui**。
+
+- 12 个工具 / 5 组（`UI_MCP_ENABLE_{API,ICONS,EXAMPLES,DOCS,GUIDE}`）。主验证器是
+  `get_api(name, member=, query=)`；`query=` 会走继承链（`bases` → 外部祖先类条目）
+- **`get_guidelines` 是差异化点**：11 条"查 API 查不到但写错必炸"的范式（frozen、
+  page.render、`.ui()`+`use_ref`、PanelField、Table、expand、`#AARRGGBB`、令牌、主题、验收）
+- **改了 `src/ui` 必须 `ui-mcp build`**，`ui-mcp check` 会列出比索引新的文件
+- **新增组件要往 `src/ui_mcp/aliases.py` 补一行中文别名**，否则中文搜不到（英文名无影响）
+- 校验：`python scripts/_ui_mcp_logic.py`（58 条断言）
+- 内省三坑：own 字段只能看 `__dict__['__annotations__']`（差集会毁在 observable 代理链上）；
+  别名（`Title = Header_1`）按 `id(obj)` 去重；基类键按模块前缀判（`ui.Button` vs `flet.Button`）
+
 ## 已知待办
 - `core/constants.py` 的 `StyleType` 仍在用不随主题走的 M2 硬色（`BLUE`/`GREEN`/`RED`/`YELLOW_600`）
 - `display/media/audio.py` 有从未被提交包含的遗留改动，需复核去留

@@ -422,6 +422,54 @@ python examples/demo.py
 - `examples/test_minimal.py` / `test_simple.py` — 最小示例
 - `examples/my_control.py` — 自定义控件示例
 
+## MCP 服务（ui-mcp）
+
+给 AI agent 用的组件库 API 服务，思路同 [flet-mcp](https://flet.dev/docs/cookbook/flet-mcp/)：
+模型对 cs-ui 的记忆必然是过期的、而且是编造的，与其让它猜，不如让它**查**。
+
+索引是**运行时内省**出来的（`@ft.control` 会把构造器拍平、`@ft.observable`
+会造代理类，静态扫描看不到真实签名），随包分发三份 JSON，服务期不 import `ui`：
+
+| 产物 | 内容 |
+|------|------|
+| `data/api.json` | 约 80 个组件、60 个函数、9 个枚举，外加组件继承到的 40+ 个外部类成员表 |
+| `data/examples.json` | `examples/demo.py` 拆页 + **每个组件的真实调用片段** |
+| `data/docs.json` | README / TODO / 项目记忆切段，可检索 |
+
+工具（12 个，可用 `UI_MCP_ENABLE_{API,ICONS,EXAMPLES,DOCS,GUIDE}=0` 关掉整组）：
+
+| 工具 | 用途 |
+|------|------|
+| `get_api(name, member=, query=, format=)` | 主验证器。查组件/数据类/函数/枚举/外部基类；`query` 能搜继承链 |
+| `list_components(category=, pattern=, kind=)` | 按分类 / 范式（static / observable / function）浏览 |
+| `search_components(query)` | 中英文语义检索（"翻页表格" → Table） |
+| `get_enum` / `search_enum_members` / `enum_has_member` | 枚举查证 |
+| `find_icon(query)` | 按概念找 Material 图标（内置中文映射） |
+| `search_examples` / `get_example` | 找 demo 页、读真实源码（支持分段） |
+| `search_docs` / `get_doc` | 搜文档段落 |
+| `get_guidelines(topic)` | **经验条款**：frozen 树、`page.render`、颜色串顺序、令牌… |
+
+```bash
+pip install -e ".[mcp]"      # 装 fastmcp 依赖
+ui-mcp                        # stdio 服务（默认子命令）
+ui-mcp build                  # 改了 src/ui 之后重建索引
+ui-mcp check                  # 索引是否落后于源码
+ui-mcp guide frozen           # 终端里直接看经验条款
+```
+
+MCP 客户端配置（Claude Desktop / Cursor / WorkBuddy…）：
+
+```json
+{
+  "mcpServers": {
+    "ui": { "command": "ui-mcp" }
+  }
+}
+```
+
+> ⚠️ 改了组件后记得 `ui-mcp build`；`ui-mcp check` 会列出比索引新的文件。
+> 新增组件要往 `src/ui_mcp/aliases.py` 补一行中文别名，否则中文搜不到它（英文名不受影响）。
+
 ## 参考资料
 
 - <https://github.com/flet-dev/examples.git>

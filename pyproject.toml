@@ -14,6 +14,10 @@ dependencies = [
     "flet-webview",
 ]
 
+# ui-mcp（给 AI agent 的组件库 MCP 服务）是可选能力：装它不影响 ui 本身的使用。
+[project.optional-dependencies]
+mcp = ["fastmcp>=2.0"]
+
 [project.urls]
 Homepage = "https://www.github.com/icstos/cs-ui"
 Repository = "https://www.github.com/icstos/cs-ui"
@@ -25,11 +29,16 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["ui"]
-package-dir = { "ui" = "src/ui" }
+packages = ["ui", "ui_mcp"]
+package-dir = { "ui" = "src/ui", "ui_mcp" = "src/ui_mcp" }
 include-package-data = true
+
+# 索引产物随包分发（和 flet-mcp 一样：装完即用，不需要额外构建步骤）
+[tool.setuptools.package-data]
+ui_mcp = ["data/*.json"]
 
 # [tool.setuptools.package-dir]
 # ui = "cs_ui"
 [project.scripts]
+ui-mcp = "ui_mcp.cli:main"
 moss-tts-nano = "ui.cli:main"
