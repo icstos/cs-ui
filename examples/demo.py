@@ -847,10 +847,11 @@ def LayoutPage() -> ft.Control:
 
     expander_section = section(
         "Expander 折叠面板",
-        "继承 ExpansionTile，统一了圆角、标题背景与展开动画。",
+        "整条标题可点、箭头自动翻转，展开时用 1px 分隔线分层；内容区左边缘与标题"
+        "文字对齐。variant 给 card / filled / plain 三种外观，density 给三档密度。",
         Expander(
             title="基础用法",
-            subtitle="点击标题展开 / 折叠",
+            subtitle="点击任意位置展开 / 折叠",
             controls=[
                 ft.Text("这里是折叠面板的内容区。", size=13),
                 Divider(color=BORDER),
@@ -858,9 +859,19 @@ def LayoutPage() -> ft.Control:
             ],
         ),
         Expander(
+            variant="filled",
             title="带前置图标",
-            leading=ft.Icon(ft.Icons.FOLDER, color=ACCENT, size=18),
-            controls=[ft.Text("支持 leading / trailing 自定义。", size=13)],
+            subtitle="图标自动落到染色方块里",
+            leading=ft.Icons.FOLDER_OPEN,
+            accent="warning",
+            controls=[ft.Text("leading 传图标名会自动染色，传控件则原样使用。", size=13)],
+        ),
+        Expander(
+            variant="plain",
+            density="compact",
+            title="plain 外观 + compact 密度",
+            trailing=ft.Text("3", size=12, color=MUTED),
+            controls=[ft.Text("无边框，适合放在列表里成组使用。", size=12, color=MUTED)],
         ),
     )
 

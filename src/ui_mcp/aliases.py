@@ -47,7 +47,7 @@ ALIASES: dict[str, list[str]] = {
     "Stack": ["堆叠", "层叠布局"],
     "Divider": ["分隔线", "横线"],
     "VerticalDivider": ["竖分隔线"],
-    "Expander": ["折叠面板", "可展开卡片", "折叠卡片"],
+    "Expander": ["折叠面板", "可展开卡片", "折叠卡片", "手风琴", "折叠块", "展开收起"],
     "GridView": ["网格", "网格布局"],
     "ListView": ["列表", "列表视图"],
     "PageLayout": ["页面骨架", "页面布局"],
