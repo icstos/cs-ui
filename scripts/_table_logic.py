@@ -16,9 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-import flet as ft  # noqa: E402
+import flet as ft
 
-from ui.layout.table import TableState  # noqa: E402
+from ui.layout.table import TableState
 
 PASSED = 0
 
@@ -38,7 +38,7 @@ def check_no_raise(label: str, fn) -> None:
     global PASSED
     try:
         fn()
-    except BaseException as e:  # noqa: BLE001
+    except BaseException as e:
         print(f"FAIL  {label}: 抛了 {type(e).__name__}: {e}")
         raise SystemExit(1) from e
     PASSED += 1
@@ -52,9 +52,7 @@ def check_no_raise(label: str, fn) -> None:
 
 def make_dt(n_rows: int, n_cols: int = 3) -> ft.DataTable:
     rows = [
-        ft.DataRow(
-            cells=[ft.DataCell(ft.Text(f"r{i}c{j}")) for j in range(n_cols)]
-        )
+        ft.DataRow(cells=[ft.DataCell(ft.Text(f"r{i}c{j}")) for j in range(n_cols)])
         for i in range(n_rows)
     ]
     cols = [ft.DataColumn(ft.Text(f"c{j}")) for j in range(n_cols)]
@@ -106,10 +104,12 @@ check("超过总页落到 1", s4.clamp_page(99), 1)
 
 print()
 print("=== 边界：空表 / 整除 / rows_per_page<=0 ===")
-# 注意：flet 1.0.4 的 DataTable.columns 是**必填**位置参数，所以"空表"
+# 注意：flet 1.0.5 的 DataTable.columns 是**必填**位置参数，所以"空表"
 # 只能用「有列名、无数据行」来构造 —— 这也正是 Table 不给 data_table 时的兜底形状。
 empty_dt = ft.DataTable(columns=[ft.DataColumn(ft.Text("列"))])
-check_no_raise("空表构造 TableState", lambda: TableState(data_table=empty_dt, rows_per_page=10))
+check_no_raise(
+    "空表构造 TableState", lambda: TableState(data_table=empty_dt, rows_per_page=10)
+)
 s_empty = TableState(data_table=make_dt(0), rows_per_page=10)
 check("空表行数", s_empty.num_rows, 0)
 check("空表页数至少 1", s_empty.num_pages, 1)
@@ -140,7 +140,7 @@ check("两次调用结果一致", a, b)
 
 print()
 print("=== PagingState 能吃下 TableState 的派生值 ===")
-from ui.navigation.paging import PagingState  # noqa: E402
+from ui.navigation.paging import PagingState
 
 ps = PagingState(sum_data_nums=s4.num_rows, data_per_page_nums=s4.rows_per_page)
 check("PagingState 算出的页数与 Table 一致", ps.sum_page_nums, s4.num_pages)

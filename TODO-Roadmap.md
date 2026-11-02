@@ -95,7 +95,7 @@
         **把语义色拆三档**：`SEMANTIC`（实心填充）/ `SEMANTIC_ON`（填充上的前景）/
         `SEMANTIC_TEXT`（页面文字），三档在明暗下各自 ≥ 4.5:1，`scripts/_theme_logic.py`
         有断言守着。
-      - **关键技术点（血泪）**：flet 1.0.4 **读 observable 字段不会订阅**。订阅只发生在
+      - **关键技术点（血泪）**：flet 1.0.5 **读 observable 字段不会订阅**。订阅只发生在
         三处：组件参数是 `Observable`、`use_state`、`use_context`。原先
         `use_theme()` 写成"读一次字段"，点击回调照跑、状态照改、**界面零重渲染**。
         正确解法是 `ft.use_context(ft.create_context(default_value=state))`
@@ -110,17 +110,17 @@
       - 验证：`_theme_logic.py` 125 断言全过；smoke 12 路由 `ok=12 fail=0`；
         `_visual_check.py` 12 页灰块检测全绿（灰占比 0.000~0.014，阈值 0.55）；
         真机三张截图像素量测确认主色种子生效（pill 底色 `#D9E2FF`→`#2D4578`→`#4F3D74`）。
-- [x] 2026-09-27：`pyproject.toml` 收紧 flet 到 `~=1.0.4`（声明式 API 在 1.0.x 内仍有
+- [x] 2026-09-27：`pyproject.toml` 收紧 flet 到 `~=1.0.5`（声明式 API 在 1.0.x 内仍有
       差异，`>=1.0.0` 会静默升到不兼容版本），补上漏声明的 `flet-webview` 依赖，
       版本号 0.0.5 → 0.1.0。
 - [x] 2026-09-27：README / README_CN 同步：新增「设计令牌与主题」章节（双语）、
       `Pdf` 恢复到组件清单、下线的 `ECharts` 从清单与包结构树移除、
-      双范式描述改为「静态组件 / 交互式组件」、flet 版本 1.0.0 → 1.0.4。
+      双范式描述改为「静态组件 / 交互式组件」、flet 版本 1.0.0 → 1.0.5。
 
 - [x] 2026-10-12：`Table` 从 `@ft.control` 子类重写为 `@ft.component` 函数组件
       （用户报的 `RuntimeError: Frozen control cannot be updated.`）。
       **根因**：`set_page()` 用 `self.update()` 换页，而 demo 走 `page.render(App)` 根视图路径，
-      flet 1.0.4 把整棵树标记 frozen，`update()` 第一件事就查 `_frozen` → 点「下一页」必崩。
+      flet 1.0.5 把整棵树标记 frozen，`update()` 第一件事就查 `_frozen` → 点「下一页」必崩。
       代码里原有的 `# TODO: bad design: need add TableState` 就是当时的自述。
       - 新增 `TableState`（`@ft.observable @dataclass`）：承载数据与页码，
         抽出它才能让调用方在组件外读页码；**必须是 observable** —— 否则表格翻页了、

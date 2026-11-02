@@ -1,10 +1,9 @@
 import os
-from dataclasses import field
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from enum import Enum
 
 import flet as ft
-from collections.abc import Callable
-from enum import Enum
-from dataclasses import dataclass
 
 from ui.core.styles import outline_input
 
@@ -250,6 +249,8 @@ def Paging(state: PagingState):
         options=[ft.DropdownOption(str(_)) for _ in per_page_options],
         value=str(current_per_page),
         width=88,
+        # height=32,
+        # text_align=ft.TextAlign.CENTER,
         dense=True,
         content_padding=0,
         border=outline_input(4, ft.Colors.GREY_300, ft.Colors.BLUE),

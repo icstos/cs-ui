@@ -139,7 +139,7 @@ page.show_dialog**（零像素、且不报错），MultiSelect / DateInput / Col
 它们依赖 `page.overlay`，所以又回到 `rendering` 那条：必须
 `page.render` + `Router(manage_views=False)`，否则面板一片空白。
 
-已知限制（flet 1.0.4，非本项目 bug）：`Paging` 的"前往 __ 页"输入框、
+已知限制（flet 1.0.5，非本项目 bug）：`Paging` 的"前往 __ 页"输入框、
 `ImageGridView` 的下拉在 frozen 树里点不开。""",
     },
     {

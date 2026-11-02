@@ -1,6 +1,6 @@
 # CS-UI
 
-[![Flet](https://img.shields.io/badge/Flet-1.0.4-blue)](https://flet.dev)
+[![Flet](https://img.shields.io/badge/Flet-1.0.5-blue)](https://flet.dev)
 [![Python](https://img.shields.io/badge/Python-3.12%2B-green)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
@@ -32,7 +32,7 @@
 ## 环境要求
 
 - Python >= 3.12
-- flet[all] ~= 1.0.4
+- flet[all] ~= 1.0.5
 - flet-code-editor
 - flet-charts
 - flet-video / flet-audio / flet-webview
@@ -347,7 +347,7 @@ hairline()          # 1px 分隔线
 
 ### 四、一个重要陷阱
 
-在 flet 1.0.4 里，**读取 observable 对象的字段并不会订阅它**。
+在 flet 1.0.5 里，**读取 observable 对象的字段并不会订阅它**。
 订阅只发生在三处：组件参数是 `Observable`、`use_state`、`use_context`。
 
 ```python
@@ -387,7 +387,7 @@ from ui import Page, Colors, Icons, MainAxisAlignment, CrossAxisAlignment
 - 事件处理函数命名：`on_xx`
 - 所有组件采用绝对路径导入
 - 基于 Python 3.12+ 语法实现
-- 优先使用 flet 1.0.4 声明式 API（`@ft.component` + hooks），少用命令式 `update()`
+- 优先使用 flet 1.0.5 声明式 API（`@ft.component` + hooks），少用命令式 `update()`
 
 ## 示例
 

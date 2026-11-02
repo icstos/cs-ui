@@ -30,7 +30,7 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 ## Requirements
 
 - Python >= 3.12
-- flet[all] ~= 1.0.4
+- flet[all] ~= 1.0.5
 - flet-code-editor
 - flet-charts
 - flet-video / flet-audio / flet-webview
@@ -346,7 +346,7 @@ only **2.15:1** — white text on them is equally unreadable at 2.54 / 2.15. Eac
 
 ### One important trap
 
-In flet 1.0.4, **reading a field of an observable does not subscribe to it**. Subscription only
+In flet 1.0.5, **reading a field of an observable does not subscribe to it**. Subscription only
 happens in three places: the component argument is an `Observable`, `use_state`, or `use_context`.
 
 ```python

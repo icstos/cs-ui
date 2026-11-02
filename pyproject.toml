@@ -1,12 +1,12 @@
 [project]
-name = "ui"
+name = "cs-ui"
 version = "0.1.0"
 description = "A Python UI framework inspired by Flet"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Shawn Chen", email = "cs@cstos.com" }]
 dependencies = [
-    "flet[all]==1.0.4",
+    "flet[all]==1.0.5",
     "flet-code-editor",
     "flet-charts",
     "flet-video",
@@ -29,9 +29,13 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["ui", "ui_mcp"]
 package-dir = { "ui" = "src/ui", "ui_mcp" = "src/ui_mcp" }
 include-package-data = true
+
+
+[tool.setuptools.packages.find]
+where = ["src"]   # 从 src 目录开始查找
+include = ["ui*"] # 匹配顶层包名 + 所有子包（*通配符）
 
 # 索引产物随包分发（和 flet-mcp 一样：装完即用，不需要额外构建步骤）
 [tool.setuptools.package-data]

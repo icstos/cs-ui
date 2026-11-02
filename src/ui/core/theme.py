@@ -47,15 +47,15 @@ from ui.core.tokens import (
 
 __all__ = [
     "MODES",
-    "ThemeState",
-    "theme_state",
-    "current_mode",
-    "use_theme",
-    "build_theme",
-    "apply_theme",
     "ThemeProvider",
+    "ThemeState",
     "ThemeSwitcher",
+    "apply_theme",
+    "build_theme",
+    "current_mode",
     "set_system_brightness",
+    "theme_state",
+    "use_theme",
 ]
 
 #: ``ThemeState.mode`` 的合法取值
@@ -134,7 +134,7 @@ _state = ThemeState()
 
 #: 主题 context。默认值就是上面的单例，所以**没挂 Provider 也能用**；
 #: 真正的价值在于 :func:`ft.use_context` 碰到 ``Observable`` 值会**自动订阅** ——
-#: 而"在组件体里读 observable 字段"是**不会**订阅的（flet 1.0.4 只在
+#: 而"在组件体里读 observable 字段"是**不会**订阅的（flet 1.0.5 只在
 #: 「组件参数是 Observable」「use_state」「use_context」这三处订阅）。
 #: 换句话说：走 context 才有声明式的自动重绘，直接读全局单例是静默失效的。
 theme_context = ft.create_context(default_value=_state)
@@ -225,7 +225,9 @@ def apply_theme(
     def _on_change(e: ft.PlatformBrightnessChangeEvent) -> None:
         value = getattr(e, "brightness", None)
         name = getattr(value, "value", value)
-        st.platform_brightness = "dark" if str(name).lower().endswith("dark") else "light"
+        st.platform_brightness = (
+            "dark" if str(name).lower().endswith("dark") else "light"
+        )
         if on_brightness:
             on_brightness(st.platform_brightness)
 
@@ -233,7 +235,9 @@ def apply_theme(
     current = getattr(page, "platform_brightness", None)
     if current is not None:
         name = getattr(current, "value", current)
-        st.platform_brightness = "dark" if str(name).lower().endswith("dark") else "light"
+        st.platform_brightness = (
+            "dark" if str(name).lower().endswith("dark") else "light"
+        )
 
 
 @ft.component
@@ -316,7 +320,7 @@ def ThemeSwitcher(*, compact: bool = False) -> ft.Control:
                     else ft.Icons.DARK_MODE
                 ),
                 tooltip=f"明暗：当前 {'深色' if th.mode_name == 'dark' else '浅色'}"
-                        f"（{'跟随系统' if th.mode == 'system' else th.mode}）",
+                f"（{'跟随系统' if th.mode == 'system' else th.mode}）",
                 on_click=lambda _e: th.toggle_mode(),
             ),
         ],
@@ -334,11 +338,15 @@ def App() -> ft.Control:
             content=ft.Column(
                 spacing=16,
                 controls=[
-                    ft.Text("设计令牌 + 主题运行时", size=20,
-                            weight=ft.FontWeight.W_600),
-                    ft.Text("下面的卡片、状态胶囊、按钮全部走 Material 3 角色色，"
-                            "切明暗 / 换主色时不需要改任何一行组件代码。",
-                            size=13, color=ft.Colors.ON_SURFACE_VARIANT),
+                    ft.Text(
+                        "设计令牌 + 主题运行时", size=20, weight=ft.FontWeight.W_600
+                    ),
+                    ft.Text(
+                        "下面的卡片、状态胶囊、按钮全部走 Material 3 角色色，"
+                        "切明暗 / 换主色时不需要改任何一行组件代码。",
+                        size=13,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                    ),
                     ft.Row(
                         spacing=12,
                         controls=[
