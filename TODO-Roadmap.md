@@ -138,6 +138,22 @@
         直接 `Table(...)` 即可。
       - 验证：34 条逻辑断言全过；真机点击序列 `1→2→1→2→4` 与末页 `6`（编号 41-43）
         全部正确且静置无循环；`_visual_check` LayoutPage / NavigationPage 灰占比 0.001。
+- [x] 2026-11-02：新增**多语言运行时 `src/ui/core/i18n.py`**（原仓库根目录的 `i18n.py`
+      只剩兼容壳 + 迁移说明）。和 `theme.py` 同一套架构：`@ft.observable` 单例 +
+      `create_context` + `use_i18n()` / `use_t()`，切语言只重绘订阅者、不重建控件树。
+      - **扁平键表**：装表时把嵌套 dict 拍平成 `"app.title"`，查表一次 `dict.get`；
+        回退链 `当前语言 → 同语言基础档 → 兜底`（内置 `繁 → 简 → 英`）。
+      - **缺键不抛**：返回键名 + 只警告一次，`configure(strict=True)` 才抛；`validate()` 出缺表。
+      - **持久化**：改为本地 JSON（flet 1.0 的 `client_storage` 已变成异步
+        `SharedPreferences` 服务，同步读不到 → 会先闪一帧默认语言）。
+        首帧前同步读回，`store=` 可注入 `MemoryStore` / 自定义实现。
+      - **语言标签归一**：`zh-CN`/`zh_TW`/`en-US` 都能认；只注册 `en` 时 `en-US` 也命中。
+      - 组件：`LanguageSwitcher`（母语名 + 当前项打勾 + 英文名副标题），
+        并把语言同步给 Flutter 侧（`page.locale_configuration` / `page.rtl`），
+        让日期选择器等系统控件跟着翻译。
+      - 验证：`scripts/_i18n_logic.py` 68 条断言全过；`examples/test_i18n.py` 真机连切
+        简 → 繁 → 英 → 简 → 英，文案与复数全部跟随，输入框内容不丢（截图留档）。
+      - 删掉 `src/ui/core/language.py`（0 字节占位文件，避免与 i18n.py 争同一职责）。
 
 # TODO
 - [ ] 声明式范式收敛：把仍用 `@ft.observable` + `.ui()` 的组件（`Input` / `Checkbox` /

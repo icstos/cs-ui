@@ -22,6 +22,9 @@
   （折叠态占用高度即整个组件高度，展开不推动下方内容）
 - **双范式组件** — 静态组件继承原生控件；交互式组件是 `@ft.component` 函数，
   内部用 `use_state` / `use_memo` / `use_effect` 等 hooks 声明状态与副作用
+- **国际化 (i18n)** — 内置简体中文 / 繁體中文 / English，`use_t()` 一行订阅，
+  切语言只重绘用到翻译的组件（不丢表单内容）；缺翻译自动沿
+  `繁 → 简 → 英` 回退，选择写入本地配置、首帧即生效（不会先闪默认语言）
 - **图表支持** — 通过 `flet-charts` 封装 Bar / Line / Area / Scatter 图表，x 轴数值 / 分类通吃
 - **桌面级时间线** — `Timeline` 三种对齐（轴在左 / 轴在右 / 左右交替），时间戳可放
   对侧独立成列（默认，VS Code 时间线那种形态）/ 标题上方 / 同行 / 隐藏；
@@ -178,7 +181,7 @@ src/ui/
 │   ├── config.py            #   配置
 │   ├── constants.py         #   StyleType / FeedbackStyle / ButtonShape …
 │   ├── float_layer.py       #   页面浮层：overlay_usable / use_float_layer
-│   ├── language.py          #   多语言
+│   ├── i18n.py              #   多语言：I18nProvider / LanguageSwitcher / use_t / t
 │   ├── logger.py            #   日志
 │   ├── snackbar.py          #   SnackBar 类组件的 content 守卫
 │   ├── styles.py            #   统一样式助手
@@ -248,7 +251,7 @@ src/ui/
 
 | 分类 | 组件 |
 |------|------|
-| **Core 核心** | ThemeProvider、ThemeSwitcher、`use_theme`、`theme_state` |
+| **Core 核心** | ThemeProvider、ThemeSwitcher、`use_theme`、theme_state；I18nProvider、LanguageSwitcher、`use_t`、`t` |
 | **Chart 图表** | BarChart、LineChart、AreaChart、ScatterChart |
 | **Display 展示** | Image、ImageGridView、ListTile、LogContainer、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display 媒体** | Audio、AudioPlayer、Video、Pdf |
@@ -360,6 +363,99 @@ state = use_theme()        # ✅ use_context(theme_context)，flet 自动挂订�
 角色名交给 Flutter 解析 → 切主题不需要 Python 参与；
 而 `semantic("success")` 这类算出来的 hex，组件自己订阅了主题才会更新。
 
+## 多语言（i18n）
+
+### 一、注册文案
+
+`zh_Hans` / `zh_Hant` / `en` 三种语言**框架已内置**，应用侧只要给文案：
+
+```python
+from ui import register_messages
+
+register_messages("zh_Hans", {
+    "app": {"title": "我的应用"},
+    "hello": "你好，{name}",
+    "files": {"one": "{n} 个文件", "other": "{n} 个文件"},
+})
+register_messages("en", {
+    "app.title": "My App",            # 平铺写法和嵌套写法等价
+    "hello": "Hello, {name}",
+    "files": {"one": "{n} file", "other": "{n} files"},
+})
+```
+
+键在**装表时**拍平成 `"app.title"` 这样的点号串，查表是一次 `dict.get` ——
+不在每次渲染里 `split` 再逐层下钻（一个界面几百条文案，这个差别是可测的）。
+
+### 二、接入页面
+
+```python
+@ft.component
+def App():
+    return I18nProvider(build=MainShell)     # 和 ThemeProvider 并列放根视图
+
+@ft.component
+def Toolbar():
+    tr = use_t()                              # 订阅：切语言自动重绘
+    return ft.Text(tr("app.title"))           # 插值：tr("hello", name="Shawn")
+
+t("app.title")                                # 组件外（日志 / 菜单构造）：不订阅
+```
+
+`LanguageSwitcher()` 是现成的顶栏语言菜单（显示母语名、当前项打勾），直接放进 `Row` 即可。
+
+> **为什么必须用 `use_t()`**：flet 只在三处订阅 observable —— 组件参数是 `Observable`、
+> `use_state`、`use_context`。在组件体里直接调全局 `t()` 只会读一次，切语言不重绘。
+
+`I18nProvider` 用 `use_memo(build, [])` 复用控件树，所以**切语言不会清空表单内容**
+（示例里输入框打几个字再切语言，内容还在）。代价是只有订阅过的组件会更新 —— 这正是
+`use_t()` 存在的理由。
+
+### 三、回退与缺键
+
+查表链路是 `当前语言 → 同语言基础档 → 全局兜底`，内置关系为 `繁 → 简 → 英`：
+繁体只翻了一半时，剩下的自动落简体，简体再缺就落英文。
+
+缺键**不抛异常**（UI 不该因为漏翻一句就白屏）：返回键名本身，日志里只警告一次，
+`missing_keys()` 可查运行期漏了哪些。CI 里打开严格模式，缺键立即报错：
+
+```python
+from ui import configure, validate
+
+configure(strict=True)        # 缺键 → KeyError
+validate("zh_Hans")           # {"zh_Hant": ["a.b"], "en": []} —— 以简体为基准查缺
+```
+
+### 四、扩语言
+
+加一种语言 = 一行 `register_language` + 一份文案；想交给译者，就放 JSON 包：
+
+```python
+from ui import Language, load_catalogs, register_language
+
+register_language(Language("ja", "日本語", "Japanese", fallback="en"))
+load_catalogs("assets/i18n")     # fr.json / de.json …（含 _meta 时可自动注册语言）
+```
+
+```json
+{
+  "_meta": {"native_name": "Français", "english_name": "French", "fallback": "en"},
+  "messages": {"app": {"title": "Mon App"}}
+}
+```
+
+语言标签写 `zh-CN` / `zh_TW` / `en-US` 都能认：`zh-CN` 落简体、`zh-TW` 落繁体、
+只注册了 `en` 时 `en-US` 也命中 `en`。
+
+### 五、持久化
+
+用户切过的语言写进本地配置（`FLET_APP_STORAGE_DATA`，或 Windows `%LOCALAPPDATA%\cs-ui`、
+macOS `Application Support`、Linux `$XDG_CONFIG_HOME`），**首帧之前同步读回**，
+所以启动不会先闪一下默认语言。没切过就跟随系统语言（Windows 读
+`GetUserDefaultUILanguage`，其他平台读 `LANG`）。
+
+`MemoryStore()` 用于测试或临时会话；自定义存储只要实现 `read()` / `write()` 两个方法。
+
 ## 导入方式
 
 所有组件均可从 `ui` 直接导入：
@@ -416,6 +512,7 @@ python examples/demo.py
 - `examples/test_home.py` — 最小首页
 - `examples/test_form.py` — 表单组件
 - `examples/test_feedback.py` — 反馈组件（对话框、消息提示、加载、进度条）
+- `examples/test_i18n.py` — 多语言（顶栏切换简 / 繁 / 英，实时跟随）
 - `examples/test_chart.py` — 图表组件
 - `examples/test_line_chart.py` — 折线图
 - `examples/test_button.py` — 按钮变体
