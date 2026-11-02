@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 
 import flet as ft
 
+from ui.core.i18n import t, use_t
 from ui.navigation.paging import Paging, PagingState
 
 __all__ = ["Table", "TableState", "pandas_to_datatable"]
@@ -39,6 +40,8 @@ HEADING_ROW_COLOR = ft.Colors.SURFACE_CONTAINER_LOW
 HORIZONTAL_LINE = ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)
 TABLE_BORDER = ft.Border.all(1, ft.Colors.OUTLINE_VARIANT)
 
+#: 「编号」列的兜底文案。真实文案走 ``ui.table.number``（英文是 ``#``），
+#: 这里保留常量只为兼容老代码的 ``from ui.layout.table import NUMBER_COLUMN_LABEL``。
 NUMBER_COLUMN_LABEL = "编号"
 
 
@@ -100,7 +103,7 @@ class TableState:
         """列定义；``with_number`` 时在最前面补一列「编号」。"""
         cols = list(self._source.columns)
         if self.with_number:
-            cols.insert(0, ft.DataColumn(label=ft.Text(NUMBER_COLUMN_LABEL)))
+            cols.insert(0, ft.DataColumn(label=ft.Text(t("ui.table.number"))))
         return cols
 
     def build_rows(self, page: int) -> list[ft.DataRow]:
@@ -128,7 +131,7 @@ def _default_state(
     with_paged: bool,
 ) -> TableState:
     # ft.DataTable 的 columns 是必填位置参数，空表也给一列占位
-    empty = ft.DataTable(columns=[ft.DataColumn(ft.Text(NUMBER_COLUMN_LABEL))])
+    empty = ft.DataTable(columns=[ft.DataColumn(ft.Text(t("ui.table.number")))])
     return TableState(
         data_table=data_table if data_table is not None else empty,
         rows_per_page=rows_per_page,
@@ -160,6 +163,8 @@ def Table(
     Example:
         >>> Table(data_table=dt, rows_per_page=10)  # doctest: +SKIP
     """
+    # 订阅语言：表头「编号 / #」与分页器文案都要跟着切
+    use_t()
     table_state = state or _default_state(
         data_table, rows_per_page, with_number, with_paged
     )

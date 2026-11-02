@@ -33,6 +33,7 @@ from collections.abc import Callable
 import flet as ft
 
 from ui.core.float_layer import overlay_usable
+from ui.core.i18n import t
 
 __all__ = ["PanelField", "place_panel", "panel_shell"]
 
@@ -198,7 +199,7 @@ class PanelField:
                 border_radius=ft.BorderRadius.all(4),
                 bgcolor=HOVER_BG if self._hover == "clear" else None,  # type: ignore[attr-defined]
                 on_hover=lambda e: self._hover_key("clear", _truthy(e.data)),
-                tooltip=ft.Tooltip(message="清除"),
+                tooltip=ft.Tooltip(message=t("ui.common.clear")),
                 content=ft.Icon(ft.Icons.CLOSE, size=14, color=ft.Colors.OUTLINE),
             ),
         )

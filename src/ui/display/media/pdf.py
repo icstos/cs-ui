@@ -27,6 +27,7 @@ from pathlib import PurePath
 import flet as ft
 import flet_webview as fwv
 
+from ui.core.i18n import t, use_t
 from ui.core.tokens import FONT_SIZE, RADIUS, elevation, overlay
 
 __all__ = ["Pdf", "pdf_url"]
@@ -83,6 +84,7 @@ def Pdf(
     加载进度由 ``WebView.on_progress`` 驱动：进度未满时在正文区**上沿**压一条
     2px 细进度条 —— 不占额外高度（占高度会让文档区每次加载完往下跳一格）。
     """
+    use_t()  # 订阅语言：工具条按钮与空态 / 失败态文案都要跟着切
     url = pdf_url(src)
     name = title or _file_name(src)
     progress, set_progress = ft.use_state(0.0)
@@ -118,14 +120,14 @@ def Pdf(
                 bgcolor=overlay(0.06),
                 ink=True,
                 on_click=lambda _e: on_open(),
-                tooltip="打开本地 PDF",
+                tooltip=t("ui.pdf.open_tooltip"),
                 content=ft.Row(
                     spacing=4,
                     tight=True,
                     controls=[
                         ft.Icon(ft.Icons.FOLDER_OPEN, size=15,
                                 color=ft.Colors.ON_SURFACE_VARIANT),
-                        ft.Text("打开", size=FONT_SIZE["small"]),
+                        ft.Text(t("ui.pdf.open"), size=FONT_SIZE["small"]),
                     ],
                 ),
             )
@@ -138,7 +140,7 @@ def Pdf(
                 bgcolor=overlay(0.06),
                 ink=True,
                 on_click=_reset,
-                tooltip="重新加载",
+                tooltip=t("ui.pdf.reload"),
                 content=ft.Icon(ft.Icons.REFRESH, size=15,
                                 color=ft.Colors.ON_SURFACE_VARIANT),
             )
@@ -154,7 +156,7 @@ def Pdf(
                 controls=[
                     ft.Icon(ft.Icons.PICTURE_AS_PDF, size=40,
                              color=ft.Colors.OUTLINE_VARIANT),
-                    ft.Text("未选择 PDF", size=FONT_SIZE["small"],
+                    ft.Text(t("ui.pdf.empty"), size=FONT_SIZE["small"],
                             color=ft.Colors.ON_SURFACE_VARIANT),
                 ],
             ),
@@ -169,7 +171,7 @@ def Pdf(
                 controls=[
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=36,
                             color=ft.Colors.ERROR),
-                    ft.Text("文档加载失败", size=FONT_SIZE["body"]),
+                    ft.Text(t("ui.pdf.failed"), size=FONT_SIZE["body"]),
                     ft.Text(
                         url,
                         size=FONT_SIZE["caption"],

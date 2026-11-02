@@ -2,6 +2,7 @@ import flet as ft
 from dataclasses import dataclass, field
 
 from ui.core.constants import LayoutType
+from ui.core.i18n import t
 from ui.input.input import Label
 
 ICON_SIZE = 16
@@ -79,7 +80,7 @@ class CheckboxGroup(Label):
             self.notify()  # type: ignore[attr-defined]
 
         check_all: ft.Checkbox = ft.Checkbox(
-            label="全选",
+            label=t("ui.common.select_all"),
             value=all_selected,
             on_change=_on_select_all,
             check_color=ft.Colors.WHITE,

@@ -11,11 +11,15 @@
 
 旧写法 → 新写法：
 
-    I18n(langs={"zh_CN": {...}}, fallback="zh_CN")   →  register_messages("zh_Hans", {...})
-                                                        configure(fallback="zh_Hans")
+    I18n(langs={"zh-CN": {...}}, fallback="zh-CN")   →  register_messages("zh-CN", {...})
+                                                        configure(fallback="zh-CN")
     t("a.b")                                         →  t("a.b")            # 组件里用 use_t()
-    i18n.set_lang("en")                              →  set_locale("en")
+    i18n.set_lang("en-US")                           →  set_locale("en-US")
     i18n.get_lang()                                  →  current_locale()
+
+语言码统一按 **地区写法** 归一：``zh-CN`` / ``zh-TW`` / ``en-US`` 是标准写法，
+``zh_CN`` / ``en`` 这类简写也认（见 :func:`canonical`）。框架自带这三份文案，
+所以通常只要 ``I18nProvider(locale="zh-CN", build=...)`` 就够了。
 
 语言持久化也不再依赖 ``page.client_storage``（flet 1.0 里它变成了异步的
 ``SharedPreferences`` 服务）：默认写本地 JSON 文件，首帧即可同步读回，
@@ -97,9 +101,9 @@ class I18n:
 
 if __name__ == "__main__":
     # 最小自检：注册一份文案 → 切语言 → 打印
-    register_messages("zh_Hans", {"demo.hello": "你好，{name}"})
-    register_messages("en", {"demo.hello": "Hello, {name}"})
-    for code in ("zh_Hans", "en"):
+    register_messages("zh-CN", {"demo.hello": "你好，{name}"})
+    register_messages("en-US", {"demo.hello": "Hello, {name}"})
+    for code in ("zh-CN", "en-US"):
         set_locale(code)
         print(f"{code}: {t('demo.hello', name='Shawn')}  (当前={current_locale()})")
     print("可用语言：", [item.code for item in available_languages()])

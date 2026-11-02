@@ -367,20 +367,24 @@ state = use_theme()        # ✅ use_context(theme_context)，flet 自动挂订�
 
 ### 一、注册文案
 
-`zh_Hans` / `zh_Hant` / `en` 三种语言**框架已内置**，应用侧只要给文案：
+`zh-CN` / `zh-TW` / `en-US` 三种语言**框架已内置** —— 不只是语言列表，连
+按钮（确定 / 取消 / 清除 / 全选）、日历（月份名 / 星期名 / 每周首日）、分页、
+表格、取色器、PDF / 音频播放器这些**组件自己的文案**都已翻好，应用侧只要给自己的文案：
 
 ```python
 from ui import register_messages
 
-register_messages("zh_Hans", {
+register_messages("zh-CN", {
     "app": {"title": "我的应用"},
     "hello": "你好，{name}",
     "files": {"one": "{n} 个文件", "other": "{n} 个文件"},
+    "cities": ["北京", "上海"],        # 成组文案：取用 tr.list("cities")
 })
-register_messages("en", {
+register_messages("en-US", {
     "app.title": "My App",            # 平铺写法和嵌套写法等价
     "hello": "Hello, {name}",
     "files": {"one": "{n} file", "other": "{n} files"},
+    "cities": ["Beijing", "Shanghai"],
 })
 ```
 
@@ -423,10 +427,33 @@ t("app.title")                                # 组件外（日志 / 菜单构�
 from ui import configure, validate
 
 configure(strict=True)        # 缺键 → KeyError
-validate("zh_Hans")           # {"zh_Hant": ["a.b"], "en": []} —— 以简体为基准查缺
+validate("zh-CN")             # {"zh_TW": ["a.b"], "en_US": []} —— 以简体为基准查缺
 ```
 
-### 四、扩语言
+### 四、格式也是文案
+
+只剩"没翻译"是最容易发现的国际化问题；**"翻译了但格式还是中文的"**才是常态：
+英文界面里冒出 `2026 年 9 月`、`1,286 项`、日历表头写死"一二三四五六日"。
+这些值和文案一样必须跟着语言走，统一从 `ui.core.format` 取：
+
+```python
+from ui import (format_number, format_date, format_time, format_list,
+                month_name, weekday_names, first_weekday, calendar_title)
+
+format_number(1286)                    # 1,286
+format_date(date(2026, 9, 26))         # 2026-09-26   /  09/26/2026
+format_date(d, long=True)              # 2026年9月26日 /  September 26, 2026
+calendar_title(2026, 9)                # 2026年9月     /  September 2026
+weekday_names()                        # ('一','二',…,'日') / ('Mo','Tu',…)
+first_weekday()                        # 中文 0=周一，英文 6=周日
+format_list(["A", "B", "C"])           # A、B、C       /  A, B, C
+```
+
+组件已经全部走这一层：`DateInput` / `DateTimeInput` / `CalendarPanel` 的标题、
+月份格、星期表头、每周首日都由语言决定（`first_day_weekday=None` 即跟随语言），
+`Paging` 的总数走千分位，`MultiSelect` 的已选项走本地化连接符。
+
+### 五、扩语言
 
 加一种语言 = 一行 `register_language` + 一份文案；想交给译者，就放 JSON 包：
 
@@ -444,10 +471,12 @@ load_catalogs("assets/i18n")     # fr.json / de.json …（含 _meta 时可自�
 }
 ```
 
-语言标签写 `zh-CN` / `zh_TW` / `en-US` 都能认：`zh-CN` 落简体、`zh-TW` 落繁体、
-只注册了 `en` 时 `en-US` 也命中 `en`。
+语言标签写 `zh-CN` / `zh_TW` / `en-US` 都能认：归一规则是**地区优先于文字**
+（`zh-CN → zh_CN`、`zh-Hant-TW → zh_TW`、`zh-Hant-HK → zh_TW`），查询时再按
+语言 / 文字宽松匹配 —— 只注册了 `en` 时 `en-US` / `en-GB` 都命中 `en`，
+注册了 `zh_CN` / `zh_TW` 时 `zh-Hans` / `zh-Hant` 各自落位。
 
-### 五、持久化
+### 六、持久化
 
 用户切过的语言写进本地配置（`FLET_APP_STORAGE_DATA`，或 Windows `%LOCALAPPDATA%\cs-ui`、
 macOS `Application Support`、Linux `$XDG_CONFIG_HOME`），**首帧之前同步读回**，

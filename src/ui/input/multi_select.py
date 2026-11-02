@@ -43,6 +43,8 @@ from dataclasses import dataclass, field
 import flet as ft
 
 from ui.core.float_layer import overlay_usable, use_float_layer
+from ui.core.format import format_list
+from ui.core.i18n import t, use_t
 from ui.input.input import Label
 
 __all__ = ["MultiSelect"]
@@ -82,7 +84,7 @@ class MultiSelect(Label):
     Args:
         value: 已选中的选项值列表。
         options: 全部可选项（文本即值）。
-        placeholder: 未选择任何项时框内的占位文本。
+        placeholder: 未选择任何项时框内的占位文本。``None``（默认）取语言包。
         width: 输入框与面板宽度，默认 320。
         panel_height: 选项区最大高度，超出后内部滚动，默认 260。
         show_select_all: 是否在面板顶部显示「全选」行（支持半选态），默认 True。
@@ -96,7 +98,7 @@ class MultiSelect(Label):
 
     value: list[str] = field(default_factory=list)
     options: list[str] = field(default_factory=list)
-    placeholder: str = "请选择"
+    placeholder: str | None = None
     width: int | float = 320
     panel_height: int | float = 260
     show_select_all: bool = True
@@ -181,8 +183,12 @@ class MultiSelect(Label):
 
     @property
     def display_text(self) -> str:
-        """已选内容的纯文本表示，便于日志 / 表单提交。"""
-        return "、".join(self.value)
+        """已选内容的纯文本表示，便于日志 / 表单提交。
+
+        分隔符按语言走（中文顿号、英文逗号）—— 这不是"细节"，导出 CSV 或
+        写日志时用错分隔符会直接变成脏数据。
+        """
+        return format_list(self.value)
 
     @property
     def _fg(self) -> ft.ColorValue:
@@ -212,6 +218,7 @@ class MultiSelect(Label):
     @ft.component
     def ui(self) -> ft.Control:
         """构建多选下拉框 UI。"""
+        use_t()  # 订阅语言：占位符 / 全选 / 页脚计数都要跟着切
         page = ft.context.page
         field = self._build_field()
         floating = self._should_float(page)
@@ -377,7 +384,7 @@ class MultiSelect(Label):
         if not self.value:
             return [
                 ft.Text(
-                    self.placeholder,
+                    self.placeholder or t("ui.common.placeholder"),
                     size=TEXT_SIZE,
                     color=ft.Colors.OUTLINE,
                     no_wrap=True,
@@ -457,7 +464,11 @@ class MultiSelect(Label):
                     height=ROW_HEIGHT,
                     padding=ft.Padding.symmetric(horizontal=PANEL_PAD + 8),
                     alignment=ft.Alignment.CENTER_LEFT,
-                    content=ft.Text("暂无可选项", size=CHIP_TEXT_SIZE, color=ft.Colors.OUTLINE),
+                    content=ft.Text(
+                        t("ui.multiselect.empty"),
+                        size=CHIP_TEXT_SIZE,
+                        color=ft.Colors.OUTLINE,
+                    ),
                 )
             )
 
@@ -491,7 +502,7 @@ class MultiSelect(Label):
             icon = ft.Icons.CHECK_BOX_OUTLINE_BLANK
         return self._build_row(
             key="__all__",
-            label="全选",
+            label=t("ui.common.select_all"),
             icon=icon,
             highlighted=checked,
             on_click=lambda _e: self.select_all(not self.all_selected),
@@ -566,12 +577,16 @@ class MultiSelect(Label):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     ft.Text(
-                        f"已选 {len(self.value)} / {len(self.options)}",
+                        t(
+                            "ui.multiselect.selected",
+                            n=len(self.value),
+                            total=len(self.options),
+                        ),
                         size=CHIP_TEXT_SIZE,
                         color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                     ft.TextButton(
-                        content=ft.Text("完成", size=CHIP_TEXT_SIZE),
+                        content=ft.Text(t("ui.common.done"), size=CHIP_TEXT_SIZE),
                         on_click=lambda _e: self.close(),
                     ),
                 ],

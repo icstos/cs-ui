@@ -21,6 +21,7 @@ from pathlib import Path
 
 import flet as ft
 
+from ui.core.i18n import t, use_t
 from ui.display.image import Image
 from ui.navigation.paging import Paging, PagingState
 
@@ -113,6 +114,7 @@ class ImageGridView:
     @ft.component
     def ui(self) -> ft.Control:
         """构建图片网格视图。"""
+        use_t()  # 订阅语言：尺寸滑块标签 + 分页量词都要跟着切
         controls: list[ft.Control] = []
 
         if self.title or self.show_size_slider:
@@ -142,7 +144,7 @@ class ImageGridView:
                         sum_data_nums=self.num_items,
                         data_per_page_nums=self.num_item_per_page,
                         current_page=self.current_page,
-                        data_unit="张",
+                        data_unit=t("ui.image.unit"),
                         on_change_page=self._set_page,
                         on_change_per_page_nums=self._set_num_item_per_page,
                     )
@@ -169,7 +171,11 @@ class ImageGridView:
         if self.show_size_slider:
             right.extend(
                 [
-                    ft.Text("缩略图尺寸", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
+                    ft.Text(
+                        t("ui.image.size"),
+                        size=12,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                    ),
                     ft.Slider(
                         min=MIN_IMG_SIZE,
                         max=MAX_IMG_SIZE,

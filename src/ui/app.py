@@ -6,6 +6,7 @@ from pathlib import Path
 import flet as ft
 
 from ui.core.config import logger
+from ui.core.i18n import t, use_t
 
 FONT_DIR = Path(Path(__file__).parent, "data/fonts").resolve()
 FONTS = {"AlibabaPuHuiTi": str(Path(FONT_DIR, "AlibabaPuHuiTi-3-55-Regular.otf"))}
@@ -27,7 +28,7 @@ def Home():
             ft.Button(
                 content="About", on_click=lambda _: ft.context.page.navigate("/about")
             ),
-            ft.Text("你好，测试。Welcome home!", size=24),
+            ft.Text("Welcome home", size=24),
         ]
     )
 
@@ -60,15 +61,14 @@ def Template():
 
 @ft.component
 def NotFoundView():
-    page = ft.context.page
-    #  page.window.center()
+    use_t()  # 订阅语言：用户切语言时这一页也要跟着变
     return ft.Container(
         content=ft.Column(
             controls=[
                 ft.Text("404", size=90),
-                ft.Text("当前页未定义!"),
+                ft.Text(t("ui.app.not_found")),
                 ft.Button(
-                    "回到首页",
+                    t("ui.app.back_home"),
                     width=200,
                     height=40,
                     on_click=lambda _: ft.context.page.navigate("/"),

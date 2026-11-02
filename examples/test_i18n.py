@@ -2,7 +2,7 @@
 
 演示四件事：
 
-1. **只注册文案就行**：``zh_Hans`` / ``zh_Hant`` / ``en`` 三种语言框架已内置，
+1. **只注册文案就行**：``zh-CN`` / ``zh-TW`` / ``en-US`` 三种语言框架已内置，
    应用侧只要 ``register_messages``。要加第四种语言，一行 ``register_language``
    加一份表（或一个 ``fr.json``，见 :func:`ui.core.i18n.load_catalogs`）。
 2. **组件内用 ``use_t()``**：切语言时这些组件自动重绘，不需要手动 update。
@@ -35,7 +35,7 @@ from ui.core.tokens import FONT_SIZE, RADIUS, SPACE
 # 文案：键用点号分层，装表时可嵌套写法；缺翻译自动回退（繁 → 简 → 英）
 # ---------------------------------------------------------------------------
 MESSAGES: dict[str, dict[str, object]] = {
-    "zh_Hans": {
+    "zh-CN": {
         "app": {"title": "CS UI · 多语言"},
         "hero": {
             "title": "界面语言，随时切换",
@@ -57,7 +57,7 @@ MESSAGES: dict[str, dict[str, object]] = {
             "api": "组件里用 use_t()，组件外用 t()。",
         },
     },
-    "zh_Hant": {
+    "zh-TW": {
         "app": {"title": "CS UI · 多語言"},
         "hero": {
             "title": "介面語言，隨時切換",
@@ -79,7 +79,7 @@ MESSAGES: dict[str, dict[str, object]] = {
             "api": "元件裡用 use_t()，元件外用 t()。",
         },
     },
-    "en": {
+    "en-US": {
         "app": {"title": "CS UI · i18n"},
         "hero": {
             "title": "Switch language at any time",
@@ -251,7 +251,7 @@ def DemoPage() -> ft.Control:
 @ft.component
 def App() -> ft.Control:
     # locale 只是"没存过选择时的默认值"；用户切过就以持久化选择为准。
-    return I18nProvider(build=DemoPage, locale="zh_Hans", store=MemoryStore())
+    return I18nProvider(build=DemoPage, locale="zh-CN", store=MemoryStore())
 
 
 def main(page: ft.Page) -> None:

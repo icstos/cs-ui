@@ -1,0 +1,459 @@
+{
+  "common": {
+    "back": "Back to home",
+    "read_values": "Read all values",
+    "theme": {
+      "toggle": "Appearance: {next} (now {mode})",
+      "primary": "Accent · {name}",
+      "light": "light",
+      "dark": "dark",
+      "system": "follow system"
+    }
+  },
+  "home": {
+    "title": "CS UI Components",
+    "headline": "flet 1.0.0 · declarative component library",
+    "intro": "Every component is rebuilt on @ft.component + hooks: declarative routing, root-view rendering and page overlays share one model. Switching language or theme only repaints subscribed components, so form state survives.",
+    "badge_flet": "flet >= 1.0.0",
+    "badge_scale": "10 categories · 60+ components",
+    "badge_hint": "Click a card to browse",
+    "catalog": "Categories",
+    "version": "Version {version}"
+  },
+  "nav": {
+    "general": { "title": "General", "desc": "Text / buttons / icons / chips" },
+    "layout": { "title": "Layout", "desc": "Containers / lists / tables / timeline" },
+    "navigation": { "title": "Navigation", "desc": "Breadcrumbs / tabs / paging" },
+    "form": { "title": "Forms", "desc": "Inputs / pickers / sliders / rating" },
+    "upload": { "title": "Files", "desc": "File / folder / save / image" },
+    "feedback": { "title": "Feedback", "desc": "Toast / message / dialog / progress" },
+    "display": { "title": "Display", "desc": "Logs / code / list tiles / gallery" },
+    "charts": { "title": "Charts", "desc": "Line / area / bar / scatter" },
+    "media": { "title": "Media", "desc": "Audio / video / PDF" },
+    "about": { "title": "About", "desc": "Design principles and i18n" }
+  },
+  "general": {
+    "hint": "Foundational text, button, icon, chip and image elements.",
+    "text": {
+      "title": "Text",
+      "hint": "Header_1 to Header_5 map to the five Material heading levels; Quote and Link are common variants.",
+      "body": "Body text",
+      "quote": "A quote, lightly tinted by default",
+      "link": "External link (opens in the system browser)"
+    },
+    "button": {
+      "title": "Button",
+      "hint": "StyleType offers six semantic colors; plain renders an outlined button; ButtonShape controls the silhouette.",
+      "plain": "Plain {name}",
+      "round": "Rounded",
+      "rect": "Square",
+      "pill": "Pill",
+      "primary": "Primary",
+      "icon": "With icon",
+      "disabled": "Disabled"
+    },
+    "icon": {
+      "title": "Icon / Badge",
+      "hint": "Badge attaches a counter to a button; in 1.0.0 Tooltip is a control value, not a wrapper.",
+      "love": "Like",
+      "delete": "Delete",
+      "add": "Add",
+      "rich": "Hover for a rich tooltip",
+      "rich_msg": "This is how Tooltip works in flet 1.0.0"
+    },
+    "chip": {
+      "title": "Chip",
+      "hint": "Built on Label, supports single and multiple selection with an optional caption.",
+      "single": "Single select",
+      "multi": "Multi select",
+      "options": ["Python", "Flet", "Rust"],
+      "multi_options": ["Frontend", "Backend", "Algorithms", "Design"]
+    },
+    "image": {
+      "title": "Image & Divider",
+      "hint": "Image accepts fit and border_radius; Divider supports leading_indent.",
+      "top": "Content above",
+      "bottom": "Content below",
+      "indent": "Divider with leading_indent"
+    },
+    "markdown": {
+      "title": "Markdown & Json",
+      "hint": "Markdown uses the GitHub extension set; Json wraps flet-code-editor and is read-only by default."
+    }
+  },
+  "layout": {
+    "hint": "Layout primitives, lists and grids, expanders, timelines, tables and page scaffolding.",
+    "flex": {
+      "title": "Row / Column / Container / Stack",
+      "hint": "Layout primitives; Stack pins a red counter to the avatar's lower-right corner.",
+      "container": "Container: padding + radius + background"
+    },
+    "list": {
+      "title": "ListView / GridView",
+      "hint": "Both support on-demand building, which keeps long lists cheap.",
+      "item": "Item {n}"
+    },
+    "expander": {
+      "title": "Expander",
+      "hint": "The whole header is clickable and the chevron flips; variant offers card / filled / plain, density offers three steps.",
+      "basic": "Basic usage",
+      "basic_sub": "Click anywhere to expand or collapse",
+      "basic_body1": "This is the body of the expander.",
+      "basic_body2": "Any control can live in here.",
+      "filled": "With a leading icon",
+      "filled_sub": "The icon drops into a tinted square",
+      "filled_body": "Pass an icon name to get the tinted square, or pass any control to use it as-is.",
+      "plain": "Plain look, compact density",
+      "plain_body": "No border, ideal for grouped rows inside a list."
+    },
+    "timeline": {
+      "title": "Timeline",
+      "hint": "The axis sits on the left with timestamps in their own column; type sets the semantic color, done=True adds a check and a green dot.",
+      "t1": "Request submitted",
+      "d1": "All documents uploaded",
+      "t2": "Manager review",
+      "d2": "Reviewer: Zhang",
+      "t3": "Finance check",
+      "d3": "Waiting for confirmation",
+      "t4": "Archived",
+      "d4": "Archived automatically on completion",
+      "pending": "Not started",
+      "alt1": "Morning stand-up",
+      "alt2": "API integration done",
+      "alt3": "Test build submitted"
+    },
+    "table": {
+      "title": "Table",
+      "hint": "Wraps DataTable with a pager, adds a row-number column and a hover tint.",
+      "name": "Name",
+      "email": "Email",
+      "age": "Age",
+      "status": "Status",
+      "enabled": "Active",
+      "disabled": "Inactive",
+      "user": "User {n}"
+    },
+    "page": {
+      "title": "PageLayout",
+      "hint": "Collapses title, subtitle, actions, padding and scrolling into one container.",
+      "user_title": "Users",
+      "user_subtitle": "Manage users, roles and permissions",
+      "export": "Export",
+      "create": "New user",
+      "stat_total": "Total",
+      "stat_active": "Active",
+      "stat_pending": "Pending",
+      "content": "The content area scrolls on its own"
+    }
+  },
+  "navigation": {
+    "hint": "Breadcrumbs, tabs, bottom and side navigation, plus a pager.",
+    "breadcrumb": {
+      "title": "BreadCrumb",
+      "hint": "items accepts a string, a (label, route) pair or a Crumb; clicks either navigate or run your callback.",
+      "home": "Home",
+      "nav": "Navigation",
+      "current": "Current page",
+      "str": "Plain string",
+      "route": "With route",
+      "cur": "Current"
+    },
+    "tabs": {
+      "title": "Tabs",
+      "hint": "Built from TabBar and TabBarView, with Tabs keeping them in sync.",
+      "overview": "Overview",
+      "detail": "Details",
+      "settings": "Settings",
+      "overview_body": "Overview content",
+      "detail_body": "Details content",
+      "settings_body": "Settings content"
+    },
+    "navbar": {
+      "title": "NavigationBar / NavigationRail",
+      "hint": "Bottom navigation for touch layouts, side rail for desktop; shown statically here.",
+      "home": "Home",
+      "search": "Search",
+      "mine": "Me",
+      "board": "Board",
+      "article": "Articles",
+      "settings": "Settings"
+    },
+    "paging": {
+      "title": "Paging",
+      "hint": "Driven by a PagingState object; long page ranges collapse into an ellipsis."
+    },
+    "jump": {
+      "title": "Navigation",
+      "hint": "page.navigate(path) is the 1.0.0 entry point, equivalent to push_route.",
+      "to_about": "Go to About"
+    }
+  },
+  "form": {
+    "hint": "Form components follow the observable object + ui() pattern; instances are pinned with ft.use_ref, so parent repaints never drop their state.",
+    "input": {
+      "title": "Input",
+      "hint": "data_type accepts str / int / float / file / dir; numeric inputs get +/- steppers.",
+      "name": "Name",
+      "age": "Age",
+      "amount": "Amount",
+      "dir": "Project folder"
+    },
+    "checkbox": {
+      "title": "Checkbox / CheckboxGroup",
+      "hint": "CheckboxGroup ships a select-all row and supports horizontal or vertical layout.",
+      "agree": "I have read and accept the terms",
+      "hobbies": "Interests",
+      "options": ["Reading", "Running", "Travel", "Music"]
+    },
+    "switch": {
+      "title": "Switch",
+      "hint": "on_change hands you a boolean; value is the current state.",
+      "dark": "Dark mode",
+      "notify": "Receive notifications"
+    },
+    "radio": {
+      "title": "Radio",
+      "hint": "A radio group; pass strings to options and read the choice from value.",
+      "gender": "Gender",
+      "options": ["Male", "Female", "Prefer not to say"]
+    },
+    "select": {
+      "title": "SelectBox / MultiSelect",
+      "hint": "MultiSelect is a collapsed multi-choice field whose panel is mounted on the page overlay, so it takes no layout height.",
+      "city": "City",
+      "tags": "Tags",
+      "cities": ["New York", "London", "Paris", "Tokyo", "Singapore"],
+      "tag_options": ["Frontend", "Backend", "Data", "Design", "Ops", "QA", "Algorithms", "Product"]
+    },
+    "slider": {
+      "title": "Slider / RangeSlider",
+      "hint": "min / max / divisions / slider_label behave like the native widget, wrapped in a Label layout.",
+      "volume": "Volume",
+      "price": "Price range"
+    },
+    "rating": {
+      "title": "Rating",
+      "hint": "value counts from 1; set readonly for display-only use.",
+      "interactive": "Interactive",
+      "readonly": "Read-only",
+      "disabled": "Disabled"
+    },
+    "segmented": {
+      "title": "SegmentedButton",
+      "hint": "Pass plain strings to options and they are wrapped into segments.",
+      "options": ["Left", "Center", "Right"]
+    },
+    "date": {
+      "title": "DateInput / DateTimeInput",
+      "hint": "Click the field to open a floating panel; you can also type 2026-09-26 or 20260926. The date format follows the interface language.",
+      "birthday": "Date of birth",
+      "meeting": "Meeting time",
+      "checkin": "Check-in time"
+    },
+    "color": {
+      "title": "ColorPicker",
+      "hint": "A floating color panel: drag to set saturation and brightness, drag the hue strip on the right and the alpha strip below.",
+      "brand": "Brand color",
+      "overlay": "Overlay",
+      "locked": "Disabled"
+    },
+    "search": {
+      "title": "SearchBar",
+      "hint": "options becomes the suggestion list; picking one fires on_click.",
+      "bar_hint": "Search cities…",
+      "view_hint": "Type a keyword"
+    },
+    "dump": "Name={name} | Age={age} | City={city} | Tags={tags} | Volume={volume} | Rating={stars} | Birthday={birthday} | Meeting={meeting} | Brand={brand}"
+  },
+  "upload": {
+    "hint": "File components are observable objects too; value holds the final selection.",
+    "file": {
+      "title": "FilePicker",
+      "hint": "allowed_extensions filters suffixes; allow_multiple switches between single and multi select."
+    },
+    "dir": {
+      "title": "DirPicker",
+      "hint": "value is the absolute path, ready to feed into Input(data_type='dir')."
+    },
+    "save": {
+      "title": "FileSaver",
+      "hint": "save_file(data) opens a save dialog and writes the payload to the chosen path."
+    },
+    "image": {
+      "title": "ImagePicker",
+      "hint": "Reuses the file mode of Input; value is the absolute path of the picked image.",
+      "label": "Avatar"
+    },
+    "dump": "File={file} | Folder={dir} | Save path={save} | Avatar={image}"
+  },
+  "feedback": {
+    "hint": "Overlays go through page.show_dialog / page.pop_dialog; SnackBar and Toast are one-liners.",
+    "toast": {
+      "title": "Toast",
+      "hint": "Floats in, disappears on its own — ideal for operation receipts. toast_* are the shortcuts.",
+      "default": "Default",
+      "primary": "Primary",
+      "info": "Info",
+      "success": "Success",
+      "warning": "Warning",
+      "error": "Error",
+      "msg_default": "Default toast",
+      "msg_primary": "Primary toast",
+      "msg_info": "Loaded 12 records",
+      "msg_success": "Saved successfully",
+      "msg_warning": "Disk space is running low",
+      "msg_error": "Request failed",
+      "quick": "Quick: {name}",
+      "quick_success": "Quick success",
+      "quick_error": "Quick error",
+      "quick_warning": "Quick warning",
+      "quick_info": "Quick info"
+    },
+    "message": {
+      "title": "Message",
+      "hint": "A standard SnackBar: bottom-anchored with a close button, for notifications that must be noticed.",
+      "body": "This is a Message (SnackBar) with a close button, anchored to the bottom.",
+      "show": "Show Message"
+    },
+    "dialog": {
+      "title": "AlertDialog",
+      "hint": "title / msg / style_type is enough; the action buttons take the semantic color.",
+      "title_n": "{name} dialog",
+      "body": "This is the dialog body.",
+      "confirm": "Dialog with callbacks",
+      "delete_title": "Confirm deletion",
+      "delete_msg": "This cannot be undone. Continue?",
+      "deleted": "Deleted",
+      "canceled": "Cancelled"
+    },
+    "progress": {
+      "title": "ProgressBar",
+      "hint": "value takes a float from 0 to 1; None renders an indeterminate bar."
+    },
+    "loading": {
+      "title": "Loading",
+      "hint": "size_name accepts small / normal / large."
+    },
+    "hooks": {
+      "title": "State-driven UI (hooks)",
+      "hint": "ft.use_state plus page.run_task: every progress change repaints the component.",
+      "current": "Progress: {percent}%",
+      "run": "Simulate progress"
+    }
+  },
+  "display": {
+    "hint": "Logs, code, list tiles and an image gallery.",
+    "listtile": {
+      "title": "ListTile",
+      "hint": "Pass strings directly, or controls for title / subtitle / leading / trailing.",
+      "users": "User management",
+      "users_sub": "Manage users and roles",
+      "settings": "System settings",
+      "settings_sub": "Configure system options",
+      "logs": "Activity log",
+      "logs_sub": "Review historical operations"
+    },
+    "log": {
+      "title": "LogContainer",
+      "hint": "Colors by keyword: error red / warning amber / success green / info blue.",
+      "boot": "info: application started",
+      "db": "success: database connected",
+      "theme": "warning: config is missing the theme field",
+      "cache": "error: cache service unreachable, degraded",
+      "sync_start": "info: syncing data…",
+      "sync_done": "success: sync finished, 128 records",
+      "sync_skip": "warning: 3 records skipped",
+      "append": "Append log",
+      "clear": "Clear"
+    },
+    "code": {
+      "title": "CodeEditor / CodeView",
+      "hint": "CodeEditor is editable (with autocomplete and issues); CodeView puts code and result side by side.",
+      "run": "Click me"
+    },
+    "gallery": {
+      "title": "ImageGridView",
+      "hint": "Ships with paging and a thumbnail-size slider; sources may be local files or URLs.",
+      "grid_title": "Sample gallery"
+    }
+  },
+  "charts": {
+    "hint": "All four charts wrap flet_charts with Streamlit-style parameters (data / x / y), automatic colors and axes.",
+    "line": {
+      "title": "LineChart",
+      "hint": "data accepts plain numbers, a list of dicts, a column dict or a list of tuples."
+    },
+    "area": {
+      "title": "AreaChart",
+      "hint": "opacity and gradient control the fill, curved controls smoothing."
+    },
+    "bar": {
+      "title": "BarChart",
+      "hint": "stacked=True switches to stacked mode; rod_width sets the bar width."
+    },
+    "scatter": {
+      "title": "ScatterChart",
+      "hint": "radius sets the dot size — good for showing correlation."
+    },
+    "month": "Month",
+    "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
+    "online": "Online",
+    "offline": "Retail"
+  },
+  "media": {
+    "hint": "Media components backed by flet-audio / flet-video / flet-webview (sample assets come from the network).",
+    "audio": {
+      "title": "Audio / AudioPlayer",
+      "hint": "Audio is a page-level Service (no visuals, registered on construction); AudioPlayer is a card player.",
+      "registered": "Audio service registered · src={src}",
+      "track_title": "Sample track",
+      "track_subtitle": "SoundHelix Song 1"
+    },
+    "video": {
+      "title": "Video",
+      "hint": "Pass a single src, or a playlist; loop controls repetition.",
+      "playlist": "Sample playlist"
+    },
+    "pdf": {
+      "title": "Pdf",
+      "hint": "Renders through an embedded WebView and accepts local paths or remote URLs.",
+      "doc": "Sample document"
+    }
+  },
+  "about": {
+    "hint": "cs-ui · a Python UI library built on flet 1.0.0.",
+    "design": {
+      "title": "Design principles",
+      "hint": "Four trade-offs: two paradigms, zero learning curve, one semantic palette, a shared core.",
+      "p1": "• Two paradigms: stateless controls subclass native widgets, stateful ones use observable + ui()",
+      "p2": "• Zero learning curve: every component is a flet control, so native arguments keep working",
+      "p3": "• One semantic palette: StyleType is defined once, shared by buttons, dialogs and toasts",
+      "p4": "• Shared core: chart colors live in chart/_data.py, field borders in core/styles.py"
+    },
+    "stats": {
+      "title": "Component count by category",
+      "hint": "Counted per subpackage under src/ui; demo helpers are excluded."
+    },
+    "i18n": {
+      "title": "Internationalization",
+      "hint": "Framework and app strings share one registry; built-in labels and every date, number and calendar format come from the catalogs.",
+      "p1": "• Three built-in catalogs: Simplified Chinese / Traditional Chinese / English, falling back 繁 → 简 → 英",
+      "p2": "• Built-in component text (pager, calendar, picker footers) is covered — no per-instance arguments needed",
+      "p3": "• Dates, numbers, month and weekday names follow the language; English starts the week on Sunday",
+      "p4": "• Switching language repaints only subscribers of use_t(), keeping page state and scroll position"
+    },
+    "migration": {
+      "title": "flet 1.0.0 migration cheatsheet",
+      "hint": "The APIs that changed most during the port. Two traps: page.render_views hides page overlays; ft.View cannot be used as a plain control in root-view mode."
+    },
+    "run": {
+      "title": "Run the demo",
+      "hint": "Two commands are enough: run it directly, or walk every route headlessly."
+    }
+  },
+  "notfound": {
+    "title": "Page not found",
+    "body": "This route is not defined",
+    "back": "Back to home"
+  }
+}

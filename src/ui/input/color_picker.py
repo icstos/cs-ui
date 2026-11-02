@@ -59,6 +59,7 @@ import flet as ft
 from flet import canvas as fcanvas
 
 from ui.core.float_layer import use_float_layer
+from ui.core.i18n import t, use_t
 from ui.core.styles import outline_input
 from ui.input.input import Label
 from ui.input.panel_field import (
@@ -440,7 +441,7 @@ class ColorPicker(PanelField, Label):
             ``ft.Colors.with_opacity()`` 的产物 ``"#RRGGBB,0.8"``）。
             ``None`` 表示未选择（显示 ``placeholder``）。
         default: 未选择时面板的起步色。
-        placeholder: 未选择时的占位文本。
+        placeholder: 未选择时的占位文本。``None``（默认）取语言包。
         width: 输入框宽度，默认 240。``show_value=False`` 时可调窄成纯色块按钮。
         height: 输入框高度，默认 40。
         show_value: 折叠态是否显示十六进制文本；``False`` 时只留色块与下拉箭头。
@@ -463,7 +464,7 @@ class ColorPicker(PanelField, Label):
 
     value: str | None = None
     default: str = DEFAULT_COLOR
-    placeholder: str = "请选择颜色"
+    placeholder: str | None = None
     width: int | float = FIELD_WIDTH
     height: int | float = FIELD_HEIGHT
     show_value: bool = True
@@ -691,6 +692,7 @@ class ColorPicker(PanelField, Label):
     @ft.component
     def ui(self) -> ft.Control:
         """构建颜色选择器 UI。"""
+        use_t()  # 订阅语言：占位符与面板内的提示文案都要跟着切
         page = ft.context.page
         self._sync_value()
         field = self._build_field(self._field_content(), self._trailing())
@@ -770,7 +772,7 @@ class ColorPicker(PanelField, Label):
             text_size=SMALL_SIZE,
             color=self._fg,
             content_padding=ft.Padding.symmetric(vertical=6),
-            hint_text=self.placeholder,
+            hint_text=self.placeholder or t("ui.color.placeholder"),
             hint_style=ft.TextStyle(size=SMALL_SIZE, color=ft.Colors.OUTLINE),
             input_filter=ft.InputFilter(allow=True, regex_string=_HEX_ALLOWED),
             read_only=self.disabled,
@@ -1159,7 +1161,7 @@ class ColorPicker(PanelField, Label):
                     ft.GestureDetector(
                         on_tap=lambda _e: self.revert(),
                         mouse_cursor=ft.MouseCursor.CLICK,
-                        tooltip=ft.Tooltip(message="还原到打开面板时的颜色"),
+                        tooltip=ft.Tooltip(message=t("ui.color.revert")),
                         content=self._swatch(self._orig, w=half, h=ROW_H, radius=0),
                     ),
                     ft.Container(width=1, height=ROW_H, bgcolor=ft.Colors.OUTLINE_VARIANT),
@@ -1182,7 +1184,7 @@ class ColorPicker(PanelField, Label):
             bgcolor=HOVER_BG if self._hover == "fmt" else None,
             on_click=lambda _e: self._toggle_format(),
             on_hover=lambda e: self._hover_key("fmt", _truthy(e.data)),
-            tooltip=ft.Tooltip(message=f"数值记法：{label}（点击切换）"),
+            tooltip=ft.Tooltip(message=t("ui.color.format", format=label)),
             content=ft.Text(
                 label,
                 size=LABEL_SIZE,
@@ -1245,7 +1247,7 @@ class ColorPicker(PanelField, Label):
                 text_align=ft.TextAlign.CENTER,
                 content_padding=ft.Padding.symmetric(horizontal=4, vertical=4),
                 input_filter=ft.InputFilter(allow=True, regex_string=r"[0-9]"),
-                tooltip=ft.Tooltip(message=f"{prefix}：0 ~ {hi}"),
+                tooltip=ft.Tooltip(message=t("ui.color.range", name=prefix, max=hi)),
                 on_change=lambda e, k=key: self._on_num(k, e.data, commit=False),
                 on_submit=lambda e, k=key: self._on_num(k, e.data, commit=True),
                 on_blur=lambda e, k=key: self._on_num(k, e.data, commit=True),
@@ -1350,17 +1352,17 @@ class ColorPicker(PanelField, Label):
         """页脚：左「还原」，右「清除 / 完成」。"""
         controls: list[ft.Control] = [
             self._link_button(
-                "revert", "还原", self.revert, enabled=self._orig is not None
+                "revert", t("ui.common.revert"), self.revert, enabled=self._orig is not None
             ),
             ft.Container(expand=True),
         ]
         if self.clearable:
             controls.append(
                 self._link_button(
-                    "clear", "清除", self.clear, enabled=self.value is not None
+                    "clear", t("ui.common.clear"), self.clear, enabled=self.value is not None
                 )
             )
-        controls.append(self._link_button("done", "完成", self.close))
+        controls.append(self._link_button("done", t("ui.common.done"), self.close))
         return ft.Container(
             height=FOOTER_H,
             padding=ft.Padding.only(left=2, right=2),

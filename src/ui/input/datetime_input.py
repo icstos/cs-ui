@@ -50,6 +50,8 @@ from dataclasses import dataclass
 import flet as ft
 
 from ui.core.float_layer import use_float_layer
+from ui.core.format import format_datetime
+from ui.core.i18n import t, use_t
 from ui.input.calendar_panel import (
     CAL_GRID_H,
     CAL_GRID_W,
@@ -64,7 +66,7 @@ from ui.input.calendar_panel import (
     PANEL_PAD,
     SELECTED_BG,
     TEXT_SIZE,
-    WEEKDAYS,
+    WEEKDAYS,  # noqa: F401  (历史导入路径)
     CalendarPanel,
     _truthy,
     place_panel,
@@ -95,9 +97,9 @@ V_DIV_W = 1 + PANEL_PAD * 2
 #: 轮盘的"纵深"：离中心越远的行越淡（索引 = 距离行数）。
 WHEEL_FADE = (1.0, 0.62, 0.40, 0.24)
 
-#: 三列的定义：(字段名, 列头文案, 取值上限, 步长字段名)
+#: 三列的定义：(字段名, 取值上限, 步长字段名)。列头文案来自语言包
+#: （``ui.datetime.hour`` / ``minute`` / ``second``）。
 TIME_KINDS = ("hour", "minute", "second")
-TIME_LABELS = {"hour": "时", "minute": "分", "second": "秒"}
 TIME_STEPS = {"hour": "hour_step", "minute": "minute_step", "second": "second_step"}
 
 #: 时间部分的常见写法（``09:30`` / ``9时30分`` / ``0930`` / ``093000``）。
@@ -206,12 +208,12 @@ class DateTimeInput(CalendarPanel, Label):
         hour_step: 小时步长，默认 1。
         minute_step: 分钟步长，默认 1（常用 1 / 5 / 10 / 15 / 30）。
         second_step: 秒步长，默认 10。
-        display_format: 框内文本的 ``strftime`` 格式。``None``（默认）时按
-            ``with_seconds`` 自动选 ``"%Y-%m-%d %H:%M:%S"`` / ``"%Y-%m-%d %H:%M"``。
-        placeholder: 未填写时的占位文本。
-        first_day_weekday: 每周首日，索引同 ``datetime.date.weekday()``
-            —— ``0`` = 周一（默认）、``6`` = 周日。
-        weekday_labels: 7 个星期标签，索引同上。
+        display_format: 框内文本的 ``strftime`` 格式。``None``（默认）跟随界面
+            语言；含秒时自动带上秒。
+        placeholder: 未填写时的占位文本。``None``（默认）取语言包。
+        first_day_weekday: 每周首日，索引同 ``datetime.date.weekday()``。
+            ``None``（默认）跟随语言。
+        weekday_labels: 7 个星期标签，索引同上。``None``（默认）取语言包。
         width: 输入框宽度，默认 240。
         height: 输入框高度，默认 40。
         clearable: 是否允许清空（框内 × 与页脚「清除」），默认 True。
@@ -230,9 +232,9 @@ class DateTimeInput(CalendarPanel, Label):
     minute_step: int = 1
     second_step: int = 10
     display_format: str | None = None
-    placeholder: str = "请选择日期时间"
-    first_day_weekday: int = 0
-    weekday_labels: tuple[str, ...] = WEEKDAYS
+    placeholder: str | None = None
+    first_day_weekday: int | None = None
+    weekday_labels: tuple[str, ...] | None = None
     width: int | float = FIELD_WIDTH
     height: int | float = FIELD_HEIGHT
     clearable: bool = True
@@ -326,12 +328,20 @@ class DateTimeInput(CalendarPanel, Label):
     # ------------------------------------------------------------------
     @property
     def display_text(self) -> str:
-        """当前值的格式化文本，空值返回空串，便于表单提交 / 日志。"""
-        return "" if self.value is None else self.value.strftime(self._fmt)
+        """当前值的格式化文本，空值返回空串，便于表单提交 / 日志。
+
+        ``display_format`` 显式指定时按 ``strftime`` 走，否则用
+        :func:`ui.core.format.format_datetime` 生成**当前语言**的写法。
+        """
+        if self.value is None:
+            return ""
+        if self.display_format:
+            return self.value.strftime(self.display_format)
+        return format_datetime(self.value, seconds=self.with_seconds)
 
     @property
     def _fmt(self) -> str:
-        """框内文本格式：显式指定优先，否则按 ``with_seconds`` 自动选。"""
+        """显式格式之外的兜底：``display_format`` 为空时按 ``with_seconds`` 选。"""
         if self.display_format:
             return self.display_format
         return "%Y-%m-%d %H:%M:%S" if self.with_seconds else "%Y-%m-%d %H:%M"
@@ -478,7 +488,7 @@ class DateTimeInput(CalendarPanel, Label):
                         height=TIME_LABEL_H,
                         alignment=ft.Alignment.CENTER,
                         content=ft.Text(
-                            TIME_LABELS[kind],
+                            t(f"ui.datetime.{kind}"),
                             size=LABEL_SIZE,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
@@ -532,7 +542,7 @@ class DateTimeInput(CalendarPanel, Label):
                 f"t{kind}:{'up' if delta < 0 else 'down'}",
                 ft.Icons.EXPAND_LESS if delta < 0 else ft.Icons.EXPAND_MORE,
                 lambda: self._step_time(kind, delta),
-                "上一格（滚轮同样可用）" if delta < 0 else "下一格（滚轮同样可用）",
+                t("ui.datetime.prev_step") if delta < 0 else t("ui.datetime.next_step"),
             ),
         )
 
@@ -592,16 +602,16 @@ class DateTimeInput(CalendarPanel, Label):
         controls: list[ft.Control] = [
             self._link_button(
                 "today",
-                "今天",
+                t("ui.date.today"),
                 self._pick_today,
                 enabled=self._today_enabled(),
             ),
-            self._link_button("now", "此刻", self._pick_now),
+            self._link_button("now", t("ui.datetime.now"), self._pick_now),
             ft.Container(expand=True),
         ]
         if self.show_clear_link:
-            controls.append(self._link_button("clear", "清除", self.clear))
-        controls.append(self._link_button("done", "完成", self.close))
+            controls.append(self._link_button("clear", t("ui.common.clear"), self.clear))
+        controls.append(self._link_button("done", t("ui.datetime.done"), self.close))
         return ft.Container(
             height=FOOTER_H,
             padding=ft.Padding.only(left=2, right=2),
@@ -633,6 +643,7 @@ class DateTimeInput(CalendarPanel, Label):
     @ft.component
     def ui(self) -> ft.Control:
         """构建日期时间选择器 UI。"""
+        use_t()  # 订阅语言：列头、页脚、月历、占位符都要跟着切
         page = ft.context.page
         field = self._build_field(
             self._text_field(),
@@ -689,7 +700,7 @@ class DateTimeInput(CalendarPanel, Label):
             text_size=TEXT_SIZE,
             color=self._fg,
             content_padding=ft.Padding.symmetric(vertical=6),
-            hint_text=self.placeholder,
+            hint_text=self.placeholder or t("ui.datetime.placeholder"),
             hint_style=ft.TextStyle(size=TEXT_SIZE, color=ft.Colors.OUTLINE),
             keyboard_type=ft.KeyboardType.DATETIME,
             read_only=self.disabled,

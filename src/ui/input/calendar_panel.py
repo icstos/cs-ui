@@ -36,6 +36,9 @@ import datetime
 
 import flet as ft
 
+from ui.core.format import calendar_title, first_weekday, month_cell, weekday_names
+from ui.core.i18n import t
+
 # 通用外壳（尺寸 / 配色 / 定位 / 混入）全部来自 panel_field。
 # 这里原样重导出，保持 `from ui.input.calendar_panel import PANEL_PAD` 这类
 # 历史导入路径可用。
@@ -85,7 +88,9 @@ PANEL_H = PANEL_PAD * 2 + 2 + HEADER_H + CAL_GRID_H + 1 + FOOTER_H  # 面板高
 TODAY_BG = ft.Colors.with_opacity(0.10, ft.Colors.PRIMARY)  # "今天"淡色底
 SELECTED_BG = ft.Colors.PRIMARY  # 选中填色
 
-#: 星期标签，索引与 ``datetime.date.weekday()`` 一致：0 = 周一 … 6 = 周日。
+#: 星期标签的**中文字形兜底**，索引与 ``datetime.date.weekday()`` 一致：
+#: 0 = 周一 … 6 = 周日。真正的标签来自语言包（``ui.calendar.weekdays``），
+#: 这个常量只在语言包异常时兜底，并供老代码按原路径导入。
 WEEKDAYS = ("一", "二", "三", "四", "五", "六", "日")
 
 
@@ -174,15 +179,22 @@ class CalendarPanel(PanelField):
     # 面板头部
     # ------------------------------------------------------------------
     def _cal_header(self) -> ft.Control:
-        """面板头部：翻页箭头 + 可点击的年月标题（点它切年月网格）。"""
+        """面板头部：翻页箭头 + 可点击的年月标题（点它切年月网格）。
+
+        标题与翻页提示都取自语言包：中文是「2026 年 9 月 / 上一月」，英文是
+        「September 2026 / Previous month」—— 不是把中文标题翻译一遍就算完，
+        英文的语序本来就是"月在前"。
+        """
         if self._mode == "month":
-            title: str = f"{self._view_year} 年"
-            unit = "年"
+            title: str = calendar_title(self._view_year, self._view_month, mode="year")
+            prev_tip = t("ui.calendar.prev_year")
+            next_tip = t("ui.calendar.next_year")
             prev = lambda: self._cal_shift_year(-1)  # noqa: E731
             nxt = lambda: self._cal_shift_year(1)  # noqa: E731
         else:
-            title = f"{self._view_year} 年 {self._view_month} 月"
-            unit = "月"
+            title = calendar_title(self._view_year, self._view_month)
+            prev_tip = t("ui.calendar.prev_month")
+            next_tip = t("ui.calendar.next_month")
             prev = lambda: self._cal_shift_month(-1)  # noqa: E731
             nxt = lambda: self._cal_shift_month(1)  # noqa: E731
 
@@ -220,11 +232,11 @@ class CalendarPanel(PanelField):
                 spacing=0,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    self._nav_button("prev", ft.Icons.CHEVRON_LEFT, prev, f"上一{unit}"),
+                    self._nav_button("prev", ft.Icons.CHEVRON_LEFT, prev, prev_tip),
                     ft.Container(
                         expand=True, alignment=ft.Alignment.CENTER, content=title_btn
                     ),
-                    self._nav_button("next", ft.Icons.CHEVRON_RIGHT, nxt, f"下一{unit}"),
+                    self._nav_button("next", ft.Icons.CHEVRON_RIGHT, nxt, next_tip),
                 ],
             ),
         )
@@ -240,14 +252,24 @@ class CalendarPanel(PanelField):
             spacing=0, controls=[self._cal_weekdays(), self._cal_days()]
         )
 
-    def _cal_weekday_sequence(self) -> list[str]:
-        """按 ``first_day_weekday`` 旋转后的星期标签（长度恒为 7）。
+    def _cal_first_day(self) -> int:
+        """每周首日：宿主显式给就用宿主的，``None`` 表示跟随界面语言。
 
-        ``WEEKDAYS[i]`` 对应 ``weekday() == i``；首列要放 ``first_day_weekday``，
+        中文习惯周一起、英文习惯周日起 —— 这是"日历看起来像本地软件"的关键
+        细节之一，所以做成语言驱动的默认值而不是写死。
+        """
+        value = getattr(self, "first_day_weekday", None)
+        return first_weekday() if value is None else int(value) % 7
+
+    def _cal_weekday_sequence(self) -> list[str]:
+        """按首日旋转后的星期标签（长度恒为 7）。
+
+        ``WEEKDAYS[i]`` 对应 ``weekday() == i``；首列要放首日，
         所以序列从该下标开始绕一圈。
         """
-        labels = [str(x) for x in self.weekday_labels][:7] or list(WEEKDAYS)
-        offset = int(self.first_day_weekday) % 7
+        source = getattr(self, "weekday_labels", None) or weekday_names() or WEEKDAYS
+        labels = [str(x) for x in source][:7]
+        offset = self._cal_first_day()
         return labels[offset:] + labels[:offset]
 
     def _cal_weekdays(self) -> ft.Control:
@@ -272,7 +294,7 @@ class CalendarPanel(PanelField):
     def _cal_grid_start(self) -> datetime.date:
         """网格第一格对应的日期（可能落在上月）。"""
         first = datetime.date(self._view_year, self._view_month, 1)
-        offset = (first.weekday() - int(self.first_day_weekday)) % 7
+        offset = (first.weekday() - self._cal_first_day()) % 7
         return first - datetime.timedelta(days=offset)
 
     def _cal_days(self) -> ft.Control:
@@ -390,7 +412,7 @@ class CalendarPanel(PanelField):
             if not enabled
             else (lambda e, k=key: self._hover_key(k, _truthy(e.data))),
             content=ft.Text(
-                f"{month} 月",
+                month_cell(month),
                 size=TEXT_SIZE,
                 color=color,
                 weight=ft.FontWeight.W_600 if selected else ft.FontWeight.NORMAL,

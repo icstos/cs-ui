@@ -48,6 +48,8 @@ from dataclasses import dataclass
 import flet as ft
 
 from ui.core.float_layer import use_float_layer
+from ui.core.format import format_date
+from ui.core.i18n import t, use_t
 from ui.input.calendar_panel import (
     CAL_W,
     FIELD_HEIGHT,
@@ -56,7 +58,7 @@ from ui.input.calendar_panel import (
     PANEL_GAP,
     PANEL_H,
     TEXT_SIZE,
-    WEEKDAYS,
+    WEEKDAYS,  # noqa: F401  (历史导入路径)
     CalendarPanel,
     place_panel,
 )
@@ -71,7 +73,14 @@ def _parse_date(text: str | None) -> datetime.date | None:
     """尽力把用户敲的字符串解析成日期，失败返回 ``None``。
 
     支持 ``2026-09-26`` / ``2026/9/26`` / ``2026.9.26`` / ``20260926`` /
-    ``2026年9月26日``（也接受末尾带不带"日"、各部分补不补零）。
+    ``2026年9月26日``（也接受末尾带不带"日"、各部分补不补零），以及
+    ``09/26/2026`` 这类**月日在前**的写法。
+
+    为什么后者要认：英文界面显示的是 ``09/26/2026``（见
+    :func:`ui.core.format.format_date`），如果只认 ISO 顺序，用户照着框里
+    显示的样子改一下就变成"日期非法"—— 这是本地化最常见的自相矛盾。
+    判别规则很简单：4 位的那一段是年；都是短数字时，首位 ≤ 12 按月在前、
+    否则按日在前的欧洲写法。
     """
     s = (text or "").strip()
     if not s:
@@ -85,7 +94,13 @@ def _parse_date(text: str | None) -> datetime.date | None:
                 int(parts[0][:4]), int(parts[0][4:6]), int(parts[0][6:])
             )
         if len(parts) == 3:
-            return datetime.date(int(parts[0]), int(parts[1]), int(parts[2]))
+            first, second, third = (int(p) for p in parts)
+            if len(parts[0]) == 4:  # 2026-09-26
+                return datetime.date(first, second, third)
+            if len(parts[2]) == 4 or third > 31:  # 09/26/2026 或 26/09/2026
+                year = third
+                month, day = (first, second) if first <= 12 else (second, first)
+                return datetime.date(year, month, day)
     except ValueError:
         return None
     return None
@@ -101,11 +116,14 @@ class DateInput(CalendarPanel, Label):
         min_date: 可选下界（含当天）。``None`` 时取 ``year_range`` 的起始年 1 月 1 日。
         max_date: 可选上界（含当天）。``None`` 时取 ``year_range`` 的结束年 12 月 31 日。
         year_range: 可选的年份范围，默认 ``(1900, 2100)``。
-        display_format: 框内日期的 ``strftime`` 格式，默认 ``"%Y-%m-%d"``。
-        placeholder: 未选择时的占位文本。
+        display_format: 框内日期的 ``strftime`` 格式。``None``（默认）跟随界面
+            语言：中文 ``2026-09-26``、英文 ``09/26/2026``。显式传值可锁定格式。
+        placeholder: 未选择时的占位文本。``None``（默认）取语言包里的
+            「请选择日期 / Select a date」。
         first_day_weekday: 每周首日，索引与 ``datetime.date.weekday()`` 相同
-            —— ``0`` = 周一（默认）、``6`` = 周日。
-        weekday_labels: 7 个星期标签，索引同上（``"一"`` 对应周一）。
+            —— ``0`` = 周一、``6`` = 周日。``None``（默认）跟随语言：中文周一起、
+            英文周日起。
+        weekday_labels: 7 个星期标签，索引同上。``None``（默认）取语言包。
         width: 输入框宽度，默认 240。
         height: 输入框高度，默认 40。
         clearable: 是否允许清空（框内 × 与页脚「清除」），默认 True。
@@ -120,10 +138,10 @@ class DateInput(CalendarPanel, Label):
     min_date: datetime.date | None = None
     max_date: datetime.date | None = None
     year_range: tuple[int, int] = (1900, 2100)
-    display_format: str = "%Y-%m-%d"
-    placeholder: str = "请选择日期"
-    first_day_weekday: int = 0
-    weekday_labels: tuple[str, ...] = WEEKDAYS
+    display_format: str | None = None
+    placeholder: str | None = None
+    first_day_weekday: int | None = None
+    weekday_labels: tuple[str, ...] | None = None
     width: int | float = FIELD_WIDTH
     height: int | float = FIELD_HEIGHT
     clearable: bool = True
@@ -199,8 +217,16 @@ class DateInput(CalendarPanel, Label):
     # ------------------------------------------------------------------
     @property
     def display_text(self) -> str:
-        """当前日期的格式化文本，空值返回空串，便于表单提交 / 日志。"""
-        return "" if self.value is None else self.value.strftime(self.display_format)
+        """当前日期的格式化文本，空值返回空串，便于表单提交 / 日志。
+
+        ``display_format`` 显式指定时按 ``strftime`` 走，否则交给
+        :func:`ui.core.format.format_date` 生成**当前语言**的写法。
+        """
+        if self.value is None:
+            return ""
+        if self.display_format:
+            return self.value.strftime(self.display_format)
+        return format_date(self.value)
 
     @property
     def _min(self) -> datetime.date:
@@ -255,6 +281,7 @@ class DateInput(CalendarPanel, Label):
     @ft.component
     def ui(self) -> ft.Control:
         """构建日期选择器 UI。"""
+        use_t()  # 订阅语言：占位符、页脚、月历标题、星期名都要跟着切
         page = ft.context.page
         field = self._build_field(
             self._text_field(),
@@ -306,7 +333,7 @@ class DateInput(CalendarPanel, Label):
             text_size=TEXT_SIZE,
             color=self._fg,
             content_padding=ft.Padding.symmetric(vertical=6),
-            hint_text=self.placeholder,
+            hint_text=self.placeholder or t("ui.date.placeholder"),
             hint_style=ft.TextStyle(size=TEXT_SIZE, color=ft.Colors.OUTLINE),
             keyboard_type=ft.KeyboardType.DATETIME,
             read_only=self.disabled,
@@ -378,14 +405,14 @@ class DateInput(CalendarPanel, Label):
         controls: list[ft.Control] = [
             self._link_button(
                 "today",
-                "今天",
+                t("ui.date.today"),
                 lambda: self.select(datetime.date.today()),
                 enabled=self._accepts(datetime.date.today()),
             ),
             ft.Container(expand=True),
         ]
         if self.show_clear_link:
-            controls.append(self._link_button("clear", "清除", self.clear))
+            controls.append(self._link_button("clear", t("ui.common.clear"), self.clear))
         return ft.Container(
             height=FOOTER_H,
             padding=ft.Padding.only(left=2, right=2),

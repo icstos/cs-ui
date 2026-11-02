@@ -1,6 +1,7 @@
 import flet as ft
 from collections.abc import Callable
 from ui.core.constants import StyleType, FeedbackStyle
+from ui.core.i18n import t
 from ui.input.button import Button
 from dataclasses import field
 
@@ -83,12 +84,12 @@ class AlertDialog(ft.AlertDialog):
 
         if self.on_no_click is not None:
             self.actions.append(
-                Button(content=ft.Text("取消"), height=28, on_click=self._on_no_click)
+                Button(content=ft.Text(t("ui.common.cancel")), height=28, on_click=self._on_no_click)
             )
         if self.on_yes_click is not None:
             self.actions.append(
                 Button(
-                    content=ft.Text("确认"),
+                    content=ft.Text(t("ui.common.ok")),
                     height=28,
                     on_click=self._on_yes_click,
                     style_type=StyleType.PRIMARY,

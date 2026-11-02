@@ -38,6 +38,7 @@ from dataclasses import dataclass
 
 import flet as ft
 
+from ui.core.i18n import use_t
 from ui.core.tokens import (
     PRIMARY_SEEDS,
     SEMANTIC_ROLES,
@@ -296,6 +297,17 @@ def set_system_brightness(name: str) -> None:
 def ThemeSwitcher(*, compact: bool = False) -> ft.Control:
     """主色色板 + 明暗开关。框架应用可以直接把它放进顶栏。"""
     th = use_theme()
+    tr = use_t()
+
+    def seed_label(key: str) -> str:
+        """色板提示用本地色名；语言包没写就退回种子键名，不至于显示成键路径。"""
+        path = f"ui.theme.seeds.{key}"
+        return tr(path) if tr.has(path) else key
+
+    current = tr("ui.theme.dark") if th.mode_name == "dark" else tr("ui.theme.light")
+    # system 时告诉用户"跟随系统"，手动选过则直接说是哪种
+    setting = current if th.mode == "system" else tr(f"ui.theme.{th.mode}")
+
     return ft.Row(
         spacing=8,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -307,7 +319,7 @@ def ThemeSwitcher(*, compact: bool = False) -> ft.Control:
                     ft.Container(
                         width=18,
                         height=18,
-                        tooltip=f"主色 · {name}",
+                        tooltip=tr("ui.theme.primary", name=seed_label(name)),
                         border_radius=ft.BorderRadius.all(4),
                         bgcolor=seed,
                         border=ft.Border.all(
@@ -329,8 +341,7 @@ def ThemeSwitcher(*, compact: bool = False) -> ft.Control:
                     if th.mode_name == "dark"
                     else ft.Icons.DARK_MODE
                 ),
-                tooltip=f"明暗：当前 {'深色' if th.mode_name == 'dark' else '浅色'}"
-                f"（{'跟随系统' if th.mode == 'system' else th.mode}）",
+                tooltip=tr("ui.theme.mode", mode=current, setting=setting),
                 on_click=lambda _e: th.toggle_mode(),
             ),
         ],

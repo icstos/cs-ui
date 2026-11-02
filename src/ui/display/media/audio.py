@@ -11,6 +11,8 @@ from __future__ import annotations
 import flet as ft
 import flet_audio as fa
 
+from ui.core.i18n import t
+
 __all__ = ["Audio", "AudioPlayer"]
 
 
@@ -39,7 +41,7 @@ class AudioPlayer(ft.Container):
 
     Args:
         src: 音频地址。
-        title: 标题文本。
+        title: 标题文本。``None``（默认）取语言包里的「音频 / Audio」。
         subtitle: 次要说明文本。
         width: 卡片宽度，默认撑满容器。
     """
@@ -47,7 +49,7 @@ class AudioPlayer(ft.Container):
     def __init__(
         self,
         src: str = "",
-        title: str = "音频",
+        title: str | None = None,
         subtitle: str = "",
         width: int | float | None = None,
         **kwargs,
@@ -56,12 +58,12 @@ class AudioPlayer(ft.Container):
         self._playing = False
 
         self._audio = Audio(src=src, on_state_change=self._on_state_change)
-        self._status = ft.Text("未播放", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
+        self._status = ft.Text(t("ui.audio.idle"), size=12, color=ft.Colors.ON_SURFACE_VARIANT)
         self._play_btn = ft.IconButton(
             icon=ft.Icons.PLAY_CIRCLE_FILLED,
             icon_size=34,
             icon_color=ft.Colors.BLUE,
-            tooltip="播放 / 暂停",
+            tooltip=t("ui.audio.toggle"),
             on_click=self._toggle,
         )
         self._volume = ft.Slider(
@@ -76,7 +78,7 @@ class AudioPlayer(ft.Container):
 
         info = ft.Column(
             controls=[
-                ft.Text(title, size=14, weight=ft.FontWeight.W_600),
+                ft.Text(title or t("ui.audio.title"), size=14, weight=ft.FontWeight.W_600),
                 self._status,
                 *(
                     [
@@ -137,7 +139,9 @@ class AudioPlayer(ft.Container):
         self._play_btn.icon = (
             ft.Icons.PAUSE_CIRCLE_FILLED if self._playing else ft.Icons.PLAY_CIRCLE_FILLED
         )
-        self._status.value = "播放中" if self._playing else "已暂停"
+        self._status.value = (
+            t("ui.audio.playing") if self._playing else t("ui.audio.paused")
+        )
         self.update()
 
 

@@ -51,6 +51,8 @@ from dataclasses import dataclass, field
 
 import flet as ft
 
+from ui.core.i18n import t
+
 __all__ = ["Timeline", "TimelineItem"]
 
 # ---------------------------------------------------------------------------
@@ -291,7 +293,7 @@ class Timeline(ft.Column):
         if isinstance(pending, TimelineItem):
             return pending
         if pending is True:
-            return TimelineItem(title="进行中")
+            return TimelineItem(title=t("ui.timeline.pending"))
         return TimelineItem(title=str(pending))
 
     # ------------------------------------------------------------------

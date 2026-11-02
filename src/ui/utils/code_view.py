@@ -1,4 +1,6 @@
 import flet as ft
+
+from ui.core.i18n import t
 from ui.layout.expander import Expander
 from ui.display.text import Code
 
@@ -10,7 +12,11 @@ class CodeView(ft.Column):
 
     def init(self):
         self.controls.append(
-            Expander(title="查看代码", controls=[Code(value=self.code)], dense=True)
+            Expander(
+                title=t("ui.codeview.title"),
+                controls=[Code(value=self.code)],
+                dense=True,
+            )
         )
 
     def did_mount(self):

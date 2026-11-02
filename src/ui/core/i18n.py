@@ -11,7 +11,7 @@
 2. **缺翻译不抛异常**。UI 不该因为一句文案漏翻就白屏，返回键名本身
    （Qt / Flutter 都是这个取舍），同时**每个键只警告一次**；CI 里把
    ``configure(strict=True)`` 一开就变成立即报错。
-3. **回退是有链路的**：``zh_Hant → zh_Hans → en``。繁体只翻了一部分时，
+3. **回退是有链路的**：``zh_TW → zh_CN → en_US``。繁体只翻了一部分时，
    剩下的自动落到简体；简体缺了再落英文。语言之间的关系由
    :attr:`Language.fallback` 声明，没声明就按「同语言的其他字形」猜。
 4. **首帧就是正确语言**。持久化的选择在第一次渲染**之前**读进来
@@ -22,14 +22,18 @@
 
     from ui import I18nProvider, Language, load_catalogs, register_language
 
-    register_language(Language("zh_Hans", "简体中文", "Simplified Chinese",
-                               fallback="en"))
-    register_language(Language("en", "English"))
-    load_catalogs("assets/i18n")        # zh_Hans.json / en.json ...
+    register_language(Language("zh-CN", "简体中文", "Simplified Chinese"))
+    register_language(Language("zh-TW", "繁體中文", "Traditional Chinese", fallback="zh-CN"))
+    register_language(Language("en-US", "English"))
+    load_catalogs("assets/i18n")        # zh_CN.json / zh_TW.json / en_US.json
 
     @ft.component
     def App():
-        return I18nProvider(build=MainShell)
+        return I18nProvider(build=MainShell, locale="zh-CN")
+
+框架自带 ``zh-CN`` / ``zh-TW`` / ``en-US`` 三份界面文案（见
+:mod:`ui.core.locales`），所以上面这三行 ``register_language`` **通常不用写** ——
+除非要改语言菜单的显示名或调整回退链。
 
 用法（组件内，**必须**用 hook 才会跟随切换重绘）::
 
@@ -56,6 +60,8 @@ from typing import Any, Protocol
 import flet as ft
 
 from ui.core.config import logger
+from ui.core.locales import CATALOGS as FRAMEWORK_CATALOGS
+from ui.core.locales import DEFAULT_LOCALE, FALLBACK_LOCALE
 from ui.core.tokens import FONT_SIZE, RADIUS, SPACE
 
 __all__ = [
@@ -87,6 +93,7 @@ __all__ = [
     "set_locale",
     "system_locale",
     "t",
+    "tl",
     "tn",
     "use_i18n",
     "use_t",
@@ -135,19 +142,25 @@ def _parse(tag: str) -> tuple[str, str | None, str | None]:
 
 
 def canonical(tag: str) -> str:
-    """归一语言标签：有文字就用 ``语言_文字``，否则 ``语言_地区``，再否则 ``语言``。
+    """归一语言标签：优先保留地区，没有地区才用文字，都没有就只剩语言。
 
-    ``zh-CN`` → ``zh_Hans``、``zh-Hant-TW`` → ``zh_Hant``、``en-US`` → ``en_US``。
-    **注册表里的 code 都用这个形式**，查询时再按语言/文字宽松匹配（见
-    :meth:`LanguageRegistry.resolve`），所以只注册了 ``en`` 也能接住 ``en-US``。
+    ``zh-CN`` → ``zh_CN``、``zh-Hant-TW`` → ``zh_TW``、``en-US`` → ``en_US``、
+    ``en`` → ``en``。**注册表里的 code 都用这个形式**，查询时再按语言 / 文字
+    宽松匹配（见 :meth:`LanguageRegistry.resolve`）：所以只注册了 ``en_US``
+    也能接住 ``en`` / ``en-GB``，注册了 ``zh_CN`` / ``zh_TW`` 就能接住
+    ``zh-Hans`` / ``zh-Hant``。
+
+    为什么地区优先于文字：``zh-CN`` / ``zh-TW`` 是用户和设计稿里真正在用的
+    语言码，``zh_Hans`` / ``zh_Hant`` 只是它的实现细节。反过来（``zh-TW`` 归一
+    成 ``zh_Hant``）会让"语言码"和"注册码"看起来是两套东西，排查时反而要多想一步。
     """
     language, script, region = _parse(tag)
     if not language:
         return ""
-    if script:
-        return f"{language}_{script}"
     if region:
         return f"{language}_{region}"
+    if script:
+        return f"{language}_{script}"
     return language
 
 
@@ -157,21 +170,26 @@ def canonical(tag: str) -> str:
 def flatten(messages: Mapping[str, Any], prefix: str = "") -> dict[str, str]:
     """把嵌套消息表拍成 ``{"app.title": "..."}``。
 
-    允许任意层级嵌套；数字/布尔按字面量转字符串（写 ``"count": 3`` 的稿子也能用），
-    其他类型（列表、None）视为笔误直接报错 —— 装表阶段就炸，比运行到某页才炸好。
+    允许任意层级嵌套；数字/布尔按字面量转字符串（写 ``"count": 3`` 的稿子也能用）。
+    **列表按下标展开**（``{"cities": ["北京", "上海"]}`` → ``cities.0`` / ``cities.1``），
+    这样"选项列表 / 月份名"这类成组文案也能进语言包，取用见 :meth:`I18nState.tl`。
+    其他类型（``None``、集合）视为笔误直接报错 —— 装表阶段就炸，比运行到某页才炸好。
     """
     flat: dict[str, str] = {}
     for key, value in messages.items():
         path = f"{prefix}{key}"
         if isinstance(value, Mapping):
             flat.update(flatten(value, f"{path}."))
+        elif isinstance(value, (list, tuple)):
+            for index, item in enumerate(value):
+                flat.update(flatten({str(index): item}, f"{path}."))
         elif isinstance(value, str):
             flat[path] = value
         elif isinstance(value, (int, float, bool)):
             flat[path] = str(value)
         else:
             raise TypeError(
-                f"翻译值必须是字符串或嵌套字典：{path} -> {type(value).__name__}"
+                f"翻译值必须是字符串、数字、列表或嵌套字典：{path} -> {type(value).__name__}"
             )
     return flat
 
@@ -214,10 +232,10 @@ class Language:
     哪怕界面已经是看不懂的外语。
 
     Args:
-        code: 语言标签，``zh_CN`` / ``zh-Hant`` / ``en`` 都能写，构造时统一归一。
+        code: 语言标签，``zh-CN`` / ``zh-Hant`` / ``en`` 都能写，构造时统一归一。
         native_name: 母语名，显示在语言菜单里。
         english_name: 英文名，次要显示（母语名与英文名相同时可省）。
-        fallback: 回退语言（``zh_Hant`` 一般回退 ``zh_Hans``）。不填则按
+        fallback: 回退语言（``zh_TW`` 一般回退 ``zh_CN``）。不填则按
             「同语言的其他字形」自动推断。
         direction: ``ltr`` / ``rtl``；RTL 语言会被同步到 ``page.rtl``。
     """
@@ -238,6 +256,16 @@ class Language:
     @property
     def is_rtl(self) -> bool:
         return self.direction.lower() == "rtl"
+
+    @property
+    def tag(self) -> str:
+        """BCP 47 写法（``zh_CN`` → ``zh-CN``），用于展示与 Flutter 侧对齐。"""
+        base, script, region = _parse(self.code)
+        if region:
+            return f"{base}-{region}"
+        if script:
+            return f"{base}-{script}"
+        return base or self.code
 
     @property
     def label(self) -> str:
@@ -299,7 +327,7 @@ class LanguageRegistry:
         """把任意语言标签解析成**已注册的** code（认不出就返回 ``None``）。
 
         三级命中：精确 → 同语言同文字 → 同语言。所以只注册了 ``en`` 时，
-        ``en-US`` / ``en_GB`` 都会落到 ``en``；注册了 ``zh_Hans`` / ``zh_Hant``
+        ``en-US`` / ``en_GB`` 都会落到 ``en``；注册了 ``zh_CN`` / ``zh_TW``
         时，``zh-CN`` 落简体、``zh-TW`` 落繁体。
         """
         if not tag:
@@ -395,7 +423,7 @@ class LanguageRegistry:
         return self.add_messages(code, body)
 
     def load_dir(self, path: str | Path, pattern: str = "*.json") -> int:
-        """载入目录下所有语言包（``zh_Hans.json`` / ``en.json`` …），返回总键数。"""
+        """载入目录下所有语言包（``zh_CN.json`` / ``en_US.json`` …），返回总键数。"""
         folder = Path(path)
         if not folder.is_dir():
             logger.warning(f"语言包目录不存在：{folder}")
@@ -418,24 +446,22 @@ i18n_registry = LanguageRegistry()
 # ---------------------------------------------------------------------------
 # 框架自用文案：语言切换器要说人话，而且必须自己走一遍 i18n
 # ---------------------------------------------------------------------------
+#: 内置语言，**注册顺序 = 语言菜单顺序**。回退链是
+#: ``zh_TW → zh_CN → en_US``：繁体只翻了一部分时剩下的落到简体，
+#: 简体再缺就落英文 —— 任何一步都不会白屏。
 _BUILTIN_LANGUAGES: tuple[Language, ...] = (
-    Language("zh_Hans", "简体中文", "Simplified Chinese", fallback="en"),
-    Language("zh_Hant", "繁體中文", "Traditional Chinese", fallback="zh_Hans"),
-    Language("en", "English", "English"),
+    Language("zh_CN", "简体中文", "Simplified Chinese", fallback="en_US"),
+    Language("zh_TW", "繁體中文", "Traditional Chinese", fallback="zh_CN"),
+    Language("en_US", "English", "English"),
 )
-
-_BUILTIN_MESSAGES: dict[str, dict[str, str]] = {
-    "zh_Hans": {"ui.language.tooltip": "界面语言"},
-    "zh_Hant": {"ui.language.tooltip": "介面語言"},
-    "en": {"ui.language.tooltip": "Interface language"},
-}
 
 
 def _install_builtins() -> None:
+    """注册内置语言与框架文案（:mod:`ui.core.locales` 里的三份表）。"""
     for language in _BUILTIN_LANGUAGES:
         i18n_registry.add_language(language)
-    for code, messages in _BUILTIN_MESSAGES.items():
-        i18n_registry.add_messages(code, messages)
+    for tag, messages in FRAMEWORK_CATALOGS.items():
+        i18n_registry.add_messages(tag, messages)
 
 
 _install_builtins()
@@ -646,8 +672,8 @@ class I18nState:
     语言本来就是应用级全局设置，再造一层"这个文案跟谁走"只会更难查。
     """
 
-    locale: str = "en"  # 当前语言（注册表里的 code）
-    fallback: str = "en"  # 兜底语言：所有回退链的终点
+    locale: str = canonical(DEFAULT_LOCALE) or DEFAULT_LOCALE
+    fallback: str = canonical(FALLBACK_LOCALE) or FALLBACK_LOCALE
     strict: bool = False  # True = 缺键立即抛 KeyError（CI / 单测）
     revision: int = 0  # 消息表热更新后 +1，用来强制订阅者重绘
 
@@ -759,6 +785,20 @@ class I18nState:
         params.setdefault("count", number)
         return _format(self, message, params, key)
 
+    def tl(self, key: str, /) -> list[str]:
+        """取成组译文：``tl("form.cities")`` → ``["北京", "上海", …]``。
+
+        装表时列表已经被拍成 ``key.0`` / ``key.1`` …（见 :func:`flatten`），
+        这里按下标连续读到第一个缺口为止。数组长度随语言变也没问题 ——
+        中文 5 个城市、英文 5 个城市各写各的，代码不用跟着改。
+        """
+        items: list[str] = []
+        while True:
+            message = self._lookup(f"{key}.{len(items)}")
+            if message is None:
+                return items
+            items.append(message)
+
     def _miss(self, key: str) -> str:
         """缺键：记一次数、警告一次，然后**返回键名**（不白屏）。"""
         if self.strict:
@@ -784,7 +824,7 @@ class I18nState:
 
 
 #: 进程级单例
-_state = I18nState(fallback=canonical("en") or "en")
+_state = I18nState()
 
 #: 语言 context。默认值就是这个单例，所以**不挂 Provider 也能用**；
 #: 真正的作用是 :func:`ft.use_context` 会替组件挂上 observable 订阅 ——
@@ -833,6 +873,11 @@ def tn(key: str, count: float, /, **params: Any) -> str:
     return _state.tn(key, count, **params)
 
 
+def tl(key: str, /) -> list[str]:
+    """取成组译文（不订阅）。组件里用 ``use_t().list(key)``。"""
+    return _state.tl(key)
+
+
 class Translator:
     """绑定到某次渲染的翻译器：``tr = use_t()``，然后 ``tr("key")``。
 
@@ -851,6 +896,10 @@ class Translator:
     def n(self, key: str, count: float, /, **params: Any) -> str:
         """复数形式：``tr.n("files", 3)``。"""
         return self._state.tn(key, count, **params)
+
+    def list(self, key: str, /) -> list[str]:
+        """成组形式：``tr.list("form.cities")`` → 字符串列表。"""
+        return self._state.tl(key)
 
     def has(self, key: str) -> bool:
         return self._state.has(key)

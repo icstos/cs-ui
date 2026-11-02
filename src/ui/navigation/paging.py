@@ -5,6 +5,8 @@ from enum import Enum
 
 import flet as ft
 
+from ui.core.format import format_number
+from ui.core.i18n import t, use_t
 from ui.core.styles import outline_input
 
 
@@ -103,7 +105,9 @@ class PagingState:
     on_change_per_page_nums: Callable[[int], None] | None = None  # 每页数据条数变更回调
     data_per_page_nums: int = 10  # 每页数据条数
     current_page: int = 1  # 当前页码
-    data_unit: str = "项"  # 数据单位
+    #: 数据单位。留空表示跟随界面语言（"项 / 項 / items"），
+    #: 需要"条 / 行 / 人"这类业务量词时再显式传。
+    data_unit: str = ""
 
     @property
     def sum_page_nums(self) -> int:
@@ -142,16 +146,19 @@ class PagingState:
 
 @ft.component
 def Paging(state: PagingState):
-    # sum_data_nums: int = 0  # 总数据条数
-    # on_change_page: Callable[[int], None] | None = None  # 页码变更回调
-    # on_change_per_page_nums: Callable[[int], None] | None = None  # 每页数据条数变更回调
-    # data_per_page_nums: int = 10  # 每页数据条数
-    # current_page: int = 1  # 当前页码
-    # data_unit: str = '项'  # 数据单位
-    # alignment: ft.MainAxisAlignment = ft.MainAxisAlignment.SPACE_BETWEEN
-    # expand: bool = True
+    """分页器：总数 + 页码 + 每页条数。
 
-    v_count = ft.Text(value=f"共 {state.sum_data_nums} {state.data_unit}")
+    所有文案与数字格式都取自当前语言（``ui.paging.*``）：中文是
+    「共 1,286 项 · 前往 [10] 页 · 每页 [10] 项」，英文是
+    「1,286 items · Go to [10] · Rows per page [10]」。语序差异由整句模板吸收，
+    这里只负责填参数 —— 不做"拼接词 + 变量 + 拼接词"。
+
+    ``use_t()`` 是本组件唯一的订阅点：语言一变，``Paging`` 重绘，
+    外部持有的 :class:`PagingState` 不变（页码、每页条数都不丢）。
+    """
+    use_t()
+
+    unit = state.data_unit or t("ui.paging.unit")
     rst_controls = []
     if os.environ.get("CS_UI_DEBUG_PAGING"):
         print(
@@ -160,24 +167,26 @@ def Paging(state: PagingState):
             flush=True,
         )
 
-    first_page_btn = PrevNextPageButton(
-        icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_LEFT,
-        on_click=state.click_update_page,
-        tooltip="首页",
-        data=1,
-        disabled=(state.current_page == 1),
-        icon_color=ft.Colors.GREY if (state.current_page == 1) else None,
+    rst_controls.append(
+        PrevNextPageButton(
+            icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_LEFT,
+            on_click=state.click_update_page,
+            tooltip=t("ui.paging.first"),
+            data=1,
+            disabled=(state.current_page == 1),
+            icon_color=ft.Colors.GREY if (state.current_page == 1) else None,
+        )
     )
-    rst_controls.append(first_page_btn)
-    prev_page_btn = PrevNextPageButton(
-        icon=ft.Icons.KEYBOARD_ARROW_LEFT,
-        on_click=state.click_update_page,
-        tooltip="上一页",
-        data=state.current_page - 1,
-        disabled=(state.current_page == 1),
-        icon_color=ft.Colors.GREY if (state.current_page == 1) else None,
+    rst_controls.append(
+        PrevNextPageButton(
+            icon=ft.Icons.KEYBOARD_ARROW_LEFT,
+            on_click=state.click_update_page,
+            tooltip=t("ui.paging.prev"),
+            data=state.current_page - 1,
+            disabled=(state.current_page == 1),
+            icon_color=ft.Colors.GREY if (state.current_page == 1) else None,
+        )
     )
-    rst_controls.append(prev_page_btn)
 
     for _page in get_center_pages(state.current_page, state.sum_page_nums):
         if _page == -1:
@@ -188,7 +197,7 @@ def Paging(state: PagingState):
                 NowPageButton(
                     content=str(_page),
                     on_click=state.click_update_page,
-                    tooltip=f"第 {_page} 页",
+                    tooltip=t("ui.paging.page", n=_page),
                     data=_page,
                 )
             )
@@ -199,7 +208,7 @@ def Paging(state: PagingState):
                 OtherPageButton(
                     content=str(_page),
                     on_click=state.click_update_page,
-                    tooltip=f"第 {_page} 页",
+                    tooltip=t("ui.paging.page", n=_page),
                     data=_page,
                 )
             )
@@ -208,7 +217,7 @@ def Paging(state: PagingState):
         PrevNextPageButton(
             icon=ft.Icons.KEYBOARD_ARROW_RIGHT,
             on_click=state.click_update_page,
-            tooltip="下一页",
+            tooltip=t("ui.paging.next"),
             data=state.current_page + 1,
             disabled=state.current_page >= state.sum_page_nums,
             icon_color=ft.Colors.GREY
@@ -220,7 +229,7 @@ def Paging(state: PagingState):
         PrevNextPageButton(
             icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_RIGHT,
             on_click=state.click_update_page,
-            tooltip="尾页",
+            tooltip=t("ui.paging.last"),
             data=state.sum_page_nums,
             disabled=(state.current_page >= state.sum_page_nums),
             icon_color=ft.Colors.GREY
@@ -263,18 +272,24 @@ def Paging(state: PagingState):
             f"options={[o.key for o in v_num_of_row_changer_field.options]}",
             flush=True,
         )
+    # 「前往 [x] ___」：有些语言（英文）没有"页"这个后缀，语言包给空串时
+    # 直接不渲染那个 Text，免得留下一个孤立的空格。
+    page_unit = t("ui.paging.page_unit")
+    goto_controls: list[ft.Control] = [
+        v_now_page,
+        ft.Text(t("ui.paging.goto")),
+        v_goto_page,
+        *([ft.Text(page_unit)] if page_unit else []),
+    ]
     return ft.Row(
         controls=[
-            v_count,
-            ft.Row(
-                controls=[v_now_page, ft.Text("前往"), v_goto_page, ft.Text("页")],
-                spacing=6,
-            ),
+            ft.Text(t("ui.paging.total", n=format_number(state.sum_data_nums), unit=unit)),
+            ft.Row(controls=goto_controls, spacing=6),
             ft.Row(
                 controls=[
-                    ft.Text("每页"),
+                    ft.Text(t("ui.paging.per_page")),
                     v_num_of_row_changer_field,
-                    ft.Text(state.data_unit),
+                    ft.Text(unit),
                 ]
             ),
         ]

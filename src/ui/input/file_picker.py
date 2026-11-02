@@ -1,10 +1,12 @@
-import flet as ft
+import copy
+import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from collections.abc import Callable
 
-import os
-import copy
+import flet as ft
+
+from ui.core.i18n import t
 
 
 def get_size(file_path):
@@ -64,7 +66,7 @@ class FilePicker:
             self.notify()
 
         v_choose_btn = ft.Button(
-            content=ft.Text("选择文件"),
+            content=ft.Text(t("ui.file.choose")),
             icon=ft.Icons.INSERT_DRIVE_FILE_OUTLINED,
             on_click=handle_files_pick,
         )
@@ -124,7 +126,7 @@ class DirPicker:
         return ft.Row(
             controls=[
                 ft.Button(
-                    content=ft.Text("选择文件夹"),
+                    content=ft.Text(t("ui.file.choose_dir")),
                     icon=ft.Icons.FOLDER_OPEN,
                     on_click=handle_dir_picker,
                 ),
@@ -155,7 +157,7 @@ class FileSaver:
         return ft.Row(
             controls=[
                 ft.Button(
-                    content=ft.Text("保存文件"),
+                    content=ft.Text(t("ui.file.save")),
                     icon=ft.Icons.SAVE,
                     on_click=handle_save_file,
                 ),
