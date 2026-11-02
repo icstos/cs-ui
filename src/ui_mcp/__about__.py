@@ -3,5 +3,5 @@
 from __future__ import annotations
 
 __pkg_name__ = "ui-mcp"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = ["__pkg_name__", "__version__"]

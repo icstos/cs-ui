@@ -1,5 +1,6 @@
-import flet as ft
 from dataclasses import field
+
+import flet as ft
 import flet_code_editor as fce
 
 Text = ft.Text
@@ -103,11 +104,11 @@ def App():
                 "# Markdown\n## Markdown\n### Markdown\n#### Markdown\n##### Markdown\n###### Markdown\n- Markdown\n- Markdown\n- Markdown\n[Markdown](https://www.baidu.com/)"
             ),
             Json(
-                value='{"name": "cs_ui", "version": "0.1.0", "description": "A UI library for Python."}'
+                value='{"name": "cs_ui", "version": "0.1.1", "description": "A UI library for Python."}'
             ),
             Code(
                 value="""{"name": "cs_ui",
-"version": "0.1.0",
+"version": "0.1.1",
 "description": "A UI library for Python."}
                 """,
                 language=fce.CodeLanguage.JSON,
