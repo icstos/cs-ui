@@ -8,6 +8,32 @@ BORDER_RADIUS = 6
 BUTTON_HEIGHT = 36
 
 
+def _merge_states(value, defaults: dict[ft.ControlState, str]):
+    """把调用方显式指定的状态值叠加到默认状态表上。
+
+    传单值时视作 DEFAULT/HOVERED/PRESSED 三态取同一个颜色（悬停反馈仍由
+    overlay_color 提供），DISABLED 保留默认灰；传字典时逐键覆盖。
+    这样调用方定制配色时不会因为预设色板被强制写回而出现「白底白字」。
+
+    Args:
+        value: 调用方给的状态值（None / 单值 / 状态字典）。
+        defaults: 组件预设的状态表。
+
+    Returns:
+        合并后的状态表。
+    """
+    merged = dict(defaults)
+    if value is None:
+        return merged
+    if isinstance(value, dict):
+        merged.update(value)
+        return merged
+    merged[ft.ControlState.DEFAULT] = value
+    merged[ft.ControlState.HOVERED] = value
+    merged[ft.ControlState.PRESSED] = value
+    return merged
+
+
 @ft.control
 class Button(ft.Button):
     # 注意（flet 1.0.0）：基类的 height 是 kw_only 字段；子类若用裸注解重新声明，
@@ -72,12 +98,15 @@ class Button(ft.Button):
                 ft.ControlState.HOVERED: 0,
             }
         else:
-            self.style.bgcolor = {
-                ft.ControlState.DEFAULT: self._style.color,
-                ft.ControlState.HOVERED: self._style.color_accent,
-                ft.ControlState.DISABLED: ft.Colors.GREY_300,
-                ft.ControlState.PRESSED: self._style.color_light,
-            }
+            self.style.bgcolor = _merge_states(
+                self.style.bgcolor,
+                {
+                    ft.ControlState.DEFAULT: self._style.color,
+                    ft.ControlState.HOVERED: self._style.color_accent,
+                    ft.ControlState.DISABLED: ft.Colors.GREY_300,
+                    ft.ControlState.PRESSED: self._style.color_light,
+                },
+            )
             self.style.overlay_color = self.style.overlay_color or {
                 ft.ControlState.DEFAULT: self._style.color,
                 ft.ControlState.HOVERED: self._style.color_accent,
@@ -106,7 +135,7 @@ class Button(ft.Button):
                 ft.ControlState.PRESSED: ft.BorderSide(1, self._style.color_accent),
             }
 
-        if self.style is not None:
+        if self.style is not None and self.style.shape is None:
             if self.shape == ButtonShape.RECTANGLE:
                 self.style.shape = ft.ContinuousRectangleBorder()
             elif self.shape == ButtonShape.ROUND:

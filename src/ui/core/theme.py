@@ -198,6 +198,16 @@ def build_theme(state: ThemeState) -> ft.Theme:
             windows=ft.PageTransitionTheme.NONE,
             linux=ft.PageTransitionTheme.NONE,
         ),
+        # 菜单默认取 M3 的 surfaceContainerHigh（带主色偏的灰），在白底卡片
+        # 界面上会显得脏。改用容器最低层（浅色下接近纯白、深色下接近底色），
+        # 再补一点阴影，菜单才像「浮在页面上」而不是另一块面板。
+        popup_menu_theme=ft.PopupMenuTheme(
+            color=ft.Colors.SURFACE_CONTAINER_LOWEST,
+            elevation=8,
+            shape=ft.RoundedRectangleBorder(radius=10),
+            menu_padding=ft.Padding.symmetric(vertical=6),
+            label_text_style=ft.TextStyle(size=13),
+        ),
     )
 
 
