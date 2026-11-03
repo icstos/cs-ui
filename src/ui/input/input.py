@@ -229,11 +229,13 @@ class Input(Label):
 
         v_ui = ft.TextField(
             value=str(self.value) if self.value is not None else "",
-            cursor_color=ft.Colors.BLUE,
-            selection_color=ft.Colors.GREY_400,
-            fill_color=ft.Colors.WHITE,
-            hover_color=ft.Colors.BLUE_50,
-            border=outline_input(BORDER_RADIUS, ft.Colors.GREY_300, ft.Colors.BLUE),
+            cursor_color=ft.Colors.PRIMARY,
+            selection_color=ft.Colors.with_opacity(0.24, ft.Colors.PRIMARY),
+            fill_color=ft.Colors.SURFACE_CONTAINER_HIGHEST,
+            hover_color=ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY),
+            border=outline_input(
+                BORDER_RADIUS, ft.Colors.OUTLINE_VARIANT, ft.Colors.PRIMARY
+            ),
             cursor_width=1,
             hint_text=self.hint_text,
             multiline=self.multiline,

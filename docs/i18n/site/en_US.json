@@ -1,0 +1,361 @@
+{
+  "site": {
+    "nav": {
+      "home": {"title": "Home", "desc": "What cs-ui is and what you can build with it"},
+      "getting_started": {"title": "Getting started", "desc": "Install, run, and render your first screen in minutes"},
+      "architecture": {"title": "Architecture", "desc": "Declarative rendering, providers, and routing"},
+      "theming": {"title": "Theme & tokens", "desc": "Material 3 palettes, dark mode, and design tokens"},
+      "i18n": {"title": "Internationalization", "desc": "Runtime locales, formatting, and fallback chains"},
+      "components": {"title": "Components", "desc": "Browse every cs-ui component by category"},
+      "general": {"title": "General", "desc": "Text, buttons, icons, chips, and basic display"},
+      "layout": {"title": "Layout", "desc": "Grids, containers, lists, tables, and timelines"},
+      "navigation": {"title": "Navigation", "desc": "Breadcrumbs, tabs, navigation bars, and paging"},
+      "form": {"title": "Forms", "desc": "Inputs, selectors, dates, colors, and search"},
+      "feedback": {"title": "Feedback", "desc": "Toasts, dialogs, progress, and loading states"},
+      "display": {"title": "Data display", "desc": "List tiles, logs, code, and image galleries"},
+      "charts": {"title": "Charts", "desc": "Line, area, bar, and scatter charts"},
+      "media": {"title": "Media", "desc": "Audio, video, and PDF viewing"},
+      "upload": {"title": "File pickers", "desc": "Files, directories, saving, and image picking"},
+      "about": {"title": "About", "desc": "Version, design principles, and migration"},
+      "search": {"title": "Search", "desc": "Jump to any page or component"}
+    },
+    "group": {
+      "start": "Start",
+      "guide": "Guides",
+      "components": "Components",
+      "project": "Project"
+    },
+    "search": {
+      "placeholder": "Search docs and components",
+      "empty_title": "Start with a keyword",
+      "empty_hint": "Try a page name, a component, or a feature such as “routing”, “date”, or “theme”.",
+      "no_results_title": "No results for “{query}”",
+      "no_results_hint": "Try a shorter keyword, or browse every page from the sidebar.",
+      "pages": "Pages",
+      "components": "Components",
+      "result_count": "{count} results"
+    },
+    "copy": "Copy",
+    "github": "GitHub repository",
+    "next": "Next",
+    "prev": "Previous",
+    "version": "v{version}",
+    "theme": {
+      "primary": "Accent color",
+      "toggle": "Toggle light / dark mode"
+    },
+    "tab": {
+      "docs": "Docs",
+      "components": "Components",
+      "about": "About"
+    },
+    "sidebar": {
+      "runtime": "Flet {flet} · Python {python}"
+    },
+    "breadcrumb": {
+      "docs": "Docs"
+    },
+    "footer": {
+      "tagline": "A declarative Python desktop UI library built on Flet",
+      "copyright": "© 2026 cs-ui · MIT License · v{version}"
+    },
+    "components": {
+      "count": "{count}",
+      "open": "Browse components",
+      "total": "Components",
+      "categories": "Categories",
+      "search": {
+        "title": "Can't find the component you need?",
+        "hint": "Open search and filter by name, category, or feature.",
+        "button": "Open search"
+      }
+    },
+    "notfound": {
+      "search": "Search docs"
+    },
+    "home": {
+      "eyebrow": "CS-UI · Declarative desktop UI",
+      "headline": "Build beautiful\ndesktop UIs in Python",
+      "subline": "cs-ui packages Flet 1.0's declarative components, Material 3 theming, and a complete form toolkit into one composable UI language. Write Python, ship a native desktop experience.",
+      "cta": {
+        "start": "Get started",
+        "components": "Browse components",
+        "github": "GitHub",
+        "title": "Ready to build?",
+        "desc": "From install to your first screen takes only a few minutes.",
+        "button": "Start building"
+      },
+      "hero": {
+        "point1": "Pure Python, no frontend build step",
+        "point2": "Three languages, live switching · light & dark",
+        "code_title": "Minimal working example"
+      },
+      "stats": {
+        "components": "Components",
+        "categories": "Categories",
+        "languages": "Languages",
+        "typed": "Type annotated"
+      },
+      "features": {
+        "title": "Why cs-ui",
+        "hint": "Let the library handle UI plumbing so you can focus on the product.",
+        "reactive": {
+          "title": "Declarative state",
+          "desc": "@ft.component and hooks drive the UI. State changes repaint automatically—no manual update calls."
+        },
+        "themed": {
+          "title": "Material 3 theming",
+          "desc": "One seed color derives the entire palette. Dark mode and semantic colors work out of the box."
+        },
+        "i18n": {
+          "title": "Runtime i18n",
+          "desc": "Switch between Simplified Chinese, Traditional Chinese, and English live—dates and numbers follow."
+        },
+        "typed": {
+          "title": "Fully typed",
+          "desc": "Built for Python 3.12+ with signatures on every public API, so editor completion stays reliable."
+        },
+        "modular": {
+          "title": "Composable",
+          "desc": "Layout, forms, feedback, and charts share one set of design tokens and stay consistent together."
+        },
+        "desktop": {
+          "title": "Desktop first",
+          "desc": "Designed for mouse and keyboard: hover states, density, scrolling, and window sizing all considered."
+        }
+      },
+      "catalog": {
+        "title": "Browse by category",
+        "hint": "Nine categories cover the vast majority of everyday desktop UI needs.",
+        "all": "View all components"
+      },
+      "playground": {
+        "title": "Try it",
+        "hint": "These are real components. Switching language or theme keeps your input intact.",
+        "input": "Your name",
+        "input_value": "Shawn",
+        "checkbox": "Email me product updates",
+        "switch": "Enable experimental features",
+        "toast": "Show a toast",
+        "toast_text": "Everything is working."
+      },
+      "why": {
+        "title": "Less glue code, more product",
+        "desc": "cs-ui concentrates routing, theming, language, and form state into a few entry points, so page code only describes what the UI looks like.",
+        "point1": "Root-view rendering keeps overlays and dialogs out of the view stack",
+        "point2": "Theme and locale are subscribable state, repainting only what changed",
+        "point3": "Stateful components keep user input when the language changes",
+        "point4": "Shared design tokens end the per-page spacing guessing game"
+      }
+    },
+    "getting_started": {
+      "requirements": {
+        "title": "Requirements",
+        "desc": "cs-ui targets modern Python desktop development with a deliberately small dependency set.",
+        "note_title": "Recommended setup",
+        "note": "Use Python 3.12 or newer and stay on the Flet 1.0.x line.",
+        "python": "Python 3.12+ using the latest typing syntax",
+        "flet": "Flet 1.0.5 with declarative components and hooks",
+        "deps": "A small set of third-party packages such as flet-code-editor",
+        "os": "Windows, macOS, or Linux desktop"
+      },
+      "install": {
+        "title": "Install",
+        "desc": "Pick whichever fits your workflow and keep Flet in sync with cs-ui when upgrading.",
+        "pip": "With pip",
+        "uv": "With uv (faster)",
+        "source": "From source"
+      },
+      "quickstart": {
+        "title": "Your first screen",
+        "desc": "Create main.py and render a minimal app with theming and a card."
+      },
+      "run": {
+        "title": "Run",
+        "desc": "Turn on hot reload during development and the UI refreshes as you edit."
+      },
+      "project": {
+        "title": "Suggested project layout",
+        "desc": "Keep pages, business components, catalogs, and assets separate as the app grows."
+      },
+      "next": {
+        "title": "Next steps",
+        "desc": "Learn how routing, providers, and stateful components fit together."
+      }
+    },
+    "architecture": {
+      "overview": {
+        "title": "Layered overview",
+        "desc": "cs-ui adds four layers on top of Flet: controls, state, infrastructure, and application composition.",
+        "points": [
+          "Controls: styled wrappers around native Flet controls, ready to construct.",
+          "State: @ft.observable data objects with a ui() rendering method.",
+          "Infrastructure: theme, locale, routing, formatting, and design tokens.",
+          "Application: page components compose; they don't touch the plumbing."
+        ]
+      },
+      "paradigm": {
+        "title": "Two kinds of components",
+        "desc": "Static controls subclass Flet controls directly; interactive components use observable data objects.",
+        "note_title": "Common pitfall",
+        "note": "Stateful components must be constructed inside @ft.component and pinned with a ref, or every parent re-render recreates the object and loses input."
+      },
+      "providers": {
+        "title": "Provider order",
+        "desc": "Locale outermost, theme next, router innermost. The order decides first-frame colors and copy."
+      },
+      "routing": {
+        "title": "Declarative routing",
+        "desc": "Render into the root view with manage_views=False so overlays, dialogs, and dropdown panels keep working.",
+        "note_title": "Avoid render_views",
+        "note": "render_views creates a view stack that covers the page overlay. Dialogs and hanging panels fail silently."
+      },
+      "state": {
+        "title": "State management",
+        "desc": "Use hooks for local state and module-level observable singletons for cross-page state.",
+        "points": [
+          "use_state manages state inside a component.",
+          "use_ref pins an instance across renders.",
+          "use_memo caches expensive computation.",
+          "Subscribed module-level state powers global theme and locale."
+        ]
+      },
+      "performance": {
+        "title": "Performance stance",
+        "desc": "Rendering repaints at subscription granularity; changing theme or language doesn't rebuild the tree.",
+        "points": [
+          "Only components that read use_t() or use_theme() repaint.",
+          "Route changes keep the layout shell mounted.",
+          "Code blocks and charts are built on demand to keep the first frame light.",
+          "Form instances are reused instead of recreated on every keystroke."
+        ]
+      }
+    },
+    "theming": {
+      "live": {
+        "title": "Live theming",
+        "hint": "Switch mode or accent color and the whole site updates instantly—without losing form input.",
+        "input": "Theme preview input",
+        "input_value": "Type something",
+        "mode": "Mode",
+        "primary": "Accent",
+        "mode_system": "Follow system",
+        "mode_light": "Light",
+        "mode_dark": "Dark"
+      },
+      "preview": {
+        "title": "Preview panel",
+        "body": "Panels, text, and buttons all use Material 3 role colors, so contrast holds in both light and dark mode.",
+        "primary": "Primary action",
+        "secondary": "Secondary action"
+      },
+      "semantic": {
+        "title": "Semantic colors",
+        "desc": "success, warning, danger, info, and neutral are decoupled from the palette and stay readable in either mode.",
+        "success": "Success",
+        "warning": "Warning",
+        "danger": "Danger",
+        "info": "Info",
+        "neutral": "Neutral"
+      },
+      "tokens": {
+        "title": "Design tokens",
+        "desc": "Spacing, radius, type scale, and elevation all come from ui—no magic numbers.",
+        "space": "Spacing scale",
+        "radius": "Radius scale",
+        "font": "Type scale",
+        "elevation": "Elevation levels",
+        "overlay": "Overlay opacity",
+        "semantic": "Semantic color lookup"
+      },
+      "table": {
+        "name": "Name",
+        "type": "Type",
+        "desc": "Description"
+      },
+      "modes": {
+        "title": "Light and dark",
+        "desc": "ThemeProvider writes page.theme and exposes subscribable state.",
+        "points": [
+          "mode: system, light, or dark.",
+          "primary: the seed color behind the whole palette.",
+          "font_family: the global font family.",
+          "Subscribe with use_theme() and repaint on change."
+        ]
+      },
+      "trap": {
+        "title": "Don't set page.theme from a page",
+        "desc": "Page components run one frame late, so direct changes flash the old palette. Go through ThemeProvider and use_theme() instead."
+      }
+    },
+    "i18n": {
+      "live": {
+        "title": "Switch language live",
+        "hint": "Page copy, dates, and number formats all update the moment you switch.",
+        "input": "Name",
+        "input_value": "Shawn",
+        "current": "Current locale: {locale}",
+        "sample": "Formatting sample",
+        "date": "Long date: {value}",
+        "number": "Number: {value}"
+      },
+      "overview": {
+        "title": "One runtime",
+        "desc": "Copy lives outside the code. Switching language needs no restart and no router rebuild.",
+        "points": [
+          "Three JSON catalogs load once at startup.",
+          "use_t() is the only subscription point; only subscribed components repaint.",
+          "Framework-owned copy (pagers, calendars) follows automatically.",
+          "The chosen locale is persisted locally."
+        ]
+      },
+      "register": {
+        "title": "Register messages",
+        "desc": "Register nested dictionaries with register_messages; keys resolve with dot notation.",
+        "note_title": "Fallback chain",
+        "note": "Traditional Chinese falls back to Simplified, then English. No step ever yields a blank string or a raw key."
+      },
+      "use": {
+        "title": "Use it in a component",
+        "desc": "Call use_t() at the top of the component body, then read copy with tr(key, **params)."
+      },
+      "format": {
+        "title": "Formatting",
+        "desc": "Dates, numbers, and calendar titles all follow the active locale.",
+        "points": [
+          "format_number adds thousands separators.",
+          "format_date supports short and long forms.",
+          "calendar_title produces a localized month heading.",
+          "English switches date order to month/day/year automatically."
+        ]
+      },
+      "fallback": {
+        "title": "Fallback strategy",
+        "desc": "A catalog can be partially translated; the rest resolves through the chain.",
+        "points": [
+          "zh_TW → zh_CN → en_US.",
+          "Missing keys never raise.",
+          "Untranslated keys surface in development logs."
+        ]
+      },
+      "persist": {
+        "title": "Persistence",
+        "desc": "Desktop builds write the choice to a local JSON file and restore it on launch; swap in a custom LocaleStore if needed."
+      }
+    },
+    "about": {
+      "runtime": {
+        "version": "Version",
+        "flet": "Flet version",
+        "python": "Python version",
+        "license": "License"
+      },
+      "links": {
+        "title": "Links",
+        "hint": "Source code, issue tracker, and upstream framework docs.",
+        "github": "GitHub repository",
+        "flet": "Flet documentation"
+      }
+    }
+  }
+}

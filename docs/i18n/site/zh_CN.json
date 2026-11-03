@@ -1,0 +1,361 @@
+{
+  "site": {
+    "nav": {
+      "home": {"title": "首页", "desc": "cs-ui 是什么，以及它能做什么"},
+      "getting_started": {"title": "快速开始", "desc": "五分钟安装、运行并渲染第一个界面"},
+      "architecture": {"title": "架构设计", "desc": "声明式渲染、Provider 与路由的组织方式"},
+      "theming": {"title": "主题与令牌", "desc": "Material 3 配色、明暗模式与设计令牌"},
+      "i18n": {"title": "多语言", "desc": "三语运行时、格式化与回退链"},
+      "components": {"title": "组件总览", "desc": "按分类浏览 cs-ui 的全部组件"},
+      "general": {"title": "通用", "desc": "文本、按钮、图标、标签与基础展示"},
+      "layout": {"title": "布局", "desc": "栅格、容器、列表、表格与时间线"},
+      "navigation": {"title": "导航", "desc": "面包屑、标签页、导航栏与分页"},
+      "form": {"title": "表单", "desc": "输入、选择、日期、颜色与搜索控件"},
+      "feedback": {"title": "反馈", "desc": "轻提示、对话框、进度与加载状态"},
+      "display": {"title": "数据展示", "desc": "列表项、日志、代码与图片墙"},
+      "charts": {"title": "图表", "desc": "折线、面积、柱状与散点图"},
+      "media": {"title": "媒体", "desc": "音频、视频与 PDF 阅读"},
+      "upload": {"title": "文件选择", "desc": "文件、目录、保存与图片选择"},
+      "about": {"title": "关于", "desc": "版本、设计原则与迁移指南"},
+      "search": {"title": "搜索", "desc": "在文档与组件之间快速定位"}
+    },
+    "group": {
+      "start": "开始",
+      "guide": "指南",
+      "components": "组件",
+      "project": "项目"
+    },
+    "search": {
+      "placeholder": "搜索文档与组件",
+      "empty_title": "从一个关键词开始",
+      "empty_hint": "输入页面名称、组件名或功能关键词，例如“路由”“日期”“主题”。",
+      "no_results_title": "没有找到与“{query}”相关的内容",
+      "no_results_hint": "试试更短的关键词，或者从侧边栏浏览全部页面。",
+      "pages": "页面",
+      "components": "组件",
+      "result_count": "{count} 条结果"
+    },
+    "copy": "复制",
+    "github": "GitHub 仓库",
+    "next": "下一页",
+    "prev": "上一页",
+    "version": "v{version}",
+    "theme": {
+      "primary": "主题色",
+      "toggle": "切换明暗模式"
+    },
+    "tab": {
+      "docs": "文档",
+      "components": "组件",
+      "about": "关于"
+    },
+    "sidebar": {
+      "runtime": "Flet {flet} · Python {python}"
+    },
+    "breadcrumb": {
+      "docs": "文档"
+    },
+    "footer": {
+      "tagline": "基于 Flet 的声明式 Python 桌面界面组件库",
+      "copyright": "© 2026 cs-ui · MIT License · v{version}"
+    },
+    "components": {
+      "count": "{count} 个",
+      "open": "查看组件",
+      "total": "组件总数",
+      "categories": "分类",
+      "search": {
+        "title": "找不到想要的组件？",
+        "hint": "进入搜索页，按名称、分类或功能快速定位。",
+        "button": "打开搜索"
+      }
+    },
+    "notfound": {
+      "search": "搜索文档"
+    },
+    "home": {
+      "eyebrow": "CS-UI · 声明式桌面界面",
+      "headline": "用 Python 构建\n漂亮的桌面界面",
+      "subline": "cs-ui 把 Flet 1.0 的声明式组件、Material 3 主题与完整表单控件打包成一套可组合的界面语言。写 Python，得到原生桌面体验。",
+      "cta": {
+        "start": "快速开始",
+        "components": "浏览组件",
+        "github": "GitHub",
+        "title": "准备好构建了吗？",
+        "desc": "从安装到第一个界面，只需要几分钟。",
+        "button": "开始使用"
+      },
+      "hero": {
+        "point1": "纯 Python，无前端构建",
+        "point2": "三语实时切换 · 明暗主题",
+        "code_title": "最小可运行示例"
+      },
+      "stats": {
+        "components": "组件",
+        "categories": "分类",
+        "languages": "语言",
+        "typed": "类型注解"
+      },
+      "features": {
+        "title": "为什么选择 cs-ui",
+        "hint": "把重复的界面工程交给组件库，把注意力留给业务。",
+        "reactive": {
+          "title": "声明式状态",
+          "desc": "@ft.component 与 hooks 驱动界面，状态变化自动重绘，不再手动 update。"
+        },
+        "themed": {
+          "title": "Material 3 主题",
+          "desc": "一套主色种子推导全局色板，明暗模式与语义色开箱即用。"
+        },
+        "i18n": {
+          "title": "运行时多语言",
+          "desc": "简体中文、繁体中文与英文实时切换，日期与数字格式同步变化。"
+        },
+        "typed": {
+          "title": "全程类型注解",
+          "desc": "面向 Python 3.12+，公开 API 均有类型签名，编辑器补全可靠。"
+        },
+        "modular": {
+          "title": "可组合",
+          "desc": "布局、表单、反馈与图表共享同一套设计令牌，组合起来仍然一致。"
+        },
+        "desktop": {
+          "title": "桌面优先",
+          "desc": "为鼠标与键盘设计：悬停、密度、滚动与窗口尺寸都经过考虑。"
+        }
+      },
+      "catalog": {
+        "title": "按分类浏览",
+        "hint": "九个分类覆盖日常桌面应用的绝大多数界面需求。",
+        "all": "查看全部组件"
+      },
+      "playground": {
+        "title": "试一试",
+        "hint": "下面的控件都是真实组件，切换语言或主题后状态不会丢失。",
+        "input": "你的名字",
+        "input_value": "肖恩",
+        "checkbox": "接收更新通知",
+        "switch": "启用实验特性",
+        "toast": "弹出提示",
+        "toast_text": "组件工作正常。"
+      },
+      "why": {
+        "title": "少写胶水代码，多写产品",
+        "desc": "cs-ui 把路由、主题、语言与表单状态收敛到少数几个入口，页面代码只描述“界面长什么样”。",
+        "point1": "根视图渲染，浮层与对话框不再被视图栈遮挡",
+        "point2": "主题与语言都是可订阅状态，按需重绘",
+        "point3": "有状态组件在语言切换时保留用户输入",
+        "point4": "统一的设计令牌，避免每个页面各写一套间距"
+      }
+    },
+    "getting_started": {
+      "requirements": {
+        "title": "环境要求",
+        "desc": "cs-ui 面向现代 Python 桌面开发，依赖保持精简。",
+        "note_title": "推荐环境",
+        "note": "使用 Python 3.12 或更高版本，并保持 Flet 为 1.0.x 系列。",
+        "python": "Python 3.12+，使用最新类型语法",
+        "flet": "Flet 1.0.5，声明式组件与 hooks",
+        "deps": "flet-code-editor 等少量第三方依赖",
+        "os": "Windows / macOS / Linux 桌面环境"
+      },
+      "install": {
+        "title": "安装",
+        "desc": "任选一种方式；升级时保持 Flet 与 cs-ui 同步。",
+        "pip": "使用 pip",
+        "uv": "使用 uv（更快）",
+        "source": "从源码安装"
+      },
+      "quickstart": {
+        "title": "第一个界面",
+        "desc": "创建 main.py，渲染一个带主题与卡片的最小应用。"
+      },
+      "run": {
+        "title": "运行",
+        "desc": "开发时开启热重载，修改代码后界面自动刷新。"
+      },
+      "project": {
+        "title": "推荐目录结构",
+        "desc": "页面、业务组件、文案与资源分开放置，规模变大后仍然清晰。"
+      },
+      "next": {
+        "title": "下一步",
+        "desc": "了解路由、Provider 与有状态组件的组织方式。"
+      }
+    },
+    "architecture": {
+      "overview": {
+        "title": "分层概览",
+        "desc": "cs-ui 在 Flet 之上提供四层能力：控件、状态、基础设施与应用组合。",
+        "points": [
+          "控件层：原生 Flet 控件的样式化包装，构造即用。",
+          "状态层：@ft.observable 数据对象与 ui() 渲染方法。",
+          "基础设施：主题、语言、路由、格式化与设计令牌。",
+          "应用层：页面组件只负责组合，不关心底层细节。"
+        ]
+      },
+      "paradigm": {
+        "title": "两类组件",
+        "desc": "静态控件直接继承 Flet 控件；需要交互状态的组件用 observable 数据对象。",
+        "note_title": "常见陷阱",
+        "note": "有状态组件必须在 @ft.component 内构造，并用 ref 固定实例，否则父组件重渲染会重建对象并丢失输入。"
+      },
+      "providers": {
+        "title": "Provider 顺序",
+        "desc": "语言在最外层，主题其次，路由最内层。顺序决定首帧颜色与文案。"
+      },
+      "routing": {
+        "title": "声明式路由",
+        "desc": "使用根视图渲染与 manage_views=False，确保浮层、对话框和下拉面板正常工作。",
+        "note_title": "不要使用 render_views",
+        "note": "render_views 会创建视图栈并盖住整个页面浮层，对话框与悬挂面板会静默失效。"
+      },
+      "state": {
+        "title": "状态管理",
+        "desc": "局部状态用 hooks，跨页面状态用模块级 observable 单例。",
+        "points": [
+          "use_state 管理组件内部状态。",
+          "use_ref 固定跨渲染实例。",
+          "use_memo 缓存昂贵计算。",
+          "模块级状态配合订阅，实现全局主题与语言。"
+        ]
+      },
+      "performance": {
+        "title": "性能取向",
+        "desc": "渲染按订阅粒度重绘；切换主题或语言不会重建整棵控件树。",
+        "points": [
+          "只有读取 use_t() / use_theme() 的组件会重绘。",
+          "路由切换保留布局外壳，减少重建。",
+          "代码块与图表按需构造，避免首帧过重。",
+          "表单实例复用，避免输入过程中反复创建对象。"
+        ]
+      }
+    },
+    "theming": {
+      "live": {
+        "title": "实时主题",
+        "hint": "切换模式或主色，整站配色立即更新；表单内容不会丢失。",
+        "input": "主题预览输入框",
+        "input_value": "输入一些文字",
+        "mode": "模式",
+        "primary": "主色",
+        "mode_system": "跟随系统",
+        "mode_light": "浅色",
+        "mode_dark": "深色"
+      },
+      "preview": {
+        "title": "预览面板",
+        "body": "面板、文字与按钮都使用 Material 3 角色色，因此在明暗主题下保持对比度。",
+        "primary": "主要操作",
+        "secondary": "次要操作"
+      },
+      "semantic": {
+        "title": "语义色",
+        "desc": "success / warning / danger / info / neutral 与主题解耦，深浅模式下都保证可读。",
+        "success": "成功",
+        "warning": "警告",
+        "danger": "危险",
+        "info": "信息",
+        "neutral": "中性"
+      },
+      "tokens": {
+        "title": "设计令牌",
+        "desc": "间距、圆角、字号与阴影统一从 ui 导入，避免魔法数字。",
+        "space": "间距刻度",
+        "radius": "圆角刻度",
+        "font": "字号刻度",
+        "elevation": "阴影层级",
+        "overlay": "叠加层透明度",
+        "semantic": "语义色解析"
+      },
+      "table": {
+        "name": "名称",
+        "type": "类型",
+        "desc": "说明"
+      },
+      "modes": {
+        "title": "明暗模式",
+        "desc": "ThemeProvider 负责写入 page.theme，并提供可订阅的状态入口。",
+        "points": [
+          "mode：system / light / dark。",
+          "primary：主色种子，驱动整套色板。",
+          "font_family：全局字体族名。",
+          "订阅 use_theme() 后，变化时自动重绘。"
+        ]
+      },
+      "trap": {
+        "title": "不要在页面里直接改 page.theme",
+        "desc": "页面组件晚一帧执行，直接修改会先闪旧配色；统一通过 ThemeProvider 与 use_theme() 控制。"
+      }
+    },
+    "i18n": {
+      "live": {
+        "title": "实时切换语言",
+        "hint": "切换语言后，页面文字、日期与数字格式立即更新。",
+        "input": "姓名",
+        "input_value": "肖恩",
+        "current": "当前语言：{locale}",
+        "sample": "格式示例",
+        "date": "长日期：{value}",
+        "number": "数字：{value}"
+      },
+      "overview": {
+        "title": "一套运行时",
+        "desc": "文案与代码分离，语言切换不需要重启，也不需要重建路由。",
+        "points": [
+          "三份 JSON 语言包在启动时一次载入。",
+          "use_t() 是唯一订阅点，只有订阅组件重绘。",
+          "框架内置文案（分页器、日历等）自动跟随。",
+          "语言选择持久化到本地配置文件。"
+        ]
+      },
+      "register": {
+        "title": "注册文案",
+        "desc": "使用 register_messages 注册嵌套字典，键可以用点号访问。",
+        "note_title": "回退链",
+        "note": "繁体缺失时回退简体，再回退英文；任何一步都不会出现空白或键名。"
+      },
+      "use": {
+        "title": "在组件中使用",
+        "desc": "在组件体开头调用 use_t()，之后用 tr(key, **params) 取文案。"
+      },
+      "format": {
+        "title": "格式化",
+        "desc": "日期、数字与日历标题都跟随当前语言。",
+        "points": [
+          "format_number 自动添加千分位。",
+          "format_date 支持短日期与长日期。",
+          "calendar_title 输出本地化的年月标题。",
+          "英文界面下日期顺序自动切换为月/日/年。"
+        ]
+      },
+      "fallback": {
+        "title": "回退策略",
+        "desc": "语言包可以只翻译一部分，其余内容按链回退。",
+        "points": [
+          "zh_TW → zh_CN → en_US。",
+          "缺失的键不会抛异常。",
+          "开发期可通过日志发现未翻译的键。"
+        ]
+      },
+      "persist": {
+        "title": "持久化",
+        "desc": "桌面端将选择写入本地 JSON，下次启动直接恢复；也可替换为自定义 LocaleStore。"
+      }
+    },
+    "about": {
+      "runtime": {
+        "version": "版本",
+        "flet": "Flet 版本",
+        "python": "Python 版本",
+        "license": "许可证"
+      },
+      "links": {
+        "title": "相关链接",
+        "hint": "源码、问题反馈与上游框架文档。",
+        "github": "GitHub 仓库",
+        "flet": "Flet 官方文档"
+      }
+    }
+  }
+}

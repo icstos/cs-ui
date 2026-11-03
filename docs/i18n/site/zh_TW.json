@@ -1,0 +1,361 @@
+{
+  "site": {
+    "nav": {
+      "home": {"title": "首頁", "desc": "cs-ui 是什麼，以及它能做什麼"},
+      "getting_started": {"title": "快速開始", "desc": "五分鐘安裝、執行並渲染第一個介面"},
+      "architecture": {"title": "架構設計", "desc": "宣告式渲染、Provider 與路由的組織方式"},
+      "theming": {"title": "主題與設計權杖", "desc": "Material 3 配色、明暗模式與設計權杖"},
+      "i18n": {"title": "多語言", "desc": "三語執行階段、格式化與回退鏈"},
+      "components": {"title": "元件總覽", "desc": "依分類瀏覽 cs-ui 的全部元件"},
+      "general": {"title": "通用", "desc": "文字、按鈕、圖示、標籤與基礎展示"},
+      "layout": {"title": "版面配置", "desc": "格線、容器、清單、表格與時間軸"},
+      "navigation": {"title": "導覽", "desc": "麵包屑、分頁標籤、導覽列與分頁器"},
+      "form": {"title": "表單", "desc": "輸入、選擇、日期、顏色與搜尋控制項"},
+      "feedback": {"title": "回饋", "desc": "輕提示、對話框、進度與載入狀態"},
+      "display": {"title": "資料顯示", "desc": "清單項目、日誌、程式碼與圖片牆"},
+      "charts": {"title": "圖表", "desc": "折線、面積、長條與散佈圖"},
+      "media": {"title": "媒體", "desc": "音訊、影片與 PDF 閱讀"},
+      "upload": {"title": "檔案選擇", "desc": "檔案、目錄、儲存與圖片選擇"},
+      "about": {"title": "關於", "desc": "版本、設計原則與遷移指南"},
+      "search": {"title": "搜尋", "desc": "在文件與元件之間快速定位"}
+    },
+    "group": {
+      "start": "開始",
+      "guide": "指南",
+      "components": "元件",
+      "project": "專案"
+    },
+    "search": {
+      "placeholder": "搜尋文件與元件",
+      "empty_title": "從一個關鍵字開始",
+      "empty_hint": "輸入頁面名稱、元件名稱或功能關鍵字，例如「路由」「日期」「主題」。",
+      "no_results_title": "找不到與「{query}」相關的內容",
+      "no_results_hint": "試試更短的關鍵字，或從側邊欄瀏覽全部頁面。",
+      "pages": "頁面",
+      "components": "元件",
+      "result_count": "{count} 筆結果"
+    },
+    "copy": "複製",
+    "github": "GitHub 儲存庫",
+    "next": "下一頁",
+    "prev": "上一頁",
+    "version": "v{version}",
+    "theme": {
+      "primary": "主題色",
+      "toggle": "切換明暗模式"
+    },
+    "tab": {
+      "docs": "文件",
+      "components": "元件",
+      "about": "關於"
+    },
+    "sidebar": {
+      "runtime": "Flet {flet} · Python {python}"
+    },
+    "breadcrumb": {
+      "docs": "文件"
+    },
+    "footer": {
+      "tagline": "基於 Flet 的宣告式 Python 桌面介面元件庫",
+      "copyright": "© 2026 cs-ui · MIT License · v{version}"
+    },
+    "components": {
+      "count": "{count} 個",
+      "open": "查看元件",
+      "total": "元件總數",
+      "categories": "分類",
+      "search": {
+        "title": "找不到想要的元件？",
+        "hint": "進入搜尋頁，依名稱、分類或功能快速定位。",
+        "button": "開啟搜尋"
+      }
+    },
+    "notfound": {
+      "search": "搜尋文件"
+    },
+    "home": {
+      "eyebrow": "CS-UI · 宣告式桌面介面",
+      "headline": "用 Python 打造\n漂亮的桌面介面",
+      "subline": "cs-ui 把 Flet 1.0 的宣告式元件、Material 3 主題與完整表單控制項打包成一套可組合的介面語言。寫 Python，得到原生桌面體驗。",
+      "cta": {
+        "start": "快速開始",
+        "components": "瀏覽元件",
+        "github": "GitHub",
+        "title": "準備好開始打造了嗎？",
+        "desc": "從安裝到第一個介面，只需要幾分鐘。",
+        "button": "開始使用"
+      },
+      "hero": {
+        "point1": "純 Python，無需前端建置",
+        "point2": "三語即時切換 · 明暗主題",
+        "code_title": "最小可執行範例"
+      },
+      "stats": {
+        "components": "元件",
+        "categories": "分類",
+        "languages": "語言",
+        "typed": "型別註解"
+      },
+      "features": {
+        "title": "為什麼選擇 cs-ui",
+        "hint": "把重複的介面工程交給元件庫，把注意力留給業務。",
+        "reactive": {
+          "title": "宣告式狀態",
+          "desc": "@ft.component 與 hooks 驅動介面，狀態變化自動重繪，不再手動 update。"
+        },
+        "themed": {
+          "title": "Material 3 主題",
+          "desc": "一組主色種子推導全域色盤，明暗模式與語意色開箱即用。"
+        },
+        "i18n": {
+          "title": "執行階段多語言",
+          "desc": "簡體中文、繁體中文與英文即時切換，日期與數字格式同步變化。"
+        },
+        "typed": {
+          "title": "全程型別註解",
+          "desc": "面向 Python 3.12+，公開 API 均有型別簽章，編輯器補全可靠。"
+        },
+        "modular": {
+          "title": "可組合",
+          "desc": "版面配置、表單、回饋與圖表共享同一套設計權杖，組合起來仍然一致。"
+        },
+        "desktop": {
+          "title": "桌面優先",
+          "desc": "為滑鼠與鍵盤設計：懸停、密度、捲動與視窗尺寸都經過考量。"
+        }
+      },
+      "catalog": {
+        "title": "依分類瀏覽",
+        "hint": "九個分類涵蓋日常桌面應用的絕大多數介面需求。",
+        "all": "查看全部元件"
+      },
+      "playground": {
+        "title": "試一試",
+        "hint": "下面的控制項都是真實元件，切換語言或主題後狀態不會遺失。",
+        "input": "你的名字",
+        "input_value": "肖恩",
+        "checkbox": "接收更新通知",
+        "switch": "啟用實驗功能",
+        "toast": "彈出提示",
+        "toast_text": "元件運作正常。"
+      },
+      "why": {
+        "title": "少寫膠水程式碼，多寫產品",
+        "desc": "cs-ui 把路由、主題、語言與表單狀態收斂到少數幾個入口，頁面程式碼只描述「介面長什麼樣子」。",
+        "point1": "根視圖渲染，浮層與對話框不再被視圖堆疊遮住",
+        "point2": "主題與語言都是可訂閱狀態，按需重繪",
+        "point3": "有狀態元件在語言切換時保留使用者輸入",
+        "point4": "統一的設計權杖，避免每個頁面各寫一套間距"
+      }
+    },
+    "getting_started": {
+      "requirements": {
+        "title": "環境需求",
+        "desc": "cs-ui 面向現代 Python 桌面開發，相依套件保持精簡。",
+        "note_title": "建議環境",
+        "note": "使用 Python 3.12 或更新版本，並保持 Flet 為 1.0.x 系列。",
+        "python": "Python 3.12+，使用最新型別語法",
+        "flet": "Flet 1.0.5，宣告式元件與 hooks",
+        "deps": "flet-code-editor 等少量第三方相依套件",
+        "os": "Windows / macOS / Linux 桌面環境"
+      },
+      "install": {
+        "title": "安裝",
+        "desc": "任選一種方式；升級時保持 Flet 與 cs-ui 同步。",
+        "pip": "使用 pip",
+        "uv": "使用 uv（更快）",
+        "source": "從原始碼安裝"
+      },
+      "quickstart": {
+        "title": "第一個介面",
+        "desc": "建立 main.py，渲染一個帶主題與卡片的最小應用。"
+      },
+      "run": {
+        "title": "執行",
+        "desc": "開發時開啟熱重載，修改程式碼後介面自動重新整理。"
+      },
+      "project": {
+        "title": "建議目錄結構",
+        "desc": "頁面、業務元件、文案與資源分開放，規模變大後仍然清晰。"
+      },
+      "next": {
+        "title": "下一步",
+        "desc": "了解路由、Provider 與有狀態元件的組織方式。"
+      }
+    },
+    "architecture": {
+      "overview": {
+        "title": "分層概覽",
+        "desc": "cs-ui 在 Flet 之上提供四層能力：控制項、狀態、基礎設施與應用組合。",
+        "points": [
+          "控制項層：原生 Flet 控制項的樣式化包裝，建構即用。",
+          "狀態層：@ft.observable 資料物件與 ui() 渲染方法。",
+          "基礎設施：主題、語言、路由、格式化與設計權杖。",
+          "應用層：頁面元件只負責組合，不關心底層細節。"
+        ]
+      },
+      "paradigm": {
+        "title": "兩類元件",
+        "desc": "靜態控制項直接繼承 Flet 控制項；需要互動狀態的元件使用 observable 資料物件。",
+        "note_title": "常見陷阱",
+        "note": "有狀態元件必須在 @ft.component 內建構，並用 ref 固定實例，否則父元件重繪會重建物件並遺失輸入。"
+      },
+      "providers": {
+        "title": "Provider 順序",
+        "desc": "語言在最外層，主題其次，路由最內層。順序決定首幀顏色與文案。"
+      },
+      "routing": {
+        "title": "宣告式路由",
+        "desc": "使用根視圖渲染與 manage_views=False，確保浮層、對話框和下拉面板正常運作。",
+        "note_title": "不要使用 render_views",
+        "note": "render_views 會建立視圖堆疊並蓋住整個頁面浮層，對話框與懸掛面板會靜默失效。"
+      },
+      "state": {
+        "title": "狀態管理",
+        "desc": "區域狀態用 hooks，跨頁面狀態用模組級 observable 單例。",
+        "points": [
+          "use_state 管理元件內部狀態。",
+          "use_ref 固定跨渲染實例。",
+          "use_memo 快取昂貴計算。",
+          "模組級狀態配合訂閱，實現全域主題與語言。"
+        ]
+      },
+      "performance": {
+        "title": "效能取向",
+        "desc": "渲染依訂閱粒度重繪；切換主題或語言不會重建整棵控制項樹。",
+        "points": [
+          "只有讀取 use_t() / use_theme() 的元件會重繪。",
+          "路由切換保留版面外殼，減少重建。",
+          "程式碼區塊與圖表按需建構，避免首幀過重。",
+          "表單實例重複使用，避免輸入過程中反覆建立物件。"
+        ]
+      }
+    },
+    "theming": {
+      "live": {
+        "title": "即時主題",
+        "hint": "切換模式或主色，全站配色立即更新；表單內容不會遺失。",
+        "input": "主題預覽輸入框",
+        "input_value": "輸入一些文字",
+        "mode": "模式",
+        "primary": "主色",
+        "mode_system": "跟隨系統",
+        "mode_light": "淺色",
+        "mode_dark": "深色"
+      },
+      "preview": {
+        "title": "預覽面板",
+        "body": "面板、文字與按鈕都使用 Material 3 角色色，因此在明暗主題下維持對比度。",
+        "primary": "主要操作",
+        "secondary": "次要操作"
+      },
+      "semantic": {
+        "title": "語意色",
+        "desc": "success / warning / danger / info / neutral 與主題解耦，深淺模式下都保證可讀。",
+        "success": "成功",
+        "warning": "警告",
+        "danger": "危險",
+        "info": "資訊",
+        "neutral": "中性"
+      },
+      "tokens": {
+        "title": "設計權杖",
+        "desc": "間距、圓角、字級與陰影統一從 ui 匯入，避免魔術數字。",
+        "space": "間距刻度",
+        "radius": "圓角刻度",
+        "font": "字級刻度",
+        "elevation": "陰影層級",
+        "overlay": "疊加層透明度",
+        "semantic": "語意色解析"
+      },
+      "table": {
+        "name": "名稱",
+        "type": "型別",
+        "desc": "說明"
+      },
+      "modes": {
+        "title": "明暗模式",
+        "desc": "ThemeProvider 負責寫入 page.theme，並提供可訂閱的狀態入口。",
+        "points": [
+          "mode：system / light / dark。",
+          "primary：主色種子，驅動整套色盤。",
+          "font_family：全域字體家族名稱。",
+          "訂閱 use_theme() 後，變化時自動重繪。"
+        ]
+      },
+      "trap": {
+        "title": "不要在頁面裡直接改 page.theme",
+        "desc": "頁面元件晚一幀執行，直接修改會先閃舊配色；統一透過 ThemeProvider 與 use_theme() 控制。"
+      }
+    },
+    "i18n": {
+      "live": {
+        "title": "即時切換語言",
+        "hint": "切換語言後，頁面文字、日期與數字格式立即更新。",
+        "input": "姓名",
+        "input_value": "肖恩",
+        "current": "目前語言：{locale}",
+        "sample": "格式範例",
+        "date": "長日期：{value}",
+        "number": "數字：{value}"
+      },
+      "overview": {
+        "title": "一套執行階段",
+        "desc": "文案與程式碼分離，語言切換不需要重新啟動，也不需要重建路由。",
+        "points": [
+          "三份 JSON 語言包在啟動時一次載入。",
+          "use_t() 是唯一訂閱點，只有訂閱元件重繪。",
+          "框架內建文案（分頁器、行事曆等）自動跟隨。",
+          "語言選擇持久化到本機設定檔。"
+        ]
+      },
+      "register": {
+        "title": "註冊文案",
+        "desc": "使用 register_messages 註冊巢狀字典，鍵可以用點號存取。",
+        "note_title": "回退鏈",
+        "note": "繁體缺失時回退簡體，再回退英文；任何一步都不會出現空白或鍵名。"
+      },
+      "use": {
+        "title": "在元件中使用",
+        "desc": "在元件主體開頭呼叫 use_t()，之後用 tr(key, **params) 取得文案。"
+      },
+      "format": {
+        "title": "格式化",
+        "desc": "日期、數字與行事曆標題都跟隨目前語言。",
+        "points": [
+          "format_number 自動加入千分位。",
+          "format_date 支援短日期與長日期。",
+          "calendar_title 輸出在地化的年月標題。",
+          "英文介面下日期順序自動切換為月/日/年。"
+        ]
+      },
+      "fallback": {
+        "title": "回退策略",
+        "desc": "語言包可以只翻譯一部分，其餘內容依鏈回退。",
+        "points": [
+          "zh_TW → zh_CN → en_US。",
+          "缺失的鍵不會拋出例外。",
+          "開發期可透過日誌發現未翻譯的鍵。"
+        ]
+      },
+      "persist": {
+        "title": "持久化",
+        "desc": "桌面端將選擇寫入本機 JSON，下次啟動直接還原；也可替換為自訂 LocaleStore。"
+      }
+    },
+    "about": {
+      "runtime": {
+        "version": "版本",
+        "flet": "Flet 版本",
+        "python": "Python 版本",
+        "license": "授權條款"
+      },
+      "links": {
+        "title": "相關連結",
+        "hint": "原始碼、問題回報與上游框架文件。",
+        "github": "GitHub 儲存庫",
+        "flet": "Flet 官方文件"
+      }
+    }
+  }
+}
