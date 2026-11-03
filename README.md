@@ -376,6 +376,28 @@ from ui import ft  # the flet module
 from ui import Page, Colors, Icons, MainAxisAlignment, CrossAxisAlignment
 ```
 
+### Import cost is lazy
+
+`import ui` only loads `flet` itself (~0.2 s); components are imported from their
+subpackage the first time they are touched. Eager star-imports were measured at
+**1.4 s** for the same `import ui` — `ui.chart` alone drags in matplotlib + plotly
+(~0.62 s) and `ft_init`'s 536 attribute reflections cost ~0.59 s.
+
+```python
+import ui              # ~0.2 s
+ui.Container           # ~35 ms — imports ui.layout once
+ui.BarChart            # imports ui.chart (matplotlib) only because it is used
+```
+
+`dir(ui)` still returns every name, so IDE completion and `from ui import *` behave
+as before (the star-import deliberately pays for everything). The
+name → subpackage table lives in `src/ui/_registry.py` and is generated:
+
+```bash
+python scripts/gen_ui_registry.py           # regenerate after adding components
+python scripts/gen_ui_registry.py --check   # verify it hasn't drifted
+```
+
 ## Examples
 
 Run the demo to see every component in action (11 category pages plus a 404 page):

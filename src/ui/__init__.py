@@ -1,17 +1,125 @@
-from .ft_init import *
-from flet import *
-from flet import canvas
+"""CS UI —— 基于 flet 的组件库。
 
-from .chart import *
-from .core import *
-from .display import *
-from .feedback import *
-from .input import *
-from .layout import *
-from .navigation import *
-from .utils import *
+导入策略（**改前先读**，这里的取舍是实测结论）：
 
-from .app import App
+``import ui`` 只加载 ``flet`` 本身，组件在第一次被访问时才导入所属子包。
+历史写法是 ``from .ft_init import *`` + ``from flet import *`` + 各子包 star-import，
+实测总耗时 1.4~1.6s，其中绝大部分是「用不到也得付」的钱：
+
+- ``ui.chart`` → ``flet_charts`` → matplotlib + plotly                  ~0.62s
+- ``ft_init`` 的 536 个 ``ft.X = ...`` 逐属性反射（触发 flet 懒导入全部子模块） ~0.59s
+- 其余子包（display / feedback / input / layout / navigation / utils）  ~0.18s
+
+而 ``import flet`` 本身只要 0.19s。也就是说，「用一次 ui 就要先烧掉 1.4s」对一个
+桌面应用的启动关键路径是灾难（CSearch 实测首帧因此晚约 1.4s）。
+
+现在改成 PEP 562 模块级 ``__getattr__``：
+
+1. ``ui.X`` 首次被访问 → 按 ``_registry.COMPONENT_MODULES`` 导入所属子包并缓存到
+   ``globals()``，此后就是普通属性查找；
+2. ``ui.<子包名>`` → 直接返回 ui 自己的子模块（**必须先于 flet 判断**：flet 的
+   ``__all__`` 里也有 ``utils`` / ``input`` / ``icons`` 这类同名项，覆盖顺序必须和
+   原来的 star-import 一致：ui 的子包赢）；
+3. 其余交给 ``flet`` —— 等价于原先 ``ft_init`` 提供的 536 个别名，但只在用到时反射。
+
+``dir(ui)`` 仍返回完整名字表（含未加载的），IDE 补全与 ``from ui import *`` 行为不变。
+新增 / 删除组件后必须重新生成注册表：``python scripts/gen_ui_registry.py``。
+"""
+
+from __future__ import annotations
+
+import importlib
+from typing import Any as _Any
+
+import flet as flet
+
+from ._registry import COMPONENT_MODULES as _COMPONENT_MODULES
+
+#: 公开别名：README 里 ``from ui import ft`` 取的就是 flet 模块本身
+ft = flet
+
+#: ui 自己的子模块（``ui.layout`` 等）。必须显式登记：flet 的 ``__all__`` 里也有
+#: 同名项（``utils`` / ``icons`` / ``padding`` …），不能靠「flet 没有再试子模块」判定。
+_SUBMODULES: tuple[str, ...] = (
+    "app",
+    "chart",
+    "cli",
+    "components",
+    "core",
+    "display",
+    "feedback",
+    "ft_init",
+    "input",
+    "layout",
+    "navigation",
+    "theme",
+    "utils",
+)
+
+#: 不属于任何子包 ``__all__``、但曾经由 star-import 暴露出来的名字
+_EXTRA_LAZY: dict[str, str] = {"App": "ui.app"}
+
+#: flet 的**子模块**（不是 ``__all__`` 里的名字，`getattr(flet, ...)` 拿不到）。
+#: 原先用 ``from flet import canvas`` 显式导入，光这一行就要 85ms（flet.canvas 会拖进
+#: 一整套绘图控件），改成用到时再导入。
+_FLET_SUBMODULES: tuple[str, ...] = ("canvas",)
+
+
+def __getattr__(name: str) -> _Any:
+    """按需加载 ``ui.<name>``（PEP 562）。
+
+    顺序不可调换：ui 子模块 → ui 组件 → flet 名字。调换会让 ``ui.utils`` 变成
+    ``flet.utils``、``ui.input`` 变成 ``flet.input``（flet 的 ``__all__`` 就带着这些
+    子模块名），而这两个名字在改造前指向的是 ui 自己的子包。
+    """
+    if name in _SUBMODULES:
+        value: _Any = importlib.import_module(f"{__name__}.{name}")
+    elif name in _FLET_SUBMODULES:
+        value = importlib.import_module(f"flet.{name}")
+    else:
+        module_path = _COMPONENT_MODULES.get(name) or _EXTRA_LAZY.get(name)
+        if module_path is not None:
+            value = getattr(importlib.import_module(module_path), name)
+        else:
+            try:
+                value = getattr(flet, name)
+            except AttributeError:
+                raise AttributeError(
+                    f"module {__name__!r} has no attribute {name!r}"
+                ) from None
+    globals()[name] = value  # 缓存：后续访问不再走 __getattr__
+    return value
+
+
+def __dir__() -> list[str]:
+    """完整名字表（含尚未加载的），供 IDE 补全与 ``from ui import *`` 使用。"""
+    return sorted(
+        {
+            *globals(),
+            *_COMPONENT_MODULES,
+            *_EXTRA_LAZY,
+            *_SUBMODULES,
+            *_FLET_SUBMODULES,
+            *flet.__all__,
+        }
+    )
+
+
+# ``from ui import *`` 的导出面 = 改造前 star-import 的并集：
+# flet 全部公开名 + ft_init 的 536 个别名（⊆ flet.__all__）+ 各子包 __all__
+# + 子模块名 + 'ft'
+__all__ = [
+    *sorted(
+        {
+            *flet.__all__,
+            *_COMPONENT_MODULES,
+            *_EXTRA_LAZY,
+            *_SUBMODULES,
+            *_FLET_SUBMODULES,
+            "ft",
+        }
+    )
+]
 
 
 # 手动

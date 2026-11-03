@@ -502,6 +502,27 @@ from ui import ft  # flet 模块
 from ui import Page, Colors, Icons, MainAxisAlignment, CrossAxisAlignment
 ```
 
+### 导入是懒加载的
+
+`import ui` 只加载 `flet` 本身（约 0.2s），组件在**第一次被访问**时才从所属子包导入。
+改造前全量 star-import 的实测代价是 **1.4s**：`ui.chart` 单它就把 matplotlib + plotly
+拖进来（约 0.62s），`ft_init` 里 536 个逐属性反射再花约 0.59s。
+
+```python
+import ui              # ~0.2s
+ui.Container           # ~35ms，顺带把 ui.layout 导进来（一次性）
+ui.BarChart            # 只有真用到图表时才会导入 ui.chart（matplotlib）
+```
+
+`dir(ui)` 仍然返回完整名字表，IDE 补全与 `from ui import *` 的行为不变（star-import
+本来就意味着"全都要"，它照样会付全款）。名字 → 子包的映射在 `src/ui/_registry.py`，
+由脚本生成：
+
+```bash
+python scripts/gen_ui_registry.py           # 新增/删除组件后重新生成
+python scripts/gen_ui_registry.py --check   # 校验是否与源码一致
+```
+
 ## 设计原则
 
 - 基于 Flet 原生控件继承，`from ui import *` 即可使用
