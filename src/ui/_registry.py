@@ -22,6 +22,8 @@ COMPONENT_MODULES: dict[str, str] = {
     "Button": "ui.input",
     "ButtonShape": "ui.core",
     "Card": "ui.layout",
+    "Cascader": "ui.input",
+    "CascaderNode": "ui.input",
     "Checkbox": "ui.input",
     "CheckboxGroup": "ui.input",
     "Chip": "ui.input",

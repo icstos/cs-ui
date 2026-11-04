@@ -140,6 +140,7 @@ _ZH_CN: dict[str, object] = {
         },
         "multiselect": {"selected": "已选 {n} / {total}", "empty": "暂无可选项"},
         "tree": {"empty": "暂无节点"},
+        "cascader": {"placeholder": "请选择", "empty": "暂无数据"},
         "color": {
             "placeholder": "请选择颜色",
             "revert": "还原到打开面板时的颜色",
@@ -287,6 +288,7 @@ _ZH_TW: dict[str, object] = {
         },
         "multiselect": {"selected": "已選 {n} / {total}", "empty": "暫無選項"},
         "tree": {"empty": "暫無節點"},
+        "cascader": {"placeholder": "請選擇", "empty": "暫無數據"},
         "color": {
             "placeholder": "請選擇顏色",
             "revert": "還原為開啟面板時的顏色",
@@ -434,6 +436,7 @@ _EN_US: dict[str, object] = {
         },
         "multiselect": {"selected": "{n} of {total} selected", "empty": "No options"},
         "tree": {"empty": "No nodes"},
+        "cascader": {"placeholder": "Select", "empty": "No data"},
         "color": {
             "placeholder": "Select a color",
             "revert": "Revert to the color when the panel opened",

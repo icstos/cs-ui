@@ -211,6 +211,7 @@ src/ui/
 │   ├── input.py             #   Input (data_type: str/int/float/file/dir)
 │   ├── multi_select.py      #   MultiSelect
 │   ├── number_input.py      #   NumberInput (step / precision / range / unit)
+│   ├── cascader.py          #   Cascader / CascaderNode (multi-column cascading picker)
 │   ├── radio.py             #   RadioGroup
 │   ├── rating.py            #   Rating
 │   ├── search_bar.py        #   SearchBar
@@ -252,7 +253,7 @@ src/ui/
 | **Display** | Image, ImageGridView, ListTile, LogContainer, Tree, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display / Media** | Audio, AudioPlayer, Video, Pdf |
 | **Feedback** | AlertDialog, Loading, Message, ProgressBar, Toast |
-| **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, NumberInput, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch |
+| **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, NumberInput, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch, Cascader |
 | **Layout** | Card, Column, Container, Divider, Expander, GridView, ListView, PageLayout, Row, Stack, Table, Tabs, Timeline, View |
 | **Navigation** | AppBar, BreadCrumb, Paging |
 

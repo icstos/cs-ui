@@ -217,6 +217,7 @@ src/ui/
 │   ├── input.py             #   Input（data_type: str/int/float/file/dir）
 │   ├── multi_select.py      #   MultiSelect
 │   ├── number_input.py      #   NumberInput（步进 / 精度 / 范围 / 单位）
+│   ├── cascader.py          #   Cascader / CascaderNode（多列级联选择）
 │   ├── radio.py             #   RadioGroup
 │   ├── rating.py            #   Rating
 │   ├── search_bar.py        #   SearchBar
@@ -258,7 +259,7 @@ src/ui/
 | **Display 展示** | Image、ImageGridView、ListTile、LogContainer、Tree、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display 媒体** | Audio、AudioPlayer、Video、Pdf |
 | **Feedback 反馈** | AlertDialog、Loading、Message、ProgressBar、Toast |
-| **Input 输入** | Button、Checkbox / CheckboxGroup、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker / DirPicker、ImagePicker、Input、MultiSelect、NumberInput、RadioGroup、Rating、SearchBar、SegmentedButton、SelectBox、Slider、Switch |
+| **Input 输入** | Button、Checkbox / CheckboxGroup、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker / DirPicker、ImagePicker、Input、MultiSelect、NumberInput、RadioGroup、Rating、SearchBar、SegmentedButton、SelectBox、Slider、Switch、Cascader |
 | **Layout 布局** | Card、Column、Container、Divider、Expander、GridView、ListView、PageLayout、Row、Stack、Table、Tabs、Timeline、View |
 | **Navigation 导航** | AppBar、BreadCrumb、Paging |
 
