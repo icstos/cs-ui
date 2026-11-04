@@ -19,13 +19,18 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 - **Two component paradigms** — static components subclass native Flet controls; interactive ones are
   `@ft.component` functions whose state is declared with hooks (`use_state` / `use_memo` / `use_effect`)
 - **Charts** — Bar, Line, Area, and Scatter chart wrappers via `flet-charts`, with both numeric and categorical x-axes
-- **Desktop-grade timeline** — `Timeline` supports three alignments (rail on the left / rail on the
-  right / alternating around a centered rail); the timestamp can sit in its own column on the
-  opposite side (the default, VS Code style), above the title, inline, or be hidden. Dots come with
-  semantic colors, three variants (filled / outlined / plain) and three sizes; `done` turns into a
-  check mark automatically and `pending` appends an "in progress" hollow ring. Rows are clickable
-  end to end — hover highlight and click ripple are painted by Material's `ink`, so nothing is
-  re-rendered from Python and long lists stay smooth
+- **Fields on a grid that lines up** — `Descriptions` lays a record out as a bordered grid by
+  default: tinted label cells, hairline dividers, one rounded frame. `column` sets how many fields
+  per row and `span` lets long values (addresses, notes) take two; if the last row runs short the
+  final field absorbs the remainder instead of leaving a hole. Switch to `direction="vertical"`
+  for label-above-value cards, or `bordered=False` to skip the frame and get a lightweight aligned
+  layout. Column widths come from flex weights, so nothing is measured and resizing is free
+- **Steps that show progress** — `Step` models a flow as a state machine: every step is
+  `wait` / `process` / `finish` / `error`, derived from `active` or pinned per step. Connectors tint
+  only the segments already walked, so progress reads from colour alone. Lay it out horizontally,
+  as a vertical rail, or collapse it into a one-line `simple` strip that jumps on click. Click
+  feedback is immediate — the component rebuilds itself in place, and `on_change(index)` keeps the
+  caller in charge
 
 ## Requirements
 
@@ -183,6 +188,7 @@ src/ui/
 │   └── tokens.py            #   design tokens: SPACE / RADIUS / FONT_SIZE / semantic colors
 ├── data/                    # Static assets (fonts, images)
 ├── display/                 # Display components
+│   ├── descriptions.py      #   Descriptions / DescriptionsItem
 │   ├── image.py             #   Image
 │   ├── image_gridview.py    #   ImageGridView
 │   ├── list_tile.py         #   ListTile
@@ -232,7 +238,7 @@ src/ui/
 │   ├── stack.py             #   Stack
 │   ├── table.py             #   Table (with paging)
 │   ├── tabs.py              #   Tabs / Tab / TabBar / TabBarView
-│   ├── time_line.py         #   Timeline / TimelineItem
+│   ├── step.py              #   Step / StepItem
 │   └── view.py              #   View
 ├── navigation/              # Navigation
 │   ├── app_bar.py           #   AppBar
@@ -250,15 +256,15 @@ src/ui/
 |----------|-----------|
 | **Core** | ThemeProvider, ThemeSwitcher, `use_theme`, `theme_state` |
 | **Chart** | BarChart, LineChart, AreaChart, ScatterChart |
-| **Display** | Image, ImageGridView, ListTile, LogContainer, Tree, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display** | Descriptions, Image, ImageGridView, ListTile, LogContainer, Tree, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display / Media** | Audio, AudioPlayer, Video, Pdf |
 | **Feedback** | AlertDialog, Loading, Message, ProgressBar, Toast |
 | **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, NumberInput, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch, Cascader |
-| **Layout** | Card, Column, Container, Divider, Expander, GridView, ListView, PageLayout, Row, Stack, Table, Tabs, Timeline, View |
+| **Layout** | Card, Column, Container, Divider, Expander, GridView, ListView, PageLayout, Row, Stack, Step, Table, Tabs, View |
 | **Navigation** | AppBar, BreadCrumb, Paging |
 
 **Two paradigms**:
-- **Static components** (`Button` / `Table` / `Rating` / `Timeline` / charts …) subclass Flet controls and are ready to use.
+- **Static components** (`Button` / `Table` / `Rating` / `Step` / charts …) subclass Flet controls and are ready to use.
 - **Interactive components** (`Input` / `Checkbox` / `Switch` / `SelectBox` / `MultiSelect` / `Pdf` …) are
   `@ft.component` functions; their state is declared with hooks and the return value goes straight into the tree.
 
@@ -413,7 +419,7 @@ python examples/demo.py
 |-------|----------|
 | `/` | Home navigation (enter each category) |
 | `/general` | Text / buttons / icons / chips |
-| `/layout` | Containers / lists / tables / timeline |
+| `/layout` | Containers / lists / tables / steps |
 | `/navigation` | Breadcrumb / tabs / paging |
 | `/form` | Inputs / selectors / slider / rating |
 | `/upload` | Files / directories / save / images |

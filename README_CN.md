@@ -26,11 +26,16 @@
   切语言只重绘用到翻译的组件（不丢表单内容）；缺翻译自动沿
   `繁 → 简 → 英` 回退，选择写入本地配置、首帧即生效（不会先闪默认语言）
 - **图表支持** — 通过 `flet-charts` 封装 Bar / Line / Area / Scatter 图表，x 轴数值 / 分类通吃
-- **桌面级时间线** — `Timeline` 三种对齐（轴在左 / 轴在右 / 左右交替），时间戳可放
-  对侧独立成列（默认，VS Code 时间线那种形态）/ 标题上方 / 同行 / 隐藏；
-  节点有语义色、三种形态（实心 / 空心环 / 轻量点）与三档尺寸，`done` 自动变对勾、
-  `pending` 在末尾挂一个"进行中"空心环；整行可点，悬停高亮与点击水波纹由
-  Material 的 `ink` 绘制（不需要 Python 侧重绘，大列表也不掉帧）
+- **对得齐的字段网格** — `Descriptions` 默认就是带边框的表格：标签格淡底色、1px 细线分隔、
+  外框圆角；`column` 决定一行几个字段，`span` 让长内容（地址、备注）跨两列，末行没排满时
+  最后一个字段吃掉剩余列，不留空洞。`direction="vertical"` 换成标签在上，`bordered=False`
+  去掉边框退成轻量对齐排布。列宽来自 `Row` 的权重（同一行权重之和恒等于 `column`），
+  所以不测量像素，窗口缩放也自动跟手
+- **看得见进度的步骤条** — `Step` 把流程建模成状态机：每步只可能是
+  `wait` / `process` / `finish` / `error`，既可按 `active` 自动推导，也能在单步上钉死；
+  连接线只给"已经走过"的段上色，进度靠颜色说话。横向平铺、垂直轴轨、一行式 `simple`
+  三种排布，`simple` 点击即跳转；点击后组件就地重建，反馈即时，`on_change(index)`
+  让状态源仍由调用方掌握
 
 ## 环境要求
 
@@ -189,6 +194,7 @@ src/ui/
 │   └── tokens.py            #   设计令牌：SPACE / RADIUS / FONT_SIZE / 语义色
 ├── data/                    # 静态资源（字体、图片）
 ├── display/                 # 展示组件
+│   ├── descriptions.py      #   Descriptions / DescriptionsItem
 │   ├── image.py             #   Image
 │   ├── image_gridview.py    #   ImageGridView
 │   ├── list_tile.py         #   ListTile
@@ -238,7 +244,7 @@ src/ui/
 │   ├── stack.py             #   Stack
 │   ├── table.py             #   Table（含分页）
 │   ├── tabs.py              #   Tabs / Tab / TabBar / TabBarView
-│   ├── time_line.py         #   Timeline / TimelineItem
+│   ├── step.py              #   Step / StepItem
 │   └── view.py              #   View
 ├── navigation/              # 导航
 │   ├── app_bar.py           #   AppBar
@@ -256,15 +262,15 @@ src/ui/
 |------|------|
 | **Core 核心** | ThemeProvider、ThemeSwitcher、`use_theme`、theme_state；I18nProvider、LanguageSwitcher、`use_t`、`t` |
 | **Chart 图表** | BarChart、LineChart、AreaChart、ScatterChart |
-| **Display 展示** | Image、ImageGridView、ListTile、LogContainer、Tree、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display 展示** | Descriptions、Image、ImageGridView、ListTile、LogContainer、Tree、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display 媒体** | Audio、AudioPlayer、Video、Pdf |
 | **Feedback 反馈** | AlertDialog、Loading、Message、ProgressBar、Toast |
 | **Input 输入** | Button、Checkbox / CheckboxGroup、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker / DirPicker、ImagePicker、Input、MultiSelect、NumberInput、RadioGroup、Rating、SearchBar、SegmentedButton、SelectBox、Slider、Switch、Cascader |
-| **Layout 布局** | Card、Column、Container、Divider、Expander、GridView、ListView、PageLayout、Row、Stack、Table、Tabs、Timeline、View |
+| **Layout 布局** | Card、Column、Container、Divider、Expander、GridView、ListView、PageLayout、Row、Stack、Step、Table、Tabs、View |
 | **Navigation 导航** | AppBar、BreadCrumb、Paging |
 
 **双范式**：
-- **静态组件**（`Button` / `Table` / `Rating` / `Timeline` / 图表 …）直接继承 Flet 控件，构造即用。
+- **静态组件**（`Button` / `Table` / `Rating` / `Step` / 图表 …）直接继承 Flet 控件，构造即用。
 - **交互式组件**（`Input` / `Checkbox` / `Switch` / `SelectBox` / `MultiSelect` / `Pdf` …）
   是 `@ft.component` 函数组件，状态用 hooks 声明，返回值直接进控件树。
 
@@ -550,7 +556,7 @@ python examples/demo.py
 |------|------|
 | `/` | 首页导航（按分类进入各页） |
 | `/general` | 文本 / 按钮 / 图标 / 标签 |
-| `/layout` | 容器 / 列表 / 表格 / 时间线 |
+| `/layout` | 容器 / 列表 / 表格 / 步骤条 |
 | `/navigation` | 面包屑 / 标签页 / 分页 |
 | `/form` | 输入框 / 选择器 / 滑块 / 评分 |
 | `/upload` | 文件 / 目录 / 保存 / 图片 |

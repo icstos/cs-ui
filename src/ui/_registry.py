@@ -36,6 +36,8 @@ COMPONENT_MODULES: dict[str, str] = {
     "Crumb": "ui.navigation",
     "DateInput": "ui.input",
     "DateTimeInput": "ui.input",
+    "Descriptions": "ui.display",
+    "DescriptionsItem": "ui.display",
     "DirPicker": "ui.input",
     "Divider": "ui.layout",
     "ELEVATION": "ui.core",
