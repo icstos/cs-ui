@@ -89,6 +89,7 @@ _ZH_CN: dict[str, object] = {
             "next_month": "下一月",
             "prev_year": "上一年",
             "next_year": "下一年",
+            "mode": {"month": "月", "year": "年"},
             "first_weekday": "0",
             "weekdays": {
                 1: "一",
@@ -259,6 +260,7 @@ _ZH_TW: dict[str, object] = {
             "next_month": "下一月",
             "prev_year": "上一年",
             "next_year": "下一年",
+            "mode": {"month": "月", "year": "年"},
             "first_weekday": "0",
             "weekdays": {
                 1: "一",
@@ -429,6 +431,7 @@ _EN_US: dict[str, object] = {
             "next_month": "Next month",
             "prev_year": "Previous year",
             "next_year": "Next year",
+            "mode": {"month": "Month", "year": "Year"},
             "first_weekday": "6",
             "weekdays": {
                 1: "Mo",

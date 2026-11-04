@@ -37,6 +37,10 @@
   越活跃。顺序色阶按主题备了浅深两套（M3 的角色推不出"第 3 级绿"），底板色仍是主题角色，
   所以明暗切换不用写一行特判。整片网格只挂**一个**手势控件，用坐标反算格子；悬停只在"跨格"
   时重绘，网格本身构建一次就缓存——鼠标划过去只换一个气泡，不重建 371 个格子
+- **能放东西的整月日历** — `Calendar` 是日期选择器的"整面板"版本：格子大到能再放一行内容
+  （`cell_content`），点标题放大成十二个月而不是连点十二次翻页；选中 / 今天 / 悬停都收在
+  30px 的小胶囊里，格子再宽也不会糊成一块色斑。跨月的灰日子点一下就翻到那个月；
+  网格恒定 42 格，翻页时面板高度不跳
 - **对得齐的字段网格** — `Descriptions` 默认就是带边框的表格：标签格淡底色、1px 细线分隔、
   外框圆角；`column` 决定一行几个字段，`span` 让长内容（地址、备注）跨两列，末行没排满时
   最后一个字段吃掉剩余列，不留空洞。`direction="vertical"` 换成标签在上，`bordered=False`
@@ -180,7 +184,7 @@ if __name__ == "__main__":
 
 ```
 src/ui/
-├── __init__.py              # 导出 flet 全部内容 + 所有 CS UI 组件（706 个名字）
+├── __init__.py              # 导出 flet 全部内容 + 所有 CS UI 组件（705 个名字）
 ├── app.py                   # 传统式 App 入口
 ├── ft_init.py               # Flet 初始化
 ├── theme.py                 # 主题 / 配色
@@ -206,6 +210,7 @@ src/ui/
 │   └── tokens.py            #   设计令牌：SPACE / RADIUS / FONT_SIZE / 语义色
 ├── data/                    # 静态资源（字体、图片）
 ├── display/                 # 展示组件
+│   ├── calendar.py          #   Calendar（整月面板、年视图放大、格内自定义内容）
 │   ├── descriptions.py      #   Descriptions / DescriptionsItem
 │   ├── heatmap.py           #   Heatmap / HeatmapItem（日历热力图）
 │   ├── image.py             #   Image
@@ -277,7 +282,7 @@ src/ui/
 |------|------|
 | **Core 核心** | ThemeProvider、ThemeSwitcher、`use_theme`、theme_state；I18nProvider、LanguageSwitcher、`use_t`、`t` |
 | **Chart 图表** | BarChart、LineChart、AreaChart、ScatterChart |
-| **Display 展示** | Descriptions、Heatmap、Image、ImageGridView、ListTile、LogContainer、Tree、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display 展示** | Calendar、Descriptions、Heatmap、Image、ImageGridView、ListTile、LogContainer、Tree、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display 媒体** | Audio、AudioPlayer、Video、Pdf |
 | **Feedback 反馈** | AlertDialog、Loading、Message、Notification、ProgressBar |
 | **Input 输入** | Button、Checkbox / CheckboxGroup、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker / DirPicker、ImagePicker、Input、MultiSelect、NumberInput、RadioGroup、Rating、SearchBar、SegmentedButton、SelectBox、Slider、Switch、Cascader |
@@ -576,7 +581,7 @@ python examples/demo.py
 | `/form` | 输入框 / 选择器 / 滑块 / 评分 |
 | `/upload` | 文件 / 目录 / 保存 / 图片 |
 | `/feedback` | 消息提示 / 通知 / 对话框 / 进度 |
-| `/display` | 日志 / 代码 / 图片 |
+| `/display` | 日历 / 热力图 / 日志 / 代码 / 图片 |
 | `/charts` | 折线 / 面积 / 柱状 / 散点图 |
 | `/media` | 音频 / 视频 / PDF |
 | `/about` | 迁移速查与设计说明 |

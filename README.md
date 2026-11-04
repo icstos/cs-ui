@@ -34,6 +34,11 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
   so light/dark needs no special case. The whole grid carries **one** gesture detector and maps the
   pointer to a cell by division; hover repaints only when the cell changes and the grid itself is
   built once — moving the mouse swaps a tooltip, not 371 cells
+- **A month as a working surface** — `Calendar` is the full-panel counterpart to the date picker.
+  Cells are large enough to hold a second line (`cell_content`), the title zooms out to twelve
+  months instead of paging, and selection / today / hover live inside a 30px pill so a wide cell
+  never turns into a block of colour. Clicking a greyed neighbouring day jumps to that month —
+  the grid is always exactly 42 cells, so the panel never changes height when you page
 - **Fields on a grid that lines up** — `Descriptions` lays a record out as a bordered grid by
   default: tinted label cells, hairline dividers, one rounded frame. `column` sets how many fields
   per row and `span` lets long values (addresses, notes) take two; if the last row runs short the
@@ -178,7 +183,7 @@ if __name__ == "__main__":
 
 ```
 src/ui/
-├── __init__.py              # re-exports all of flet + every CS UI component (706 names)
+├── __init__.py              # re-exports all of flet + every CS UI component (705 names)
 ├── app.py                   # legacy-style App entry point
 ├── ft_init.py               # Flet initialization
 ├── theme.py                 # theme / palette
@@ -204,6 +209,7 @@ src/ui/
 │   └── tokens.py            #   design tokens: SPACE / RADIUS / FONT_SIZE / semantic colors
 ├── data/                    # Static assets (fonts, images)
 ├── display/                 # Display components
+│   ├── calendar.py          #   Calendar (month panel, year zoom, per-cell content)
 │   ├── descriptions.py      #   Descriptions / DescriptionsItem
 │   ├── heatmap.py           #   Heatmap / HeatmapItem (calendar heatmap)
 │   ├── image.py             #   Image
@@ -275,7 +281,7 @@ src/ui/
 |----------|-----------|
 | **Core** | ThemeProvider, ThemeSwitcher, `use_theme`, `theme_state` |
 | **Chart** | BarChart, LineChart, AreaChart, ScatterChart |
-| **Display** | Descriptions, Heatmap, Image, ImageGridView, ListTile, LogContainer, Tree, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display** | Calendar, Descriptions, Heatmap, Image, ImageGridView, ListTile, LogContainer, Tree, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display / Media** | Audio, AudioPlayer, Video, Pdf |
 | **Feedback** | AlertDialog, Loading, Message, Notification, ProgressBar |
 | **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, NumberInput, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch, Cascader |
@@ -443,7 +449,7 @@ python examples/demo.py
 | `/form` | Inputs / selectors / slider / rating |
 | `/upload` | Files / directories / save / images |
 | `/feedback` | Message / notification / dialog / progress |
-| `/display` | Logs / code / images |
+| `/display` | Calendar / heatmap / logs / code / images |
 | `/charts` | Line / area / bar / scatter charts |
 | `/media` | Audio / video / PDF |
 | `/about` | Migration cheat-sheet and design notes |
