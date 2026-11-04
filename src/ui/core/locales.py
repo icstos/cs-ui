@@ -194,6 +194,12 @@ _ZH_CN: dict[str, object] = {
             "time": "{h:02d}:{mi:02d}",
             "time_seconds": "{h:02d}:{mi:02d}:{s:02d}",
         },
+        "heatmap": {
+            "less": "少",
+            "more": "多",
+            "empty": "暂无数据",
+            "tooltip": "{date} · {value}",
+        },
     }
 }
 
@@ -358,6 +364,12 @@ _ZH_TW: dict[str, object] = {
             "time": "{h:02d}:{mi:02d}",
             "time_seconds": "{h:02d}:{mi:02d}:{s:02d}",
         },
+        "heatmap": {
+            "less": "少",
+            "more": "多",
+            "empty": "暫無資料",
+            "tooltip": "{date} · {value}",
+        },
     }
 }
 
@@ -521,6 +533,12 @@ _EN_US: dict[str, object] = {
             "date_long": "{name} {d}, {y:04d}",
             "time": "{h:02d}:{mi:02d}",
             "time_seconds": "{h:02d}:{mi:02d}:{s:02d}",
+        },
+        "heatmap": {
+            "less": "Less",
+            "more": "More",
+            "empty": "No data",
+            "tooltip": "{date} · {value}",
         },
     }
 }

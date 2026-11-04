@@ -58,6 +58,8 @@ COMPONENT_MODULES: dict[str, str] = {
     "Header_3": "ui.display",
     "Header_4": "ui.display",
     "Header_5": "ui.display",
+    "Heatmap": "ui.display",
+    "HeatmapItem": "ui.display",
     "I18nProvider": "ui.core",
     "I18nState": "ui.core",
     "INPUT_HEIGHT": "ui.core",

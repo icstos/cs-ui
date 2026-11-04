@@ -1,6 +1,7 @@
 """展示类组件：文本、图片、媒体、日志、图表容器等。"""
 
 from .descriptions import Descriptions, DescriptionsItem
+from .heatmap import Heatmap, HeatmapItem
 from .image import Image
 from .image_gridview import ImageGridView
 from .list_tile import ListTile
@@ -34,6 +35,8 @@ __all__ = [
     "Header_3",
     "Header_4",
     "Header_5",
+    "Heatmap",
+    "HeatmapItem",
     "Image",
     "ImageGridView",
     "Json",
