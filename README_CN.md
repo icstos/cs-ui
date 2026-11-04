@@ -194,6 +194,7 @@ src/ui/
 │   ├── list_tile.py         #   ListTile
 │   ├── log_container.py     #   LogContainer
 │   ├── text.py              #   Text / Header_1..5 / Quote / Link / Code / Markdown / Json
+│   ├── tree.py             #   Tree / TreeNode（展开 / 复选 / 过滤）
 │   └── media/               #   媒体
 │       ├── audio.py         #     Audio / AudioPlayer
 │       ├── pdf.py           #     Pdf
@@ -254,7 +255,7 @@ src/ui/
 |------|------|
 | **Core 核心** | ThemeProvider、ThemeSwitcher、`use_theme`、theme_state；I18nProvider、LanguageSwitcher、`use_t`、`t` |
 | **Chart 图表** | BarChart、LineChart、AreaChart、ScatterChart |
-| **Display 展示** | Image、ImageGridView、ListTile、LogContainer、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display 展示** | Image、ImageGridView、ListTile、LogContainer、Tree、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display 媒体** | Audio、AudioPlayer、Video、Pdf |
 | **Feedback 反馈** | AlertDialog、Loading、Message、ProgressBar、Toast |
 | **Input 输入** | Button、Checkbox / CheckboxGroup、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker / DirPicker、ImagePicker、Input、MultiSelect、NumberInput、RadioGroup、Rating、SearchBar、SegmentedButton、SelectBox、Slider、Switch |

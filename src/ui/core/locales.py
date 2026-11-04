@@ -139,6 +139,7 @@ _ZH_CN: dict[str, object] = {
             "next_step": "下一格（滚轮同样可用）",
         },
         "multiselect": {"selected": "已选 {n} / {total}", "empty": "暂无可选项"},
+        "tree": {"empty": "暂无节点"},
         "color": {
             "placeholder": "请选择颜色",
             "revert": "还原到打开面板时的颜色",
@@ -285,6 +286,7 @@ _ZH_TW: dict[str, object] = {
             "next_step": "下一格（滾輪同樣可用）",
         },
         "multiselect": {"selected": "已選 {n} / {total}", "empty": "暫無選項"},
+        "tree": {"empty": "暫無節點"},
         "color": {
             "placeholder": "請選擇顏色",
             "revert": "還原為開啟面板時的顏色",
@@ -431,6 +433,7 @@ _EN_US: dict[str, object] = {
             "next_step": "Step forward (mouse wheel also works)",
         },
         "multiselect": {"selected": "{n} of {total} selected", "empty": "No options"},
+        "tree": {"empty": "No nodes"},
         "color": {
             "placeholder": "Select a color",
             "revert": "Revert to the color when the panel opened",

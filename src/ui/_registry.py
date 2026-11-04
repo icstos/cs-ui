@@ -127,6 +127,8 @@ COMPONENT_MODULES: dict[str, str] = {
     "Title": "ui.display",
     "Toast": "ui.feedback",
     "Translator": "ui.core",
+    "Tree": "ui.display",
+    "TreeNode": "ui.display",
     "VerticalDivider": "ui.layout",
     "Video": "ui.display",
     "VideoMedia": "ui.display",

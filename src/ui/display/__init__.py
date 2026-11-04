@@ -20,6 +20,7 @@ from .text import (
     Text,
     Title,
 )
+from .tree import Tree, TreeNode
 
 __all__ = [
     "Audio",
@@ -42,6 +43,8 @@ __all__ = [
     "SubTitle",
     "Text",
     "Title",
+    "Tree",
+    "TreeNode",
     "Video",
     "VideoMedia",
     "build_playlist",

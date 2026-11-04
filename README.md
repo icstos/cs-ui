@@ -188,6 +188,7 @@ src/ui/
 │   ├── list_tile.py         #   ListTile
 │   ├── log_container.py     #   LogContainer
 │   ├── text.py              #   Text / Header_1..5 / Quote / Link / Code / Markdown / Json
+│   ├── tree.py             #   Tree / TreeNode (expand / check / filter)
 │   └── media/               #   Media
 │       ├── audio.py         #     Audio / AudioPlayer
 │       ├── pdf.py           #     Pdf
@@ -248,7 +249,7 @@ src/ui/
 |----------|-----------|
 | **Core** | ThemeProvider, ThemeSwitcher, `use_theme`, `theme_state` |
 | **Chart** | BarChart, LineChart, AreaChart, ScatterChart |
-| **Display** | Image, ImageGridView, ListTile, LogContainer, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display** | Image, ImageGridView, ListTile, LogContainer, Tree, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display / Media** | Audio, AudioPlayer, Video, Pdf |
 | **Feedback** | AlertDialog, Loading, Message, ProgressBar, Toast |
 | **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, NumberInput, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch |
