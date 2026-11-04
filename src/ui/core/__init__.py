@@ -55,7 +55,6 @@ from .i18n import (
     use_t,
     validate,
 )
-from .snackbar import ensure_snackbar_content
 from .styles import INPUT_HEIGHT, INPUT_RADIUS, outline_input, underline_input
 from .theme import (
     MODES,
@@ -148,7 +147,6 @@ __all__ = [
     "format_date",
     "format_datetime",
     "elevation",
-    "ensure_snackbar_content",
     "first_weekday",
     "focus_border",
     "hairline",

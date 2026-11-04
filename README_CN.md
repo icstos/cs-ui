@@ -26,6 +26,17 @@
   切语言只重绘用到翻译的组件（不丢表单内容）；缺翻译自动沿
   `繁 → 简 → 英` 回退，选择写入本地配置、首帧即生效（不会先闪默认语言）
 - **图表支持** — 通过 `flet-charts` 封装 Bar / Line / Area / Scatter 图表，x 轴数值 / 分类通吃
+- **一个日期选择器，九种形态** — `DateInput` 覆盖 Element 那一整族：`date` / `week` /
+  `month` / `year`、三种多选（`dates` / `months` / `years`）、两种范围（`daterange` /
+  `monthrange`）。它们共用同一张日历：一格长什么样只由一个 `DayMark` 决定（实心圆、区间连条、
+  今天、禁用、非本月），所以"选多个"和"选范围"不是两个组件，只是同一张网格上算出的不同标记。
+  点标题逐层放大（日 → 月 → 年），不用连点十二次翻页。范围是左右两列，左早右晚，点完起点后
+  连条会跟着指针预览到哪一天。值始终是标准库的 `datetime.date`（月份就是 1 号、年份就是 1 月 1 日），
+  不多造一套类型
+- **一眼看完一年的热力图** — `Heatmap` 把日期铺成"每周一列 × 七天一行"的方格，颜色越深
+  越活跃。顺序色阶按主题备了浅深两套（M3 的角色推不出"第 3 级绿"），底板色仍是主题角色，
+  所以明暗切换不用写一行特判。整片网格只挂**一个**手势控件，用坐标反算格子；悬停只在"跨格"
+  时重绘，网格本身构建一次就缓存——鼠标划过去只换一个气泡，不重建 371 个格子
 - **对得齐的字段网格** — `Descriptions` 默认就是带边框的表格：标签格淡底色、1px 细线分隔、
   外框圆角；`column` 决定一行几个字段，`span` 让长内容（地址、备注）跨两列，末行没排满时
   最后一个字段吃掉剩余列，不留空洞。`direction="vertical"` 换成标签在上，`bordered=False`
@@ -148,7 +159,7 @@ if __name__ == "__main__":
 > 1. `page.render_views`（`Router(manage_views=True)` 的视图栈）会把**整个页面浮层盖住** ——
 >    `page.overlay` 里挂任何东西都是零像素、`page.show_dialog` 同样失效，
 >    而且**不报错**（Python 侧 `len(page.overlay)` 正确、回调照常触发）。
->    `MultiSelect` 的悬浮面板、Toast、Dialog 都会因此失灵。
+>    `MultiSelect` 的悬浮面板、Notification、Dialog 都会因此失灵。
 > 2. **`ft.View` 不能当普通控件用**。根视图模式下把一个 `View` 塞进控件树，
 >    Flutter 侧会反复抛 `Bad state: No element`，整页渲染成灰块。
 >    同理 `ft.AppBar` 是 `AdaptiveControl`，只能挂在 `View.appbar` 上，
@@ -169,7 +180,7 @@ if __name__ == "__main__":
 
 ```
 src/ui/
-├── __init__.py              # 导出 flet 全部内容 + 所有 CS UI 组件（617 个名字）
+├── __init__.py              # 导出 flet 全部内容 + 所有 CS UI 组件（706 个名字）
 ├── app.py                   # 传统式 App 入口
 ├── ft_init.py               # Flet 初始化
 ├── theme.py                 # 主题 / 配色
@@ -186,15 +197,17 @@ src/ui/
 │   ├── config.py            #   配置
 │   ├── constants.py         #   StyleType / FeedbackStyle / ButtonShape …
 │   ├── float_layer.py       #   页面浮层：overlay_usable / use_float_layer
+│   ├── format.py            #   本地化格式化：日期 / 数字 / 月份星期名
 │   ├── i18n.py              #   多语言：I18nProvider / LanguageSwitcher / use_t / t
+│   ├── locales.py           #   内置 zh_CN / zh_TW / en_US 语言包
 │   ├── logger.py            #   日志
-│   ├── snackbar.py          #   SnackBar 类组件的 content 守卫
 │   ├── styles.py            #   统一样式助手
 │   ├── theme.py             #   ThemeProvider / ThemeSwitcher / use_theme
 │   └── tokens.py            #   设计令牌：SPACE / RADIUS / FONT_SIZE / 语义色
 ├── data/                    # 静态资源（字体、图片）
 ├── display/                 # 展示组件
 │   ├── descriptions.py      #   Descriptions / DescriptionsItem
+│   ├── heatmap.py           #   Heatmap / HeatmapItem（日历热力图）
 │   ├── image.py             #   Image
 │   ├── image_gridview.py    #   ImageGridView
 │   ├── list_tile.py         #   ListTile
@@ -206,11 +219,13 @@ src/ui/
 │       ├── pdf.py           #     Pdf
 │       └── video.py         #     Video
 ├── feedback/                # 反馈 & 浮层
+│   ├── _look.py             #   共用的类型 → 图标 / 强调色映射
+│   ├── _overlay.py          #   浮层卡片栈（锚点、计时、合并、悬停暂停）
 │   ├── alert_dialog.py      #   AlertDialog
 │   ├── loading.py           #   Loading
-│   ├── message.py           #   Message
-│   ├── progress_bar.py      #   ProgressBar
-│   └── toast.py             #   Toast / toast_success / toast_error …
+│   ├── message.py           #   Message（顶部居中，主动操作的回执）
+│   ├── notification.py      #   Notification（贴角卡片、带标题，系统级通报）
+│   └── progress_bar.py      #   ProgressBar
 ├── input/                   # 表单输入
 │   ├── button.py            #   Button
 │   ├── checkbox.py          #   Checkbox / CheckboxGroup
@@ -262,9 +277,9 @@ src/ui/
 |------|------|
 | **Core 核心** | ThemeProvider、ThemeSwitcher、`use_theme`、theme_state；I18nProvider、LanguageSwitcher、`use_t`、`t` |
 | **Chart 图表** | BarChart、LineChart、AreaChart、ScatterChart |
-| **Display 展示** | Descriptions、Image、ImageGridView、ListTile、LogContainer、Tree、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display 展示** | Descriptions、Heatmap、Image、ImageGridView、ListTile、LogContainer、Tree、Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display 媒体** | Audio、AudioPlayer、Video、Pdf |
-| **Feedback 反馈** | AlertDialog、Loading、Message、ProgressBar、Toast |
+| **Feedback 反馈** | AlertDialog、Loading、Message、Notification、ProgressBar |
 | **Input 输入** | Button、Checkbox / CheckboxGroup、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker / DirPicker、ImagePicker、Input、MultiSelect、NumberInput、RadioGroup、Rating、SearchBar、SegmentedButton、SelectBox、Slider、Switch、Cascader |
 | **Layout 布局** | Card、Column、Container、Divider、Expander、GridView、ListView、PageLayout、Row、Stack、Step、Table、Tabs、View |
 | **Navigation 导航** | AppBar、BreadCrumb、Paging |
@@ -560,7 +575,7 @@ python examples/demo.py
 | `/navigation` | 面包屑 / 标签页 / 分页 |
 | `/form` | 输入框 / 选择器 / 滑块 / 评分 |
 | `/upload` | 文件 / 目录 / 保存 / 图片 |
-| `/feedback` | Toast / 消息 / 对话框 / 进度 |
+| `/feedback` | 消息提示 / 通知 / 对话框 / 进度 |
 | `/display` | 日志 / 代码 / 图片 |
 | `/charts` | 折线 / 面积 / 柱状 / 散点图 |
 | `/media` | 音频 / 视频 / PDF |
@@ -570,7 +585,7 @@ python examples/demo.py
 
 - `examples/test_home.py` — 最小首页
 - `examples/test_form.py` — 表单组件
-- `examples/test_feedback.py` — 反馈组件（对话框、消息提示、加载、进度条）
+- `examples/test_feedback.py` — 反馈组件（消息提示、通知、对话框、加载、进度条）
 - `examples/test_i18n.py` — 多语言（顶栏切换简 / 繁 / 英，实时跟随）
 - `examples/test_chart.py` — 图表组件
 - `examples/test_line_chart.py` — 折线图
@@ -588,7 +603,7 @@ python examples/demo.py
 
 | 产物 | 内容 |
 |------|------|
-| `data/api.json` | 约 80 个组件、60 个函数、9 个枚举，外加组件继承到的 40+ 个外部类成员表 |
+| `data/api.json` | 92 个组件、16 个数据类、98 个函数、9 个枚举，外加组件继承到的 46 个外部类成员表 |
 | `data/examples.json` | `examples/demo.py` 拆页 + **每个组件的真实调用片段** |
 | `data/docs.json` | README / TODO / 项目记忆切段，可检索 |
 

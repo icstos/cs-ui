@@ -19,6 +19,21 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 - **Two component paradigms** — static components subclass native Flet controls; interactive ones are
   `@ft.component` functions whose state is declared with hooks (`use_state` / `use_memo` / `use_effect`)
 - **Charts** — Bar, Line, Area, and Scatter chart wrappers via `flet-charts`, with both numeric and categorical x-axes
+- **One date picker, nine modes** — `DateInput` covers the whole Element-style family:
+  `date` / `week` / `month` / `year`, the three multi-select flavours (`dates` / `months` / `years`),
+  and `daterange` / `monthrange`. They all share one calendar: a cell's look is a single
+  `DayMark` (filled dot, range band, today, disabled, out-of-month), so "pick many" and "pick a
+  range" are not separate widgets — just different marks on the same grid. Click the title to
+  zoom out a level (day → month → year) instead of paging twelve times. Ranges lay out two
+  panels side by side, left early right late, and the connector band previews to wherever the
+  pointer is after the first click. Values stay plain `datetime.date` (a month is its 1st, a
+  year is Jan 1) — no extra type to learn
+- **A year at a glance** — `Heatmap` lays dates out as one column per week, seven rows per week,
+  and the deeper the colour the busier the day. The sequential ramp ships a light and a dark set
+  (M3 roles can’t express “the third green”), while the empty-cell base colour stays a theme role,
+  so light/dark needs no special case. The whole grid carries **one** gesture detector and maps the
+  pointer to a cell by division; hover repaints only when the cell changes and the grid itself is
+  built once — moving the mouse swaps a tooltip, not 371 cells
 - **Fields on a grid that lines up** — `Descriptions` lays a record out as a bordered grid by
   default: tinted label cells, hairline dividers, one rounded frame. `column` sets how many fields
   per row and `span` lets long values (addresses, notes) take two; if the last row runs short the
@@ -140,7 +155,7 @@ if __name__ == "__main__":
 > 1. `page.render_views` (the view stack behind `Router(manage_views=True)`) **covers the entire page
 >    overlay layer** — anything appended to `page.overlay` renders zero pixels, and `page.show_dialog`
 >    is just as dead. It does **not** raise: `len(page.overlay)` is correct and callbacks still fire.
->    Floating `MultiSelect` panels, toasts and dialogs all silently break.
+>    Floating `MultiSelect` panels, notifications and dialogs all silently break.
 > 2. **`ft.View` cannot be used as an ordinary control.** Under the root-view path, putting a `View`
 >    into the widget tree makes Flutter throw `Bad state: No element` on repeat and the whole page
 >    turns into a grey box. Likewise `ft.AppBar` is an `AdaptiveControl`: it only fits `View.appbar`
@@ -163,7 +178,7 @@ if __name__ == "__main__":
 
 ```
 src/ui/
-├── __init__.py              # re-exports all of flet + every CS UI component (617 names)
+├── __init__.py              # re-exports all of flet + every CS UI component (706 names)
 ├── app.py                   # legacy-style App entry point
 ├── ft_init.py               # Flet initialization
 ├── theme.py                 # theme / palette
@@ -180,15 +195,17 @@ src/ui/
 │   ├── config.py            #   configuration
 │   ├── constants.py         #   StyleType / FeedbackStyle / ButtonShape …
 │   ├── float_layer.py       #   page overlay: overlay_usable / use_float_layer
-│   ├── language.py          #   i18n
+│   ├── format.py            #   locale-aware date / number formatting
+│   ├── i18n.py              #   i18n: I18nProvider / LanguageSwitcher / use_t / t
+│   ├── locales.py           #   bundled zh_CN / zh_TW / en_US dictionaries
 │   ├── logger.py            #   logging
-│   ├── snackbar.py          #   content guard for SnackBar-based components
 │   ├── styles.py            #   shared style helpers
 │   ├── theme.py             #   ThemeProvider / ThemeSwitcher / use_theme
 │   └── tokens.py            #   design tokens: SPACE / RADIUS / FONT_SIZE / semantic colors
 ├── data/                    # Static assets (fonts, images)
 ├── display/                 # Display components
 │   ├── descriptions.py      #   Descriptions / DescriptionsItem
+│   ├── heatmap.py           #   Heatmap / HeatmapItem (calendar heatmap)
 │   ├── image.py             #   Image
 │   ├── image_gridview.py    #   ImageGridView
 │   ├── list_tile.py         #   ListTile
@@ -200,11 +217,13 @@ src/ui/
 │       ├── pdf.py           #     Pdf
 │       └── video.py         #     Video
 ├── feedback/                # Feedback & overlays
+│   ├── _look.py             #   shared type → icon / accent mapping
+│   ├── _overlay.py          #   overlay card stack (anchor, timing, grouping, hover-pause)
 │   ├── alert_dialog.py      #   AlertDialog
 │   ├── loading.py           #   Loading
-│   ├── message.py           #   Message
-│   ├── progress_bar.py      #   ProgressBar
-│   └── toast.py             #   Toast / toast_success / toast_error …
+│   ├── message.py           #   Message (top-centre receipt for user actions)
+│   ├── notification.py      #   Notification (corner card with title, system-level)
+│   └── progress_bar.py      #   ProgressBar
 ├── input/                   # Form inputs
 │   ├── button.py            #   Button
 │   ├── checkbox.py          #   Checkbox / CheckboxGroup
@@ -256,9 +275,9 @@ src/ui/
 |----------|-----------|
 | **Core** | ThemeProvider, ThemeSwitcher, `use_theme`, `theme_state` |
 | **Chart** | BarChart, LineChart, AreaChart, ScatterChart |
-| **Display** | Descriptions, Image, ImageGridView, ListTile, LogContainer, Tree, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display** | Descriptions, Heatmap, Image, ImageGridView, ListTile, LogContainer, Tree, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display / Media** | Audio, AudioPlayer, Video, Pdf |
-| **Feedback** | AlertDialog, Loading, Message, ProgressBar, Toast |
+| **Feedback** | AlertDialog, Loading, Message, Notification, ProgressBar |
 | **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, NumberInput, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch, Cascader |
 | **Layout** | Card, Column, Container, Divider, Expander, GridView, ListView, PageLayout, Row, Stack, Step, Table, Tabs, View |
 | **Navigation** | AppBar, BreadCrumb, Paging |
@@ -423,7 +442,7 @@ python examples/demo.py
 | `/navigation` | Breadcrumb / tabs / paging |
 | `/form` | Inputs / selectors / slider / rating |
 | `/upload` | Files / directories / save / images |
-| `/feedback` | Toast / message / dialog / progress |
+| `/feedback` | Message / notification / dialog / progress |
 | `/display` | Logs / code / images |
 | `/charts` | Line / area / bar / scatter charts |
 | `/media` | Audio / video / PDF |
@@ -433,7 +452,7 @@ Additional test files:
 
 - `examples/test_home.py` — minimal home page
 - `examples/test_form.py` — form components
-- `examples/test_feedback.py` — feedback (dialog, snackbar, loading, progress)
+- `examples/test_feedback.py` — feedback (message, notification, dialog, loading, progress)
 - `examples/test_chart.py` — chart components
 - `examples/test_line_chart.py` — line chart
 - `examples/test_button.py` — button variants
