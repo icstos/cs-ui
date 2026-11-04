@@ -60,6 +60,8 @@ class Input(Label):
 
     def __post_init__(self):
         self.last_value = self.value
+        # 数字类型（int / float）的实现在 NumberInput 里，这里只持有实例并桥接取值。
+        self._num = None
 
     # min_value: ft.Number = -math.inf
     # max_value: ft.Number = math.inf
@@ -71,38 +73,44 @@ class Input(Label):
             return Path(str(self.value).strip().strip('"').strip("'"))
 
     def on_change(self, e):
-        print("before", self.last_value, self.value)
-        if self.data_type == "int" or self.data_type == "float":
-            try:
-                if isinstance(e.data, str) and e.data.strip() != "":
-                    float(e.data)  # 验证数值合法性
-            except ValueError:
-                self.last_value = self.value
-                self.value = self.last_value
-            else:
-                self.last_value = self.value
-                self.value = e.data
-        else:
-            self.value = e.data
-        # await asyncio.sleep(1)
-        print("after", self.last_value, self.value)
+        """文本类输入的回写（数字类型走 :meth:`_on_number_change`）。"""
+        self.value = e.data
 
-    def handle_decrease_click(self, e):
-        _value = float(Decimal(str(self.value)) - Decimal(str(self.step)))
-        if self.data_type == "int":
-            self.value = int(_value)
-        else:
-            self.value = float(_value)
-        self.last_value = self.value
+    def _on_number_change(self, value: int | float | None) -> None:
+        """NumberInput 的值回写到 ``Input.value``，外部读到的始终是最新值。"""
+        self.value = value
+        self.last_value = value
+        self.notify()
 
-    def handle_increase_click(self, e):
-        print(self.value, self.step)
-        _value = float(Decimal(str(self.value)) + Decimal(str(self.step)))
-        if self.data_type == "int":
-            self.value = int(_value)
-        else:
-            self.value = float(_value)
-        self.last_value = self.value
+    def _number_ui(self) -> ft.Control:
+        """数字类型：渲染交给 :class:`~ui.input.number_input.NumberInput`。
+
+        步进 / 精度 / 范围 / 单位都在那边实现，这里只做「标签参数 + 值」的搬运，
+        避免两套数值处理逻辑各自漂移。
+
+        ``NumberInput`` 继承自本模块的 :class:`Label`，所以在函数内延迟导入，
+        避免模块级循环依赖。
+        """
+        from ui.input.number_input import NumberInput
+
+        if self._num is None:
+            self._num = NumberInput(
+                label=self.label,
+                label_width=self.label_width,
+                is_vertical=self.is_vertical,
+                is_required=self.is_required,
+                spacing=self.spacing,
+                run_spacing=self.run_spacing,
+                value=self.value,
+                step=1 if self.data_type == "int" else (self.step or 0.01),
+                precision=0 if self.data_type == "int" else None,
+                width=self.width,
+                hint_text=self.hint_text,
+                on_change=self._on_number_change,
+            )
+        # 外部改了 Input.value 时同步下来；值没变时 set_value 内部直接返回
+        self._num.set_value(self.value)
+        return self._num.ui()
 
     async def handle_file_picker(self, e):
         self.selected_files = await e.control.pick_files(allow_multiple=False)
@@ -116,65 +124,19 @@ class Input(Label):
         suffix: ft.Control | None = None,
         prefix_icon: ft.Control | None = None,
     ):
-        is_decrese_hover, set_decrese_hover = ft.use_state(False)
-        is_increase_hover, set_increase_hover = ft.use_state(False)
+        """构建输入控件。
+
+        数字类型（``data_type="int"/"float"``）直接交给
+        :class:`~ui.input.number_input.NumberInput`，``prefix`` / ``suffix`` /
+        ``prefix_icon`` 只对文本与文件类型生效 —— 数字框的单位请用
+        ``NumberInput`` 的 ``prefix`` / ``suffix`` 字符串参数。
+        """
+        if self.data_type == "int" or self.data_type == "float":
+            return self._number_ui()
+
         text_align: ft.TextAlign = ft.TextAlign.START
         keyboard_type: ft.KeyboardType = ft.KeyboardType.TEXT
-        if self.data_type == "int" or self.data_type == "float":
-            text_align: ft.TextAlign = ft.TextAlign.CENTER
-            if self.data_type == "int":
-                self.step = 1
-            elif self.data_type == "float":
-                self.step = 0.01
-            v_decrease = ft.Container(
-                content=ft.Icon(
-                    icon=ft.Icons.REMOVE,
-                    size=ICON_SIZE,
-                    color=ft.Colors.WHITE if is_decrese_hover else None,
-                ),
-                border_radius=ft.BorderRadius(
-                    top_left=0, top_right=0, bottom_left=0, bottom_right=0
-                ),
-                on_click=self.handle_decrease_click,
-                width=30,
-                alignment=ft.Alignment.CENTER,
-                bgcolor=ft.Colors.BLUE if is_decrese_hover else None,
-                on_hover=lambda e: set_decrese_hover(e.data),
-            )
-            v_increase = ft.Container(
-                content=ft.Icon(
-                    icon=ft.Icons.ADD,
-                    size=ICON_SIZE,
-                    color=ft.Colors.WHITE if is_increase_hover else None,
-                ),
-                border_radius=ft.BorderRadius(
-                    top_left=0,
-                    top_right=BORDER_RADIUS,
-                    bottom_left=0,
-                    bottom_right=BORDER_RADIUS,
-                ),
-                on_click=self.handle_increase_click,
-                width=30,
-                alignment=ft.Alignment.CENTER,
-                bgcolor=ft.Colors.BLUE if is_increase_hover else None,
-                on_hover=lambda e: set_increase_hover(e.data),
-            )
-            suffix = ft.Container(
-                content=ft.Row(
-                    controls=[v_decrease, v_increase],
-                    alignment=ft.MainAxisAlignment.END,
-                    vertical_alignment=ft.CrossAxisAlignment.START,
-                    spacing=0,
-                    run_spacing=0,
-                ),
-                width=60,
-                alignment=ft.Alignment.CENTER_RIGHT,
-                # TODO: 不加这个的话背景颜色会偏移
-                offset=ft.Offset(x=0.1, y=-0.05),
-            )
-            content_padding = ft.Padding.only(left=5, right=0, top=0, bottom=10)
-            keyboard_type: ft.KeyboardType = ft.KeyboardType.NUMBER
-        elif self.data_type == "file" or self.data_type == "dir":
+        if self.data_type == "file" or self.data_type == "dir":
             is_pick, set_is_pick = ft.use_state(False)
             content_padding: ft.Padding = ft.Padding.only(
                 left=5, right=10, top=0, bottom=0
@@ -268,7 +230,7 @@ class Input(Label):
 @ft.component
 def App():
     name = Input(label="name", value="shawn")
-    age = Input(label="age", value="123", data_type="int")
+    age = Input(label="age", value="123", data_type="int", width=180)
     file = Input(
         label="file",
         value="",
@@ -281,7 +243,9 @@ def App():
         controls=[
             name.ui(),
             age.ui(),
-            Input(label="age", value="123", data_type="int", is_required=True).ui(),
+            Input(
+                label="age", value="123", data_type="int", is_required=True, width=180
+            ).ui(),
             Input(label="file", value="", data_type="file").ui(),
             Input(value="", data_type="file").ui(),
             Input(label="file", value="", label_width=300, data_type="file").ui(),

@@ -79,6 +79,7 @@ COMPONENT_MODULES: dict[str, str] = {
     "MemoryStore": "ui.core",
     "Message": "ui.feedback",
     "MultiSelect": "ui.input",
+    "NumberInput": "ui.input",
     "PAD": "ui.core",
     "PAD_LOOSE": "ui.core",
     "PRIMARY_SEEDS": "ui.core",

@@ -10,6 +10,7 @@ from .file_picker import DirPicker, FilePicker, FileSaver
 from .image_picker import ImagePicker
 from .input import Input
 from .multi_select import MultiSelect
+from .number_input import NumberInput
 from .radio import Radio
 from .rating import Rating
 from .search_bar import SearchBar
@@ -32,6 +33,7 @@ __all__ = [
     "ImagePicker",
     "Input",
     "MultiSelect",
+    "NumberInput",
     "Radio",
     "RangeSlider",
     "Rating",
