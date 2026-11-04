@@ -19,6 +19,7 @@ from .segmented_button import SegmentedButton
 from .select_box import SelectBox, SelectOption
 from .slider import RangeSlider, Slider
 from .switch import Switch
+from .transfer import Transfer, TransferItem
 
 __all__ = [
     "Button",
@@ -46,4 +47,6 @@ __all__ = [
     "SelectOption",
     "Slider",
     "Switch",
+    "Transfer",
+    "TransferItem",
 ]

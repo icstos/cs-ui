@@ -133,6 +133,8 @@ COMPONENT_MODULES: dict[str, str] = {
     "ThemeState": "ui.core",
     "ThemeSwitcher": "ui.core",
     "Title": "ui.display",
+    "Transfer": "ui.input",
+    "TransferItem": "ui.input",
     "Translator": "ui.core",
     "Tree": "ui.display",
     "TreeNode": "ui.display",
