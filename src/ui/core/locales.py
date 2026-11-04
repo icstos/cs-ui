@@ -162,7 +162,6 @@ _ZH_CN: dict[str, object] = {
             "paused": "已暂停",
             "toggle": "播放 / 暂停",
         },
-        "timeline": {"pending": "进行中"},
         "app": {"not_found": "当前页未定义", "back_home": "回到首页"},
         "file": {
             "choose": "选择文件",
@@ -310,7 +309,6 @@ _ZH_TW: dict[str, object] = {
             "paused": "已暫停",
             "toggle": "播放 / 暫停",
         },
-        "timeline": {"pending": "進行中"},
         "app": {"not_found": "目前頁面未定義", "back_home": "回到首頁"},
         "file": {
             "choose": "選擇檔案",
@@ -458,7 +456,6 @@ _EN_US: dict[str, object] = {
             "paused": "Paused",
             "toggle": "Play / Pause",
         },
-        "timeline": {"pending": "In progress"},
         "app": {"not_found": "Page not found", "back_home": "Back to home"},
         "file": {
             "choose": "Choose file",

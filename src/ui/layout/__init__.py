@@ -1,4 +1,4 @@
-"""布局类组件：容器、栅格、标签页、时间线、页面骨架等。"""
+"""布局类组件：容器、栅格、标签页、步骤条、页面骨架等。"""
 
 from .card import Card
 from .column import Column
@@ -10,9 +10,9 @@ from .list_view import ListView
 from .page import PageLayout
 from .row import Row
 from .stack import Stack
+from .step import Step, StepItem
 from .table import Table, TableState
 from .tabs import Tab, TabBar, TabBarView, Tabs
-from .time_line import Timeline, TimelineItem
 from .view import View
 
 __all__ = [
@@ -26,14 +26,14 @@ __all__ = [
     "PageLayout",
     "Row",
     "Stack",
+    "Step",
+    "StepItem",
     "Tab",
     "TabBar",
     "TabBarView",
     "Table",
     "TableState",
     "Tabs",
-    "Timeline",
-    "TimelineItem",
     "VerticalDivider",
     "View",
 ]
