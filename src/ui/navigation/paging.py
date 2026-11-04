@@ -1,108 +1,341 @@
-import os
+"""分页器 (Paging) —— 总数、页码、跳页与每页条数。
+
+
+布局：总数在左，页码 / 跳页 / 条数依次靠右。但**弹性给了页码那条**
+而不是总数 —— 它 ``expand=1`` 且可横向滚动：宽容器里吃掉中间空档（页码靠右），
+窄容器里被压到 0 之后自己滚，总数和右侧两组永远是完整的。这比"先把总数省略成
+``共 1,28…``"更耐窄。总页数为 0 时整排翻页控件不出现 —— 对着"共 0 项"
+摆一排禁用按钮，只是噪声。
+
+用法::
+
+    state = PagingState(sum_data_nums=1_286, on_change_page=load)
+    Column([Paging(state)])
+
+``use_t()`` 是本组件唯一的订阅点：语言一变重绘，外部持有的
+:class:`PagingState` 不受影响（页码、每页条数都不丢）。
+"""
+
+from __future__ import annotations
+
+import logging
 from collections.abc import Callable
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
 
 import flet as ft
 
 from ui.core.format import format_number
 from ui.core.i18n import t, use_t
 from ui.core.styles import outline_input
+from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, overlay
+
+__all__ = ["Paging", "PagingState", "get_center_pages"]
+
+_log = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# 尺寸：控件基线取本框架的 36（见模块文档第 5 条）
+# ---------------------------------------------------------------------------
+BTN = 32  # 页码 / 翻页按钮边长
+BTN_RADIUS = RADIUS["sm"]  # 4px
+PAGER_GAP = SPACE["2"]  # 8   相邻页码之间
+GROUP_GAP = SPACE["4"]  # 16  组与组之间
+ICON_SIZE = 18  # 翻页箭头
+TEXT_PAD = 8  # 页码文字的左右留白
+JUMP_W = 48  # 跳页输入框宽度
+SIZE_W = 84  # 每页条数下拉宽度
+
+# ---------------------------------------------------------------------------
+# 颜色：全部是角色或"角色 + 透明度"，随明暗主题与主色自动解析
+# ---------------------------------------------------------------------------
+#: 翻页箭头：默认次要文字，悬停提亮到正文
+NAV_FG = ft.Colors.ON_SURFACE_VARIANT
+NAV_FG_HOVER = ft.Colors.ON_SURFACE
+NAV_BG_HOVER = overlay(0.06)
+
+#: 页码格子：透明底 + 发丝描边，文字同翻页箭头（一排里不该有两种灰度）
+PAGE_FG = ft.Colors.ON_SURFACE_VARIANT
+PAGE_FG_HOVER = ft.Colors.PRIMARY
+PAGE_BORDER = ft.Colors.OUTLINE_VARIANT
+PAGE_BORDER_HOVER = ft.Colors.PRIMARY
+
+#: 当前页：主色实底 + 反白字。深色主题下 PRIMARY 变浅、ON_PRIMARY 变深，
+#: 对比度仍然成立 —— 这正是走角色而不是写死 #0052D9 的理由。
+CURRENT_FG = ft.Colors.ON_PRIMARY
+CURRENT_BG = ft.Colors.PRIMARY
+
+#: 禁用 / 省略号：两档更弱的灰，靠透明度拉开层次
+FG_DISABLED = overlay(0.38)
+FG_MUTED = ft.Colors.OUTLINE
+
+#: 标签类文字（"前往""每页""项"）与总数同色
+LABEL_FG = ft.Colors.ON_SURFACE_VARIANT
 
 
-class BorderRadiusSize(Enum):
-    # https://fluent2.microsoft.design/shapes
-    NONE = 0
-    S = 2
-    M = 4
-    L = 8
-    X = 12
+def _page_width(label: str) -> int:
+    """页码格子宽度：两位数以内是正方形，三位数起按字数往外让。
 
-
-ICON_WIDTH = 36
-ICON_HEIGHT = 32
-ICON_DEFAULT_COLOR = ft.Colors.BLUE
-ICON_HOVER_COLOR = ft.Colors.BLUE_100
-
-
-@ft.control
-class NowPageButton(ft.Button):
-    # width/height 在基类中是 kw_only 字段；重新声明时必须显式 kw_only=True，
-    # 否则会变成第 0 个位置参数，抢占 content 的位置（详见 ui.input.button.Button）。
-    width: int = field(default=ICON_WIDTH, kw_only=True)
-    height: int = field(default=ICON_HEIGHT, kw_only=True)
-    style: ft.ButtonStyle = field(
-        default_factory=lambda: ft.ButtonStyle(
-            color=ft.Colors.BLUE,
-            bgcolor={ft.ControlState.DEFAULT: ft.Colors.WHITE},
-            side={
-                ft.ControlState.DEFAULT: ft.BorderSide(1, ft.Colors.BLUE),
-            },
-            shape=ft.RoundedRectangleBorder(radius=BorderRadiusSize.M.value),
-            elevation=0,
-            padding=0,
-        )
-    )
-
-
-@ft.control
-class OtherPageButton(ft.Button):
-    width: int = field(default=ICON_WIDTH, kw_only=True)
-    height: int = field(default=ICON_HEIGHT, kw_only=True)
-    style: ft.ButtonStyle = field(
-        default_factory=lambda: ft.ButtonStyle(
-            color={ft.ControlState.DEFAULT: ft.Colors.BLACK},
-            bgcolor=ft.Colors.WHITE,
-            side={ft.ControlState.HOVERED: ft.BorderSide(1, ft.Colors.BLUE)},
-            shape=ft.RoundedRectangleBorder(radius=BorderRadiusSize.M.value),
-            elevation=0,
-            padding=0,
-        )
-    )
-
-
-@ft.control
-class PrevNextPageButton(ft.IconButton):
-    icon_size: int = 20
-    width: int = field(default=ICON_WIDTH, kw_only=True)
-    height: int = field(default=ICON_HEIGHT, kw_only=True)
-    style: ft.ButtonStyle = field(
-        default_factory=lambda: ft.ButtonStyle(
-            color={
-                ft.ControlState.DEFAULT: ft.Colors.BLUE,
-                ft.ControlState.HOVERED: ft.Colors.BLUE,
-            },
-            bgcolor={ft.ControlState.HOVERED: ft.Colors.WHITE},
-            side={ft.ControlState.HOVERED: ft.BorderSide(1, ft.Colors.BLUE_300)},
-            shape=ft.RoundedRectangleBorder(radius=BorderRadiusSize.M.value),
-            padding=0,
-        )
-    )
-
-
-def get_center_pages(current_page: int, sum_page_nums: int) -> list:
+    写死 32 的话，页数上千时 ``1000`` 会被裁成 ``10…``；无限放宽又会让
+    两位数页码显得空荡。按字符数算，多一位加 8px，够用且可预期。
     """
-    根据当前页码和总页数生成分页按钮的页码列表。
-    - 页数少于等于6时，全部显示。
-    - 页数较多时，显示部分页码和省略号（-1 代表省略号）。
+    return max(BTN, TEXT_PAD * 2 + 8 * len(label))
+
+
+def _hover_handler(key: str, set_hovered: Callable) -> Callable:
+    """把"悬停开 / 关"折成一次 ``use_state`` 写入。
+
+    ``e.data`` 是 ``"true"`` / ``"false"`` 字符串（不是 bool）。
+
+    为什么不用"改控件属性 + ``control.update()``"这条更省的路：
+    ``@ft.component`` 渲染出来的控件是**冻结**的，回调和进去赋值会抛
+    ``Frozen controls cannot be updated``（真机踩到）。走 state 就绕开了
+    冻结，代价是重绘整条分页器 —— 十几个扁平 ``Container``，实测无感。
     """
-    match (sum_page_nums, current_page):
-        case (s, _) if s <= 6:
-            return list(range(1, s + 1))
-        case (s, c) if c < 5:
-            return list(range(1, 6)) + [-1, s]
-        case (s, c) if s - 5 < c <= s:
-            return [1, -1] + list(range(s - 4, s + 1))
-        case (s, c):
-            return [1, -1] + list(range(c - 2, c + 3)) + [-1, s]
+
+    def handler(e, _key=key, _set=set_hovered):
+        on = str(e.data).strip().lower() == "true"
+        _set(_key if on else "")
+
+    return handler
 
 
+# ---------------------------------------------------------------------------
+# 渲染片段：格子 / 箭头 / 省略号
+# ---------------------------------------------------------------------------
+def _page_cell(
+    page: int,
+    current: bool,
+    width: int,
+    *,
+    hovered: bool,
+    on_click: Callable,
+    on_hover: Callable | None,
+) -> ft.Container:
+    """一个页码格子。当前页是实心主色，其余是透明底 + 发丝描边。"""
+    lit = hovered and not current
+    return ft.Container(
+        width=width,
+        height=BTN,
+        border_radius=BTN_RADIUS,
+        alignment=ft.Alignment.CENTER,
+        # bgcolor 留 None 才是透明（写 Colors.TRANSPARENT 会得到一块灰底）
+        bgcolor=CURRENT_BG if current else None,
+        border=ft.Border.all(
+            1,
+            CURRENT_BG if current else (PAGE_BORDER_HOVER if lit else PAGE_BORDER),
+        ),
+        content=ft.Text(
+            str(page),
+            size=FONT_SIZE["subtitle"],
+            weight=FONT_WEIGHT["medium"] if current else None,
+            color=CURRENT_FG if current else (PAGE_FG_HOVER if lit else PAGE_FG),
+        ),
+        data=page,
+        on_click=on_click,
+        on_hover=on_hover,
+        tooltip=t("ui.paging.page", n=page),
+    )
+
+
+def _arrow(
+    *,
+    icon: str,
+    tooltip: str,
+    data: int,
+    disabled: bool,
+    hovered: bool,
+    on_click: Callable,
+    on_hover: Callable | None,
+) -> ft.Container:
+    """翻页箭头：无描边，悬停一层浅灰底。禁用时连指针都不响应。"""
+    if disabled:
+        fg, bg = FG_DISABLED, None
+    elif hovered:
+        fg, bg = NAV_FG_HOVER, NAV_BG_HOVER
+    else:
+        fg, bg = NAV_FG, None
+    return ft.Container(
+        width=BTN,
+        height=BTN,
+        border_radius=BTN_RADIUS,
+        alignment=ft.Alignment.CENTER,
+        bgcolor=bg,
+        content=ft.Icon(icon, size=ICON_SIZE, color=fg),
+        data=data,
+        tooltip=tooltip,
+        on_click=None if disabled else on_click,
+        on_hover=on_hover,
+    )
+
+
+def _more_dot() -> ft.Control:
+    """省略号。不可点，所以**没有**悬停反馈（有反馈就是在暗示能点）。"""
+    return ft.Container(
+        width=BTN,
+        height=BTN,
+        alignment=ft.Alignment.CENTER,
+        content=ft.Icon(ft.Icons.MORE_HORIZ, size=ICON_SIZE, color=FG_MUTED),
+    )
+
+
+def _pager(
+    state: PagingState,
+    total_pages: int,
+    current: int,
+    hovered: str,
+    make_hover: Callable[[str], Callable],
+) -> ft.Row:
+    """首页 … 页码 … 尾页 一排。间距固定 8px，换页时按钮不位移。"""
+    click = state.click_update_page
+
+    def arrow(key: str, icon: str, tip: str, data: int, disabled: bool) -> ft.Container:
+        return _arrow(
+            icon=icon,
+            tooltip=tip,
+            data=data,
+            disabled=disabled,
+            hovered=hovered == key,
+            on_click=click,
+            on_hover=None if disabled else make_hover(key),
+        )
+
+    at_start = current == 1
+    at_end = current >= total_pages
+    controls: list[ft.Control] = [
+        arrow(
+            "first",
+            ft.Icons.KEYBOARD_DOUBLE_ARROW_LEFT,
+            t("ui.paging.first"),
+            1,
+            at_start,
+        ),
+        arrow(
+            "prev",
+            ft.Icons.KEYBOARD_ARROW_LEFT,
+            t("ui.paging.prev"),
+            current - 1,
+            at_start,
+        ),
+    ]
+
+    for page in get_center_pages(current, total_pages):
+        if page == -1:
+            controls.append(_more_dot())
+        else:
+            key = f"p{page}"
+            controls.append(
+                _page_cell(
+                    page,
+                    page == current,
+                    _page_width(str(page)),
+                    hovered=hovered == key,
+                    on_click=click,
+                    # 当前页本来就没得"再选一次"，不给悬停反馈
+                    on_hover=None if page == current else make_hover(key),
+                )
+            )
+
+    controls.append(
+        arrow(
+            "next",
+            ft.Icons.KEYBOARD_ARROW_RIGHT,
+            t("ui.paging.next"),
+            current + 1,
+            at_end,
+        )
+    )
+    controls.append(
+        arrow(
+            "last",
+            ft.Icons.KEYBOARD_DOUBLE_ARROW_RIGHT,
+            t("ui.paging.last"),
+            total_pages,
+            at_end,
+        )
+    )
+    # ``expand`` + 横向滚动：宽容器里它吃掉中间的空档（页码靠右）
+    # 窄容器里被压到 0 之后**自己滚**，而不是把右边的跳页/条数挤出屏幕。
+    return ft.Row(
+        expand=1,
+        scroll=ft.ScrollMode.AUTO,
+        alignment=ft.MainAxisAlignment.END,
+        spacing=PAGER_GAP,
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=controls,
+    )
+
+
+def _label(text: str) -> ft.Text:
+    """分页器里的说明文字（"前往""每页""项"）：与总数同色同号。"""
+    return ft.Text(text, size=FONT_SIZE["body"], color=LABEL_FG)
+
+
+def _jumper(state: PagingState) -> ft.Row:
+    """「前往 [__] 页」。英文没有"页"这个后缀，语言包给空串时不渲染那个字。"""
+    page_unit = t("ui.paging.page_unit")
+    return ft.Row(
+        spacing=SPACE["1"],
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            _label(t("ui.paging.goto")),
+            ft.TextField(
+                width=JUMP_W,
+                height=BTN,
+                text_size=FONT_SIZE["body"],
+                text_align=ft.TextAlign.CENTER,
+                content_padding=ft.Padding.symmetric(horizontal=0, vertical=6),
+                on_submit=state.handle_goto_page_submit,
+                border=outline_input(
+                    BTN_RADIUS, ft.Colors.OUTLINE_VARIANT, ft.Colors.PRIMARY
+                ),
+            ),
+            *([_label(page_unit)] if page_unit else []),
+        ],
+    )
+
+
+def _size_picker(state: PagingState, unit: str) -> ft.Row:
+    """「每页 [10] 项」。候选里**必须包含当前值**，否则 Flutter 侧匹配不到
+    ``value``，下拉框显示空白且点不开（真机踩到：Table 用 rows_per_page=8，
+    而候选只有 5/10/15/20/30/40/50）。"""
+    options = [5, 10, 15, 20, 30, 40, 50]
+    current = state.data_per_page_nums
+    if current not in options:
+        options = sorted({*options, current})
+
+    return ft.Row(
+        # 标签与控件之间留 8：英文的 "Rows per page" 比中文的"每页"长得多，
+        # 4px 会让它和下拉框贴在一起。
+        spacing=SPACE["2"],
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            _label(t("ui.paging.per_page")),
+            ft.Dropdown(
+                options=[ft.DropdownOption(str(n)) for n in options],
+                value=str(current),
+                width=SIZE_W,
+                text_size=FONT_SIZE["body"],
+                dense=True,
+                content_padding=ft.Padding.symmetric(horizontal=6, vertical=6),
+                border=outline_input(
+                    BTN_RADIUS, ft.Colors.OUTLINE_VARIANT, ft.Colors.PRIMARY
+                ),
+                on_select=state.handle_change_per_page_nums,
+            ),
+            _label(unit),
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# 状态
+# ---------------------------------------------------------------------------
 @ft.observable
 @dataclass
 class PagingState:
     sum_data_nums: int = 0  # 总数据条数
     on_change_page: Callable[[int], None] | None = None  # 页码变更回调
-    on_change_per_page_nums: Callable[[int], None] | None = None  # 每页数据条数变更回调
+    on_change_per_page_nums: Callable[[int], None] | None = None  # 每页条数变更回调
     data_per_page_nums: int = 10  # 每页数据条数
     current_page: int = 1  # 当前页码
     #: 数据单位。留空表示跟随界面语言（"项 / 項 / items"），
@@ -111,7 +344,9 @@ class PagingState:
 
     @property
     def sum_page_nums(self) -> int:
-        num_page, num_page_over = divmod(self.sum_data_nums, self.data_per_page_nums)
+        # 每页条数为 0 时直接除零，这里兜一层 —— 分页器崩掉不该是调用方的锅
+        per_page = max(1, self.data_per_page_nums)
+        num_page, num_page_over = divmod(max(0, self.sum_data_nums), per_page)
         return num_page + (1 if num_page_over else 0)
 
     def handle_change_per_page_nums(self, e):
@@ -126,14 +361,16 @@ class PagingState:
         self.sum_data_nums = value
 
     def handle_goto_page_submit(self, e):
+        """跳页输入框回车。非法输入直接忽略 —— 输入框随重绘回到空。"""
         try:
-            page = int(e.control.value)
-            if 1 <= page <= self.sum_page_nums:
-                self.current_page = page
-                if self.on_change_page:
-                    self.on_change_page(self.current_page)
-        except Exception:
-            pass  # 非法输入忽略
+            page = int(str(e.control.value).strip())
+        except (TypeError, ValueError):
+            _log.debug("跳页输入无法解析：%r", e.control.value)
+            return
+        if 1 <= page <= self.sum_page_nums:
+            self.current_page = page
+            if self.on_change_page:
+                self.on_change_page(self.current_page)
 
     def click_update_page(self, e):
         """点击页码或前后页按钮事件"""
@@ -144,155 +381,66 @@ class PagingState:
                 self.on_change_page(self.current_page)
 
 
+def get_center_pages(current_page: int, sum_page_nums: int) -> list:
+    """根据当前页码和总页数生成分页按钮的页码列表。
+
+    - 页数少于等于 6 时，全部显示。
+    - 页数较多时，显示部分页码和省略号（``-1`` 代表省略号）。
+    """
+    match (sum_page_nums, current_page):
+        case (s, _) if s <= 6:
+            return list(range(1, s + 1))
+        case (s, c) if c < 5:
+            return list(range(1, 6)) + [-1, s]
+        case (s, c) if s - 5 < c <= s:
+            return [1, -1] + list(range(s - 4, s + 1))
+        case (s, c):
+            return [1, -1] + list(range(c - 2, c + 3)) + [-1, s]
+
+
 @ft.component
 def Paging(state: PagingState):
-    """分页器：总数 + 页码 + 每页条数。
-
-    所有文案与数字格式都取自当前语言（``ui.paging.*``）：中文是
-    「共 1,286 项 · 前往 [10] 页 · 每页 [10] 项」，英文是
-    「1,286 items · Go to [10] · Rows per page [10]」。语序差异由整句模板吸收，
-    这里只负责填参数 —— 不做"拼接词 + 变量 + 拼接词"。
-
-    ``use_t()`` 是本组件唯一的订阅点：语言一变，``Paging`` 重绘，
-    外部持有的 :class:`PagingState` 不变（页码、每页条数都不丢）。
-    """
+    """分页器：总数 + 页码 + 跳页 + 每页条数。"""
     use_t()
+    #: 当前悬停的控件键（"" / "p3" / "prev" …）。用 state 而不是直接改控件 ——
+    #: component 渲染出的控件是冻结的，见 :func:`_hover_handler`。
+    hovered, set_hovered = ft.use_state("")
 
     unit = state.data_unit or t("ui.paging.unit")
-    rst_controls = []
-    if os.environ.get("CS_UI_DEBUG_PAGING"):
-        print(
-            f"[Paging] render current_page={state.current_page} "
-            f"pages={state.sum_page_nums}",
-            flush=True,
-        )
+    total_pages = state.sum_page_nums
+    # state 里的页码可能因为数据变少而越界；渲染用夹紧后的值，回调仍走 state
+    current = min(max(state.current_page, 1), max(1, total_pages))
 
-    rst_controls.append(
-        PrevNextPageButton(
-            icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_LEFT,
-            on_click=state.click_update_page,
-            tooltip=t("ui.paging.first"),
-            data=1,
-            disabled=(state.current_page == 1),
-            icon_color=ft.Colors.GREY if (state.current_page == 1) else None,
-        )
-    )
-    rst_controls.append(
-        PrevNextPageButton(
-            icon=ft.Icons.KEYBOARD_ARROW_LEFT,
-            on_click=state.click_update_page,
-            tooltip=t("ui.paging.prev"),
-            data=state.current_page - 1,
-            disabled=(state.current_page == 1),
-            icon_color=ft.Colors.GREY if (state.current_page == 1) else None,
-        )
+    total = ft.Text(
+        t("ui.paging.total", n=format_number(state.sum_data_nums), unit=unit),
+        size=FONT_SIZE["body"],
+        color=LABEL_FG,
+        # 总数目然宽度、不参与弹性分配。弹性空间交给页码那条 ——
+        # 它被压扁时自己滚，总数和右侧两组永远是完整的（见 _pager）。
+        no_wrap=True,
+        overflow=ft.TextOverflow.ELLIPSIS,
     )
 
-    for _page in get_center_pages(state.current_page, state.sum_page_nums):
-        if _page == -1:
-            rst_controls.append(ft.Text("..."))
-        elif _page == state.current_page:
-            # 当前页
-            rst_controls.append(
-                NowPageButton(
-                    content=str(_page),
-                    on_click=state.click_update_page,
-                    tooltip=t("ui.paging.page", n=_page),
-                    data=_page,
-                )
+    controls: list[ft.Control] = [total]
+    if total_pages:
+        controls.append(
+            _pager(
+                state,
+                total_pages,
+                current,
+                hovered,
+                lambda k: _hover_handler(k, set_hovered),
             )
+        )
+        controls.append(_jumper(state))
+    controls.append(_size_picker(state, unit))
 
-        else:
-            # 其他页
-            rst_controls.append(
-                OtherPageButton(
-                    content=str(_page),
-                    on_click=state.click_update_page,
-                    tooltip=t("ui.paging.page", n=_page),
-                    data=_page,
-                )
-            )
-    # 下一页按钮
-    rst_controls.append(
-        PrevNextPageButton(
-            icon=ft.Icons.KEYBOARD_ARROW_RIGHT,
-            on_click=state.click_update_page,
-            tooltip=t("ui.paging.next"),
-            data=state.current_page + 1,
-            disabled=state.current_page >= state.sum_page_nums,
-            icon_color=ft.Colors.GREY
-            if state.current_page >= state.sum_page_nums
-            else None,
-        )
-    )
-    rst_controls.append(
-        PrevNextPageButton(
-            icon=ft.Icons.KEYBOARD_DOUBLE_ARROW_RIGHT,
-            on_click=state.click_update_page,
-            tooltip=t("ui.paging.last"),
-            data=state.sum_page_nums,
-            disabled=(state.current_page >= state.sum_page_nums),
-            icon_color=ft.Colors.GREY
-            if (state.current_page >= state.sum_page_nums)
-            else None,
-        )
-    )
-    v_now_page = ft.Row(controls=rst_controls)
-    v_goto_page = ft.TextField(
-        on_submit=state.handle_goto_page_submit,
-        width=40,
-        height=32,
-        text_align=ft.TextAlign.CENTER,
-        content_padding=0,
-        border=outline_input(4, ft.Colors.GREY_300, ft.Colors.BLUE),
-    )
-    # 每页条数的候选。**当前值不在候选里时要补进去** ——
-    # 否则 Flutter 侧匹配不到 value，下拉框显示空白且点不开。
-    # （真机踩到：Table 用 rows_per_page=8，Paging 的候选只有 5/10/15/20/30/40/50。）
-    per_page_options = [5, 10, 15, 20, 30, 40, 50]
-    current_per_page = state.data_per_page_nums
-    if current_per_page not in per_page_options:
-        per_page_options = sorted({*per_page_options, current_per_page})
-
-    v_num_of_row_changer_field = ft.Dropdown(
-        options=[ft.DropdownOption(str(_)) for _ in per_page_options],
-        value=str(current_per_page),
-        width=88,
-        # height=32,
-        # text_align=ft.TextAlign.CENTER,
-        dense=True,
-        content_padding=0,
-        border=outline_input(4, ft.Colors.GREY_300, ft.Colors.BLUE),
-        scale=0.9,
-        on_select=state.handle_change_per_page_nums,
-    )
-    if os.environ.get("CS_UI_DEBUG_PAGING"):
-        print(
-            f"[Paging] dropdown value={current_per_page!r} "
-            f"options={[o.key for o in v_num_of_row_changer_field.options]}",
-            flush=True,
-        )
-    # 「前往 [x] ___」：有些语言（英文）没有"页"这个后缀，语言包给空串时
-    # 直接不渲染那个 Text，免得留下一个孤立的空格。
-    page_unit = t("ui.paging.page_unit")
-    goto_controls: list[ft.Control] = [
-        v_now_page,
-        ft.Text(t("ui.paging.goto")),
-        v_goto_page,
-        *([ft.Text(page_unit)] if page_unit else []),
-    ]
+    # 单行、不换行：``wrap`` 会让 expand 撑满整行，把右侧控件全挤到下一行去。
+    # 窄容器靠 ``total`` 的柔性收缩兜底（它带 ELLIPSIS，能被压到很小）。
     return ft.Row(
-        controls=[
-            ft.Text(t("ui.paging.total", n=format_number(state.sum_data_nums), unit=unit)),
-            ft.Row(controls=goto_controls, spacing=6),
-            ft.Row(
-                controls=[
-                    ft.Text(t("ui.paging.per_page")),
-                    v_num_of_row_changer_field,
-                    ft.Text(unit),
-                ]
-            ),
-        ]
+        spacing=GROUP_GAP,
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=controls,
     )
 
 
@@ -305,9 +453,6 @@ def App():
             f"每页条数: {per_page_nums}"
         ),
     )
-    # def on_change_page(data):
-    # print(f'当前页码: {data}')
-
     return Paging(paging_state)
 
 
