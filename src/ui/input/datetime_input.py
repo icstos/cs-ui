@@ -256,8 +256,7 @@ class DateTimeInput(CalendarPanel, Label):
         else:
             self.value = self._normalize(self.value)
         self._emitted: datetime.datetime | None = self.value  # 上次广播出去的值
-        self._view_year: int = self.value.year  # 面板显示的年份
-        self._view_month: int = self.value.month  # 面板显示的月份
+        self._views: list[tuple[int, int]] = [(self.value.year, self.value.month)]
         self._mode: str = "day"  # "day" = 月历， "month" = 年月网格
 
     # ------------------------------------------------------------------

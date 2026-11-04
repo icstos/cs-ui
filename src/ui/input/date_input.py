@@ -1,54 +1,68 @@
 """日期选择器 (DateInput)。
 
-交互模型对齐主流桌面框架的日期选择器（Element Plus / Ant Design / WinUI
-``CalendarDatePicker``）：**一个输入框，点开就挂出一张月历**。
+交互模型对齐 Element Plus / Ant Design 的日期选择器：**一个输入框，点开挂出面板**。
+面板有三种粒度（日 / 月 / 年），``type`` 决定选什么、能选几个、要不要成对选：
 
-- 折叠态是一个和普通输入框等高的框：左侧格式化日期、右侧日历图标；
-- 点击框体的任意位置（含图标）挂出月历面板，**面板不占布局高度、不推下方内容**；
-- 月历按"上一月 / 年月标题 / 下一月"组织，点标题切到**年月网格**快速跨年跳转；
-- 点某一天即选中并收起；「今天」一键回到今天，「清除」清空（可关）；
-- 框内文字可直接键入，支持 ``2026-09-26`` / ``2026/9/26`` / ``2026.9.26`` /
-  ``20260926`` / ``2026年9月26日``，回车提交、失焦还原；非法输入框体转红边；
-- 超出 ``min_date`` / ``max_date`` / ``year_range`` 的日子以灰字禁用，不可点；
-- 点面板外部（全屏透明遮罩）即收起。
+===================  ==========================  ================================================
+``type``             值形状                       说明
+===================  ==========================  ================================================
+``date``             ``date | None``             单个日期
+``week``             ``date | None``             整周（值是周内任意一天，显示"2026 年第 39 周"）
+``month``            ``date | None``             单月（值的日恒为 1）
+``year``             ``date | None``             单年（值的月日恒为 1-1）
+``dates``            ``list[date]``              多个日期
+``months``           ``list[date]``              多个月份
+``years``            ``list[date]``              多个年份
+``daterange``        ``(date, date) | None``     日期范围，两列月历并排
+``monthrange``       ``(date, date) | None``     月份范围，两列月网格并排
+===================  ==========================  ================================================
+
+设计要点：
+
+- **一套渲染，四套语义**。日 / 月 / 年三种网格共用同一套格子绘制，选中、区间连条、
+  今天、禁用、非本月这些状态全部由 :class:`~ui.input.calendar_panel.DayMark`
+  表达 —— 所以"选多个"和"选范围"不是两个组件，只是同一个格子算出了不同的标记。
+- **粒度可下钻**。``date`` 里点标题进月网格、再点进年网格，选完逐层退回；
+  ``month`` 从月网格起步，点标题进年网格。一年一跳、十年一跳，不用连点十几次翻页。
+- **范围永远是两列**。左早右晚，翻页整体平移，中间不做"跨年就断"的特殊处理。
+- **值只有一种类型**：``datetime.date``。月份就是"该月 1 号"，年份就是"该年 1 月 1 日"，
+  不给调用方再造一套 ``YearMonth`` 类型 —— 比较、格式化、序列化都还是标准库那套。
 
 .. note::
     面板挂在**页面浮层**（``page.overlay``）上，因此折叠态的高度就是整个组件
     占用布局的高度。浮层需要 ``page.render`` 这条根视图路径；若宿主用的是
     ``page.render_views``（Router 的 ``manage_views=True`` 视图栈），浮层层会被
-    视图盖住，此时组件**自动降级为流内展开**（面板会占高度）。也可用
-    ``float_panel=False`` 强制走流内展开。判定见 :func:`ui.core.float_layer.overlay_usable`。
+    视图盖住，此时组件**自动降级为流内展开**。也可用 ``float_panel=False``
+    强制走流内展开。判定见 :func:`ui.core.float_layer.overlay_usable`。
 
 .. note::
     ``TextField`` 在 flet 1.0.0 里会吞掉所有指针事件 —— 真机实测外层
-    ``GestureDetector`` 完全收不到点击（``read_only`` / ``can_request_focus=False``
-    同样如此，只有 ``ignore_pointers=True`` 放行）。因此面板**未展开**时把输入框
-    置为 ``ignore_pointers``，让整框的点击都归外层；**展开后**再恢复响应，这样
-    点框内文字就能落光标、直接键盘输入。日历图标本身不挂事件，它上面的点击
-    自然冒泡到外层 —— 于是同一个图标在收起时"展开"、在展开时"收起"。
+    ``GestureDetector`` 完全收不到点击。因此面板**未展开**时把输入框置为
+    ``ignore_pointers``，让整框的点击都归外层；**展开后**再恢复响应，这样点框内
+    文字就能落光标、直接键盘输入。
 
 .. note::
-    月历本体（头部翻页 / 星期表头 / 6 × 7 日期网格 / 年月网格 / 配色 / 悬停）
-    全部来自 :class:`ui.input.calendar_panel.CalendarPanel`，与
-    :class:`~ui.input.datetime_input.DateTimeInput` 共用同一套像素栅格。
+    **键入只对单值类型开放**（``date`` / ``month`` / ``year``）：范围与多选没有
+    无歧义的文本写法（``~`` 还是 ``-``？两个日期还是一个？），与其猜，不如让
+    面板去点 —— 这也是桌面日历的通行做法。
 
 用法::
 
     d = DateInput(label="开始日期", value=datetime.date(2026, 9, 26))
-    ...
-    container = d.ui()
+    r = DateInput(label="活动周期", type="daterange")
+    m = DateInput(label="生效月份", type="monthrange")
 """
 
 from __future__ import annotations
 
 import datetime
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 import flet as ft
 
 from ui.core.float_layer import use_float_layer
-from ui.core.format import format_date
+from ui.core.format import calendar_title, format_date, format_list
 from ui.core.i18n import t, use_t
 from ui.input.calendar_panel import (
     CAL_W,
@@ -57,16 +71,65 @@ from ui.input.calendar_panel import (
     FOOTER_H,
     PANEL_GAP,
     PANEL_H,
+    RANGE_W,
     TEXT_SIZE,
     WEEKDAYS,  # noqa: F401  (历史导入路径)
     CalendarPanel,
+    DayMark,
     place_panel,
 )
-from ui.input.calendar_panel import _get_days_in_month  # noqa: F401  (兼容导入)
-from ui.input.calendar_panel import _is_leap_year  # noqa: F401  (兼容导入)
+from ui.input.calendar_panel import _get_days_in_month, _norm_ym  # noqa: F401  (兼容导入)
+from ui.input.calendar_panel import _is_leap_year
 from ui.input.input import Label
 
-__all__ = ["DateInput"]
+__all__ = ["DateInput", "DateType"]
+
+#: 支持的类型。分组决定"值形状"，也决定面板列数与是否允许键入。
+SINGLE = ("date", "week", "month", "year")
+MULTI = ("dates", "months", "years")
+RANGE = ("daterange", "monthrange")
+ALL_TYPES = SINGLE + MULTI + RANGE
+
+#: 别名，供类型注解与 IDE 提示（运行时仍是普通字符串）。
+DateType = str
+
+#: 各类型的起始粒度。
+_BASE_MODE = {
+    "date": "day",
+    "week": "day",
+    "dates": "day",
+    "daterange": "day",
+    "month": "month",
+    "months": "month",
+    "monthrange": "month",
+    "year": "year",
+    "years": "year",
+}
+
+#: 值的粒度：月 -> 日恒为 1；年 -> 月日恒为 1-1。
+_MONTH_LEVEL = ("month", "months", "monthrange")
+_YEAR_LEVEL = ("year", "years")
+
+
+# ---------------------------------------------------------------------------
+# 纯函数工具
+# ---------------------------------------------------------------------------
+def _as_date(value: object) -> datetime.date | None:
+    """把入参收敛成 ``datetime.date``；``datetime`` 取日期部分，其它类型忽略。"""
+    if isinstance(value, datetime.datetime):
+        return value.date()
+    if isinstance(value, datetime.date):
+        return value
+    return None
+
+
+def _snap(day: datetime.date, granularity: str) -> datetime.date:
+    """把日期对齐到当前粒度（月 -> 1 号，年 -> 1 月 1 日）。"""
+    if granularity == "month":
+        return day.replace(day=1)
+    if granularity == "year":
+        return day.replace(month=1, day=1)
+    return day
 
 
 def _parse_date(text: str | None) -> datetime.date | None:
@@ -106,63 +169,173 @@ def _parse_date(text: str | None) -> datetime.date | None:
     return None
 
 
+def _split(text: str | None) -> list[str]:
+    """把 ``2026-09`` / ``2026年9月`` / ``202609`` 拆成数字段。"""
+    s = (text or "").strip()
+    for ch in ("年", "月", "日", "/", ".", " ", "-"):
+        s = s.replace(ch, "-")
+    return [p for p in s.split("-") if p]
+
+
+def _parse_month(text: str | None) -> datetime.date | None:
+    """解析到"月"：``2026-09`` / ``2026/9`` / ``202609`` / 只写 ``2026``（取 1 月）。"""
+    parts = _split(text)
+    try:
+        if len(parts) == 1 and parts[0].isdigit():
+            raw = parts[0]
+            if len(raw) == 6:
+                return datetime.date(int(raw[:4]), int(raw[4:]), 1)
+            if len(raw) == 4:
+                return datetime.date(int(raw), 1, 1)
+        if len(parts) == 2:
+            return datetime.date(int(parts[0]), int(parts[1]), 1)
+    except ValueError:
+        return None
+    return None
+
+
+def _parse_year(text: str | None) -> datetime.date | None:
+    """解析到"年"：``2026`` / ``2026 年``。"""
+    parts = _split(text)
+    if len(parts) == 1 and len(parts[0]) == 4 and parts[0].isdigit():
+        return datetime.date(int(parts[0]), 1, 1)
+    return None
+
+
+def week_bounds(day: datetime.date, first_weekday: int) -> tuple[datetime.date, int, int]:
+    """``day`` 所在的那一周：返回 ``(周首日, ISO 年, ISO 周号)``。
+
+    周首日跟着界面语言（中文周一、英文周日），但**周号统一按 ISO 算**：取该行的
+    第 4 天（周一制就是周四）的 ISO 周号。ISO 周由周四定义，周一制算出来是精确值；
+    周日制下那行是 周日..周六，其中周三、周四同属一个 ISO 周，取周三也一样 ——
+    所以这一个公式在两种首日下都对。
+    """
+    start = day - datetime.timedelta(days=(day.weekday() - first_weekday) % 7)
+    iso = (start + datetime.timedelta(days=3)).isocalendar()
+    return start, iso.year, iso.week
+
+
 @ft.observable
 @dataclass
 class DateInput(CalendarPanel, Label):
-    """日期选择器：输入框 + 悬浮月历。
+    """日期 / 周 / 月 / 年 / 多选 / 范围 选择器。
 
     Args:
-        value: 当前日期。``None`` 表示未选择（显示 ``placeholder``）。
+        value: 当前值。形状随 ``type`` 变化（见模块 docstring 的表）：单值是
+            ``date | None``，多选是 ``list[date]``，范围是 ``(start, end)``；
+            范围允许半填 ``(start, None)``。
+        type: 选择类型，见 :data:`ALL_TYPES`。默认 ``"date"``。
         min_date: 可选下界（含当天）。``None`` 时取 ``year_range`` 的起始年 1 月 1 日。
         max_date: 可选上界（含当天）。``None`` 时取 ``year_range`` 的结束年 12 月 31 日。
         year_range: 可选的年份范围，默认 ``(1900, 2100)``。
-        display_format: 框内日期的 ``strftime`` 格式。``None``（默认）跟随界面
-            语言：中文 ``2026-09-26``、英文 ``09/26/2026``。显式传值可锁定格式。
-        placeholder: 未选择时的占位文本。``None``（默认）取语言包里的
-            「请选择日期 / Select a date」。
-        first_day_weekday: 每周首日，索引与 ``datetime.date.weekday()`` 相同
-            —— ``0`` = 周一、``6`` = 周日。``None``（默认）跟随语言：中文周一起、
-            英文周日起。
-        weekday_labels: 7 个星期标签，索引同上。``None``（默认）取语言包。
-        width: 输入框宽度，默认 240。
+        display_format: 单值日期的 ``strftime`` 格式。``None``（默认）跟随界面语言。
+        placeholder: 未选择时的占位文本。``None``（默认）取语言包里对应类型的文案。
+        separator: 范围两端之间的连接符。``None``（默认）取语言包的 ``" ~ "``。
+        first_day_weekday: 每周首日，``0`` = 周一 … ``6`` = 周日。``None`` 跟随语言。
+        weekday_labels: 7 个星期标签，索引同上。``None`` 取语言包。
+        width: 输入框宽度。``None``（默认）按类型取：单值 240，范围 300
+            —— 范围要放得下 "2026-09-01 ~ 2026-09-20" 这一整串。
         height: 输入框高度，默认 40。
-        clearable: 是否允许清空（框内 × 与页脚「清除」），默认 True。
+        clearable: 是否允许清空，默认 True。
         disabled: 是否禁用。
         is_open: 面板是否展开（运行期状态，可代码控制）。
-        float_panel: 面板是否走页面浮层。``None``（默认）表示自动：浮层可用时
-            悬挂，否则退化为流内展开。``True`` / ``False`` 强制指定。
-        on_change: 日期变化回调，接收最新的 ``datetime.date | None``。
+        float_panel: 面板是否走页面浮层。``None`` 自动，``True`` / ``False`` 强制。
+        on_change: 值变化回调，接收与 ``value`` 同形状的最新值。
     """
 
-    value: datetime.date | None = None
+    value: datetime.date | Sequence[datetime.date] | None = None
+    type: DateType = "date"
     min_date: datetime.date | None = None
     max_date: datetime.date | None = None
     year_range: tuple[int, int] = (1900, 2100)
     display_format: str | None = None
     placeholder: str | None = None
+    separator: str | None = None
     first_day_weekday: int | None = None
     weekday_labels: tuple[str, ...] | None = None
-    width: int | float = FIELD_WIDTH
+    width: int | float | None = None
     height: int | float = FIELD_HEIGHT
     clearable: bool = True
     disabled: bool = False
     is_open: bool = False
     float_panel: bool | None = None
-    on_change: Callable[[datetime.date | None], None] | None = None
+    on_change: Callable[[object], None] | None = None
 
     def __post_init__(self) -> None:
+        if self.type not in ALL_TYPES:
+            raise ValueError(
+                f"DateInput.type 不支持 {self.type!r}，可选：{'/'.join(ALL_TYPES)}"
+            )
+        if self.width is None:
+            # 范围要同时放下两个日期，240 会把右半边吃掉
+            self.width = FIELD_WIDTH + 60 if self.type in RANGE else FIELD_WIDTH
         # 运行期状态：下划线开头 => 不参与序列化，变更后靠 notify() 重绘。
+        self._sel: list[datetime.date] = self._normalize_sel(self.value)
+        self.value = self._value_of(self._sel)  # 入参一律规整成规范形状
         self._hover: str | None = None  # 当前悬停元素的 key
+        self._hover_day: datetime.date | None = None  # 悬停的日期（区间预览用）
         self._anchor: tuple[float, float] | None = None  # 输入框左上角页面坐标
         self._field_w: float = float(self.width)  # 输入框实测宽（on_size_change 上报）
         self._field_h: float = float(self.height)
         self._text: str | None = None  # 用户正在输入的原文；None = 显示格式化值
         self._invalid: bool = False  # 键入内容非法（框体转红边）
-        self._emitted: datetime.date | None = self.value  # 上次广播出去的值
-        today = datetime.date.today()
-        self._view_year: int = (self.value or today).year  # 面板显示的年份
-        self._view_month: int = (self.value or today).month  # 面板显示的月份
-        self._mode: str = "day"  # "day" = 月历， "month" = 年月网格
+        self._emitted = self.value  # 上次广播出去的值
+        self._mode: str = _BASE_MODE[self.type]  # "day" / "month" / "year"
+        self._views: list[tuple[int, int]] = self._initial_views()
+
+    # ------------------------------------------------------------------
+    # 值：规整 / 还原
+    # ------------------------------------------------------------------
+    @property
+    def granularity(self) -> str:
+        """值的粒度：``"day"`` / ``"month"`` / ``"year"``。"""
+        if self.type in _MONTH_LEVEL:
+            return "month"
+        if self.type in _YEAR_LEVEL:
+            return "year"
+        return "day"
+
+    def _normalize_sel(self, value: object) -> list[datetime.date]:
+        """把任意入参收敛成内部表示：按粒度对齐、去重、升序的点列表。"""
+        granularity = self.granularity
+        if self.type in RANGE:
+            items = list(value) if isinstance(value, (tuple, list)) else []
+            points = [
+                _snap(day, granularity)
+                for day in (_as_date(item) for item in items[:2])
+                if day is not None
+            ]
+            return sorted(points) if len(points) == 2 else points
+        if self.type in MULTI:
+            items = value if isinstance(value, (list, tuple, set)) else [value]
+            found = {
+                _snap(day, granularity)
+                for day in (_as_date(item) for item in items)
+                if day is not None
+            }
+            return sorted(found)
+        day = _as_date(value)
+        return [_snap(day, granularity)] if day is not None else []
+
+    def _value_of(self, sel: list[datetime.date]) -> object:
+        """内部表示 -> 对外的 ``value`` 形状。"""
+        if self.type in RANGE:
+            if not sel:
+                return None
+            return (sel[0], sel[1] if len(sel) > 1 else None)
+        if self.type in MULTI:
+            return list(sel)
+        return sel[0] if sel else None
+
+    def _initial_views(self) -> list[tuple[int, int]]:
+        """面板初始显示的年月：优先落在已选值上，否则今天。"""
+        base = self._sel[0] if self._sel else datetime.date.today()
+        year, month = base.year, base.month
+        if self.type == "monthrange":
+            return [(year, month), (year + 1, month)]
+        if self.type in RANGE:
+            return [(year, month), _norm_ym(year, month + 1)]
+        return [(year, month)]
 
     # ------------------------------------------------------------------
     # 公开操作
@@ -171,12 +344,23 @@ class DateInput(CalendarPanel, Label):
         """展开面板；``focus`` 指定面板先跳到的月份（默认跟随当前值 / 今天）。"""
         if self.disabled or self.is_open:
             return
-        target = focus or self.value or datetime.date.today()
-        self._view_year, self._view_month = target.year, target.month
-        self._mode = "day"
+        self._mode = _BASE_MODE[self.type]
         self._invalid = False
+        self._hover = None
+        self._hover_day = None
+        base = focus or (self._sel[0] if self._sel else datetime.date.today())
+        self._views = self._views_from(base)
         self.is_open = True
         self.notify()  # type: ignore[attr-defined]
+
+    def _views_from(self, base: datetime.date) -> list[tuple[int, int]]:
+        """以 ``base`` 为左列，向右补出第二列（范围类型才有）。"""
+        year, month = base.year, base.month
+        if self.type == "monthrange":
+            return [(year, month), (year + 1, month)]
+        if self.type in RANGE:
+            return [(year, month), _norm_ym(year, month + 1)]
+        return [(year, month)]
 
     def close(self) -> None:
         """收起面板（放弃未提交的键入内容）。"""
@@ -184,6 +368,7 @@ class DateInput(CalendarPanel, Label):
             return
         self.is_open = False
         self._hover = None
+        self._hover_day = None
         self._text = None
         self.notify()  # type: ignore[attr-defined]
 
@@ -192,48 +377,82 @@ class DateInput(CalendarPanel, Label):
         self.close() if self.is_open else self.open()
 
     def clear(self) -> None:
-        """清空已选日期。"""
-        if self.value is None:
+        """清空已选值。"""
+        if not self._sel:
             return
-        self.value = None
-        self._text = None
-        self._invalid = False
-        self._emit()
+        self._commit([])
 
-    def select(self, value: datetime.date, close: bool = True) -> None:
-        """选中某个日期；``close=False`` 时保持面板展开。"""
-        if not self._accepts(value):
+    def select(self, value: object, close: bool = True) -> None:
+        """选中一个值（形状随 ``type``）；``close=False`` 时保持面板展开。
+
+        越界的值**整体拒绝**而不是挑着收 —— 范围里只收一半会得到一个
+        用户没表达过的区间，比什么都不做更难排查。
+        """
+        self._assign(value, close=close)
+
+    def set_value(self, value: object) -> None:
+        """等价于 ``select(value, close=False)``，语义更贴近"外部灌值"。"""
+        self._assign(value)
+
+    def _assign(self, value: object, *, close: bool = False) -> None:
+        """校验范围后再写。越界入参静默忽略（与面板点选的边界行为一致）。"""
+        sel = self._normalize_sel(value)
+        if any(not self._accepts_point(point) for point in sel):
             return
-        self.value = value
-        self._text = None
-        self._invalid = False
-        self._view_year, self._view_month = value.year, value.month
-        self._emit()
-        if close:
-            self.close()
+        self._commit(sel, close=close)
+
+    def refresh(self) -> None:
+        """外部直接改过 ``value`` 后调用：重新规整内部状态并重绘。"""
+        self._sel = self._normalize_sel(self.value)
+        self.value = self._value_of(self._sel)
+        self._emitted = self.value
+        self._views = self._initial_views()
+        self.notify()  # type: ignore[attr-defined]
 
     # ------------------------------------------------------------------
     # 只读属性
     # ------------------------------------------------------------------
     @property
     def display_text(self) -> str:
-        """当前日期的格式化文本，空值返回空串，便于表单提交 / 日志。
-
-        ``display_format`` 显式指定时按 ``strftime`` 走，否则交给
-        :func:`ui.core.format.format_date` 生成**当前语言**的写法。
-        """
-        if self.value is None:
+        """当前值的文本，空值返回空串，便于表单提交 / 日志。"""
+        if not self._sel:
             return ""
+        if self.type in RANGE:
+            head = self._fmt(self._sel[0])
+            if len(self._sel) > 1:
+                return f"{head}{self._sep}{self._fmt(self._sel[1])}"
+            return f"{head}{self._sep}"  # 半填：留住连接符，提示"还差一个"
+        if self.type in MULTI:
+            # 日期串最长（10 字符），只留一项再加 "+N"，否则 240px 的框必然截断
+            limit = 1 if self.type == "dates" else 2
+            return format_list((self._fmt(day) for day in self._sel), limit=limit)
+        if self.display_format and self.granularity == "day":
+            return self._sel[0].strftime(self.display_format)
+        return self._fmt(self._sel[0])
+
+    @property
+    def _sep(self) -> str:
+        return self.separator or t("ui.format.range_sep")
+
+    def _fmt(self, day: datetime.date) -> str:
+        """按当前类型的粒度格式化一个点。"""
+        if self.granularity == "month":
+            return calendar_title(day.year, day.month)
+        if self.granularity == "year":
+            return calendar_title(day.year, 1, mode="year")
+        if self.type == "week":
+            _, iso_year, week = week_bounds(day, self._cal_first_day())
+            return t("ui.date.week", year=iso_year, n=week)
         if self.display_format:
-            return self.value.strftime(self.display_format)
-        return format_date(self.value)
+            return day.strftime(self.display_format)
+        return format_date(day)
 
     @property
     def _min(self) -> datetime.date:
         """可选下界。"""
         if self.min_date is not None:
             return self.min_date
-        lo, hi = sorted(self.year_range)
+        lo, _hi = sorted(self.year_range)
         return datetime.date(lo, 1, 1)
 
     @property
@@ -241,33 +460,192 @@ class DateInput(CalendarPanel, Label):
         """可选上界。"""
         if self.max_date is not None:
             return self.max_date
-        lo, hi = sorted(self.year_range)
+        _lo, hi = sorted(self.year_range)
         return datetime.date(hi, 12, 31)
 
     @property
     def show_clear_link(self) -> bool:
         """页脚是否显示「清除」。"""
-        return self.clearable and self.value is not None
+        return self.clearable and bool(self._sel)
+
+    def _show_clear(self) -> bool:
+        """框内 ×：可清空、未禁用、且当前有值。"""
+        return self.clearable and not self.disabled and bool(self._sel)
+
+    @property
+    def _editable(self) -> bool:
+        """是否允许键入：只有单值类型有无歧义的文本写法。"""
+        return self.type in ("date", "month", "year")
+
+    def _accepts_point(self, day: datetime.date) -> bool:
+        """``day``（已对齐粒度）是否落在可选范围内。"""
+        return self._min <= day <= self._max
+
+    #: 老名字，``DateTimeInput`` 与既有测试按这个名字调用。
+    _accepts = _accepts_point
 
     # ------------------------------------------------------------------
-    # 月历钩子（其余月历能力来自 CalendarPanel）
+    # 月历钩子
     # ------------------------------------------------------------------
+    def _cal_view_count(self) -> int:
+        return 2 if self.type in RANGE else 1
+
     def _cal_bounds(self) -> tuple[datetime.date, datetime.date]:
         return self._min, self._max
 
-    def _cal_pick(self, day: datetime.date) -> None:
-        """点某一天：选中并收起。"""
-        self.select(day)
+    def _cal_picks_month(self) -> bool:
+        return self.type in ("month", "months", "monthrange")
 
-    def _accepts(self, day: datetime.date) -> bool:
-        """``day`` 是否落在可选范围内。"""
-        return self._min <= day <= self._max
+    def _cal_picks_year(self) -> bool:
+        return self.type in ("year", "years")
+
+    def _hover_point(self) -> datetime.date | None:
+        """悬停日期对齐到当前粒度（区间预览要用同一套坐标）。"""
+        day = self._hover_day
+        return None if day is None else _snap(day, self.granularity)
+
+    def _range_mark(self, point: datetime.date) -> DayMark:
+        """区间 / 整周的连条：起终点画实心圆，中间填浅色带，两端收圆角。"""
+        if not self._sel:
+            return DayMark()
+        start = self._sel[0]
+        end = self._sel[1] if len(self._sel) > 1 else self._hover_point()
+        selected = point == start or (end is not None and point == end)
+        if end is None or end == start:
+            return DayMark(selected=point == start)
+        lo, hi = (start, end) if start <= end else (end, start)
+        if lo <= point <= hi:
+            return DayMark(
+                selected=selected,
+                band=True,
+                round_left=point == lo,
+                round_right=point == hi,
+            )
+        return DayMark(selected=selected)
+
+    def _cal_marks(self, day: datetime.date) -> DayMark:
+        if self.type == "week":
+            row = self._week_start(day)
+            if self._sel and self._week_start(self._sel[0]) == row:
+                return DayMark(band=True, selected=day == self._sel[0])
+            hovered = self._hover_day
+            return DayMark(band=hovered is not None and self._week_start(hovered) == row)
+        if self.type == "dates":
+            return DayMark(selected=day in self._sel)
+        if self.type in RANGE:
+            return self._range_mark(day)
+        return DayMark(selected=bool(self._sel) and day == self._sel[0])
+
+    def _cal_month_marks(self, year: int, month: int) -> DayMark:
+        point = datetime.date(year, month, 1)
+        if self.type == "months":
+            return DayMark(selected=point in self._sel)
+        if self.type in RANGE:
+            return self._range_mark(point)
+        # 单值类型：值可能是"某月 26 号"，比较前先对齐到月，否则下钻到月网格
+        # 时当前月不高亮 —— 看起来像"什么都没选"。
+        return DayMark(selected=bool(self._sel) and _snap(self._sel[0], "month") == point)
+
+    def _cal_year_marks(self, year: int) -> DayMark:
+        point = datetime.date(year, 1, 1)
+        if self.type == "years":
+            return DayMark(selected=point in self._sel)
+        return DayMark(selected=bool(self._sel) and _snap(self._sel[0], "year") == point)
+
+    def _week_start(self, day: datetime.date) -> datetime.date:
+        return week_bounds(day, self._cal_first_day())[0]
+
+    # ------------------------------------------------------------------
+    # 点选
+    # ------------------------------------------------------------------
+    def _cal_pick(self, day: datetime.date) -> None:
+        """点某一天：按类型决定"选值收起 / 切换 / 记区间端点"。"""
+        if self.disabled:
+            return
+        if self.type == "week":
+            self._commit([self._week_start(day)], close=True)
+        elif self.type == "dates":
+            self._toggle(day)
+        elif self.type == "daterange":
+            self._pick_range(day)
+        else:
+            self._commit([day], close=True)
+
+    def _cal_pick_month(self, year: int, month: int, idx: int = 0) -> None:
+        """点某个月（月选择器 / 月份范围）。"""
+        if self.disabled:
+            return
+        point = datetime.date(year, month, 1)
+        if self.type == "months":
+            self._toggle(point)
+        elif self.type == "monthrange":
+            self._pick_range(point)
+        else:
+            self._commit([point], close=True)
+
+    def _cal_pick_year(self, year: int, idx: int = 0) -> None:
+        """点某个年（年选择器 / 多年选择）。"""
+        if self.disabled:
+            return
+        point = datetime.date(year, 1, 1)
+        if self.type == "years":
+            self._toggle(point)
+        else:
+            self._commit([point], close=True)
+
+    def _pick_today(self) -> None:
+        """页脚「今天」：交给点选逻辑处理，各类型语义自然一致。"""
+        self._cal_pick(datetime.date.today())
+
+    # ------------------------------------------------------------------
+    # 写值
+    # ------------------------------------------------------------------
+    def _toggle(self, point: datetime.date) -> None:
+        """多选：有就去掉，没有就加上（保持升序，显示稳定）。"""
+        if point in self._sel:
+            self._commit([day for day in self._sel if day != point])
+        else:
+            self._commit(sorted([*self._sel, point]))
+
+    def _pick_range(self, point: datetime.date) -> None:
+        """范围：第一下记起点，第二下补终点（自动纠正先后），第三下重新开始。"""
+        if len(self._sel) != 1:
+            self._commit([point])
+            return
+        first = self._sel[0]
+        lo, hi = (first, point) if first <= point else (point, first)
+        self._commit([lo, hi], close=True)
+
+    def _commit(
+        self,
+        sel: list[datetime.date],
+        *,
+        close: bool = False,
+        text: str | None = None,
+    ) -> None:
+        """内部唯一写入口：同步 ``value`` / 视图 / 键入态，然后广播。
+
+        ``text`` 只在"边打字边生效"时传：用户正在输入的原文要留着，
+        否则每敲一个字符光标就会跳回末尾。
+        """
+        self._sel = list(sel)
+        self.value = self._value_of(self._sel)
+        self._text = text
+        self._invalid = False
+        self._hover = None
+        self._hover_day = None
+        # 单值类型选完就把面板挪到那个月（多选 / 范围不挪，否则会打断连续点选）
+        if self.type in SINGLE and self._sel:
+            self._views = self._views_from(self._sel[0])
+        self._emit()
+        if close:
+            self.close()
 
     def _emit(self) -> None:
         """广播变化。
 
-        ``on_change`` **按值变化去重**：同一个日期只回调一次，重复提交 / 点到
-        已选中的那天 / 键入与当前值相同的文本都不会重复触发外部回调。
+        ``on_change`` **按值变化去重**：同一个值只回调一次 —— 重复点已选中的
+        那一天、键入与当前值相同的文本都不会重复触发外部回调。
         """
         if self.value != self._emitted:
             self._emitted = self.value
@@ -281,31 +659,21 @@ class DateInput(CalendarPanel, Label):
     @ft.component
     def ui(self) -> ft.Control:
         """构建日期选择器 UI。"""
-        use_t()  # 订阅语言：占位符、页脚、月历标题、星期名都要跟着切
+        use_t()  # 订阅语言：占位符、页脚、标题、星期名都要跟着切
         page = ft.context.page
-        field = self._build_field(
-            self._text_field(),
-            ft.Icon(
-                ft.Icons.CALENDAR_MONTH,
-                size=18,
-                color=ft.Colors.OUTLINE if self.disabled else ft.Colors.ON_SURFACE_VARIANT,
-            ),
-        )
+        field = self._build_field(self._text_field(), self._trailing_icon())
         panel = self._build_panel()
         floating = self._should_float(page)
 
         if floating:
-            # 面板在浮层里，布局只占折叠态的高度。
-            body: ft.Control = field
+            body: ft.Control = field  # 面板在浮层里，布局只占折叠态的高度
         elif self.is_open and not self.disabled:
-            # 降级：面板流内展开，下方内容随之下移。
             body = ft.Column(controls=[field, panel], spacing=PANEL_GAP)
         else:
             body = field
 
-        left, top, bottom = place_panel(
-            page, self._anchor, self._field_h, CAL_W, PANEL_H
-        )
+        width = self._panel_width()
+        left, top, bottom = place_panel(page, self._anchor, self._field_h, width, PANEL_H)
         # 无条件调用（hook 顺序必须稳定）；visible=False 时浮层自动移除。
         # hole 把输入框从遮罩里挖出来：展开后还要能点框内文字落光标。
         use_float_layer(
@@ -321,28 +689,50 @@ class DateInput(CalendarPanel, Label):
 
         return self._with_label(body)
 
+    def _panel_width(self) -> float:
+        """面板宽：范围类型两列并排，其余一列。"""
+        return RANGE_W if self.type in RANGE else CAL_W
+
     # ---- 输入框 ----
+
+    def _trailing_icon(self) -> ft.Control:
+        """尾图标：范围类型用区间图标，其余用日历图标。"""
+        icon = ft.Icons.DATE_RANGE if self.type in RANGE else ft.Icons.CALENDAR_MONTH
+        return ft.Icon(
+            icon,
+            size=18,
+            color=ft.Colors.OUTLINE if self.disabled else ft.Colors.ON_SURFACE_VARIANT,
+        )
 
     def _text_field(self) -> ft.Control:
         """框内文本。收起态 ``ignore_pointers`` —— 让点击穿透到外层手势。"""
+        editable = self._editable and not self.disabled
         return ft.TextField(
             value=self._text if self._text is not None else self.display_text,
             border=ft.NoInputBorder(),
             filled=False,
             dense=True,
             text_size=TEXT_SIZE,
-            color=self._fg,
+            color=ft.Colors.ON_SURFACE if not self.disabled else ft.Colors.OUTLINE,
             content_padding=ft.Padding.symmetric(vertical=6),
-            hint_text=self.placeholder or t("ui.date.placeholder"),
+            hint_text=self.placeholder or t(f"ui.date.ph.{self.type}"),
             hint_style=ft.TextStyle(size=TEXT_SIZE, color=ft.Colors.OUTLINE),
             keyboard_type=ft.KeyboardType.DATETIME,
-            read_only=self.disabled,
+            read_only=not editable,
             # 关键：收起（或禁用）时不吃指针事件，否则外层 GestureDetector 拿不到点击。
-            ignore_pointers=self.disabled or not self.is_open,
-            on_change=None if self.disabled else self._on_text_change,
-            on_submit=None if self.disabled else self._on_text_submit,
-            on_blur=None if self.disabled else self._on_text_blur,
+            ignore_pointers=self.disabled or not self.is_open or not editable,
+            on_change=None if not editable else self._on_text_change,
+            on_submit=None if not editable else self._on_text_submit,
+            on_blur=None if not editable else self._on_text_blur,
         )
+
+    def _parse(self, text: str | None) -> datetime.date | None:
+        """按当前类型解析键入内容。"""
+        if self.type == "month":
+            return _parse_month(text)
+        if self.type == "year":
+            return _parse_year(text)
+        return _parse_date(text)
 
     def _on_text_change(self, e: ft.ControlEvent) -> None:
         """键入过程中即时解析：合法就同步 ``value`` 并广播，全程不打断输入。
@@ -353,22 +743,21 @@ class DateInput(CalendarPanel, Label):
         text = e.data or ""
         self._text = text
         self._invalid = False
-        parsed = _parse_date(text)
-        if parsed is not None and self._accepts(parsed) and parsed != self.value:
-            self.value = parsed
-            self._emit()
+        parsed = self._parse(text)
+        if parsed is not None and self._accepts_point(parsed) and parsed != self.value:
+            self._commit([parsed], text=text)
             return
         self.notify()  # type: ignore[attr-defined]
 
     def _on_text_submit(self, e: ft.ControlEvent) -> None:
         """回车提交：合法则选中并收起，非法则原样还原并标红。"""
-        parsed = _parse_date(self._text if self._text is not None else self.display_text)
+        parsed = self._parse(self._text if self._text is not None else self.display_text)
         self._text = None
-        if parsed is not None and self._accepts(parsed):
+        if parsed is not None and self._accepts_point(parsed):
             self._invalid = False
-            self.select(parsed)
+            self._commit([parsed], close=True)
             return
-        if self.value is None:
+        if not self._sel:
             # 本来就是空的，敲了半截又回车 —— 没东西可还原，也不算错。
             self._invalid = False
             self.notify()  # type: ignore[attr-defined]
@@ -386,31 +775,28 @@ class DateInput(CalendarPanel, Label):
     # ---- 面板 ----
 
     def _build_panel(self) -> ft.Control:
-        """月历面板：头部 + 星期行 + 日期网格 + 页脚。"""
+        """面板：视图（1~2 列）+ 分隔线 + 页脚。"""
         return self._panel_shell(
-            CAL_W,
+            self._panel_width(),
             ft.Column(
                 spacing=0,
-                controls=[
-                    self._cal_header(),
-                    self._cal_body(),
-                    self._divider(),
-                    self._footer(),
-                ],
+                controls=[self._cal_panel(), self._divider(), self._footer()],
             ),
         )
 
     def _footer(self) -> ft.Control:
-        """页脚：左侧「今天」，右侧「清除」（有值且可清空时）。"""
-        controls: list[ft.Control] = [
-            self._link_button(
-                "today",
-                t("ui.date.today"),
-                lambda: self.select(datetime.date.today()),
-                enabled=self._accepts(datetime.date.today()),
-            ),
-            ft.Container(expand=True),
-        ]
+        """页脚：左侧「今天」（日粒度才有），右侧「清除」（有值且可清空时）。"""
+        controls: list[ft.Control] = []
+        if self.type in ("date", "week", "dates"):
+            controls.append(
+                self._link_button(
+                    "today",
+                    t("ui.date.today"),
+                    self._pick_today,
+                    enabled=self._cal_day_enabled(datetime.date.today()),
+                )
+            )
+        controls.append(ft.Container(expand=True))
         if self.show_clear_link:
             controls.append(self._link_button("clear", t("ui.common.clear"), self.clear))
         return ft.Container(
@@ -425,61 +811,36 @@ class DateInput(CalendarPanel, Label):
 @ft.component
 def App():
     """DateInput 组件运行示例。"""
-    basic = DateInput(
-        label="开始日期",
-        is_required=True,
-        value=datetime.date(2026, 9, 26),
-        on_change=lambda d: print(f"[DateInput] 选中 {d}"),
-    )
-    empty = DateInput(label="结束日期", is_vertical=True, placeholder="未选择")
-    bounded = DateInput(
-        label="活动周期",
-        value=datetime.date(2026, 9, 10),
-        min_date=datetime.date(2026, 9, 5),
-        max_date=datetime.date(2026, 9, 20),
-    )
-    sunday_first = DateInput(
-        label="周日起头",
-        value=datetime.date(2026, 2, 28),
-        first_day_weekday=6,
-        display_format="%Y/%m/%d",
-    )
-    frozen = DateInput(
-        label="只读",
-        value=datetime.date(2026, 1, 1),
-        disabled=True,
-        clearable=False,
-    )
-
+    today = datetime.date.today()
+    items = [
+        DateInput(label="单个日期", value=datetime.date(2026, 9, 26)),
+        DateInput(label="选择周", type="week", value=datetime.date(2026, 9, 26)),
+        DateInput(label="选择月", type="month", value=datetime.date(2026, 9, 1)),
+        DateInput(label="选择年", type="year", value=datetime.date(2026, 1, 1)),
+        DateInput(label="多个日期", type="dates"),
+        DateInput(label="多个月份", type="months"),
+        DateInput(label="多个年份", type="years"),
+        DateInput(
+            label="日期范围",
+            type="daterange",
+            value=(datetime.date(2026, 9, 1), datetime.date(2026, 9, 20)),
+        ),
+        DateInput(label="月份范围", type="monthrange"),
+        DateInput(label="带边界", value=today, min_date=today, max_date=today),
+        DateInput(label="只读", value=datetime.date(2026, 1, 1), disabled=True),
+    ]
     return ft.Column(
         controls=[
             ft.Text("DateInput 日期选择器", size=20, weight=ft.FontWeight.BOLD),
             ft.Text(
-                "点框体挂出月历（悬浮、不推下方内容），点标题切年月网格，"
-                "框内可直接键入 2026-09-26 / 20260926 / 2026年9月26日",
+                "一个框挂出面板：日 / 月 / 年三种粒度，单值 / 多值 / 范围三种语义",
                 size=13,
                 color="#6b7280",
             ),
             ft.Divider(),
-            basic.ui(),
-            ft.Divider(),
-            empty.ui(),
-            ft.Divider(),
-            bounded.ui(),
-            ft.Divider(),
-            sunday_first.ui(),
-            ft.Divider(),
-            frozen.ui(),
-            ft.Divider(),
-            ft.Button(
-                content="打印当前值",
-                on_click=lambda _: print(
-                    f"{basic.value} / {empty.value} / {bounded.value} / "
-                    f"{sunday_first.value} / {frozen.value}"
-                ),
-            ),
+            *[c.ui() for c in items],
         ],
-        spacing=14,
+        spacing=12,
     )
 
 
