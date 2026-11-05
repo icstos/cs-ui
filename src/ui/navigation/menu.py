@@ -1,0 +1,900 @@
+"""菜单 (Menu) —— 侧边多级导航，支持折叠、手风琴、分组与徽标。
+
+``Menu`` （``type`` / ``size`` / ``collapse`` /
+``accordion`` / ``dot`` / ``selectedKey`` / ``expandedKeys``），
+
+``MenuItem`` 是 ``@dataclass`` 而不是 ``ft.Control``。菜单是一棵树，不是一叠控件：
+展开状态、选中链路、手风琴、缩进全都要按树算。把树交给控件图去表达，就得在渲染期
+反读 ``controls`` 的私有字段，还得处理"控件只能有一个父节点"—— 一旦某行要同时出现在
+折叠态和展开态，就炸。所以这里让 ``MenuItem`` 老老实实当节点，渲染时再生成控件。
+
+用法::
+
+    menu = Menu(
+        items=[
+            MenuItem("home", "概览", icon=ft.Icons.DASHBOARD_OUTLINED),
+            MenuGroup("运维", [
+                MenuItem(
+                    "host",
+                    "主机",
+                    icon=ft.Icons.DNS_OUTLINED,
+                    children=[
+                        MenuItem("host-list", "主机列表"),
+                        MenuItem("host-group", "主机分组"),
+                    ],
+                ),
+            ]),
+        ],
+        selected_key="host-list",
+        on_select=lambda item: print("选中", item.key),
+    )
+    Column([menu], expand=True)
+
+``Menu`` 是 ``@ft.observable`` 的，改属性即重绘 —— 不必重新构造实例::
+
+    menu.collapsed = True        # 折成图标条
+    menu.selected_key = "home"   # 外部改选中
+
+.. note::
+    别在组件函数里**每次渲染都新建** ``Menu(...)``：新实例意味着展开状态、选中状态
+    每次都被重置回初始值。用 ``use_stable`` 把实例钉住，或把它放到状态容器里。
+"""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Callable, Iterator, Sequence
+from dataclasses import dataclass, field
+from typing import Any
+
+import flet as ft
+
+from ui.core.i18n import t, use_t
+from ui.core.tokens import DURATION, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, overlay
+
+__all__ = [
+    "ORIENTATIONS",
+    "SIZES",
+    "Menu",
+    "MenuGroup",
+    "MenuItem",
+    "find_path",
+    "norm_selected",
+    "prune_expanded",
+    "row_height",
+    "toggle_expanded",
+    "visible_rows",
+    "walk",
+]
+
+# ---------------------------------------------------------------------------
+# 尺寸：三档，数值对齐 KingDesign 的 large / default / small
+# ---------------------------------------------------------------------------
+SIZES: tuple[str, ...] = ("large", "default", "small")
+ORIENTATIONS: tuple[str, ...] = ("vertical", "horizontal")
+
+ROW_H: dict[str, int] = {"large": 48, "default": 40, "small": 32}
+ROW_TEXT: dict[str, int] = {
+    "large": FONT_SIZE["title"],  # 16
+    "default": FONT_SIZE["subtitle"],  # 14
+    "small": FONT_SIZE["body"],  # 13
+}
+ROW_ICON: dict[str, int] = {"large": 20, "default": 18, "small": 16}
+
+LEAD = SPACE["3"]  # 12  行内左右留白
+ICON_GAP = SPACE["2"]  # 8   图标与文字
+ROW_GAP = 2  # 行与行之间（2px 比 4px 更"整"）
+CHEVRON = 16  # 展开箭头 / 右侧徽标的尺寸
+CHEVRON_BOX = 24  # 箭头的旋转包围盒（16 转 180° 需要 22.6 的空间）
+DOT_SIZE = 6  # 圆点直径
+GROUP_TOP = SPACE["3"]  # 12  分组标题上方的空档
+COLLAPSE_H = 40  # 折叠按钮那一行的高度
+
+# ---------------------------------------------------------------------------
+# 颜色：全走角色，明暗与主色自动跟随
+# ---------------------------------------------------------------------------
+#: 普通行：次要文字色（侧边栏里几十行，一律用正文色会整屏发亮）
+FG = ft.Colors.ON_SURFACE_VARIANT
+#: 选中项的祖先：比普通行亮一档，表示"你要找的东西在这条下面"
+FG_ACTIVE = ft.Colors.ON_SURFACE
+#: 选中项：浅主色实底 + 反相文字。**不用主色实底** —— 十几个菜单项里有一块
+#: 满饱和的蓝，视觉重量会压过页面正文本身（分页器的当前页只有一个，两回事）。
+FG_SELECTED = ft.Colors.ON_PRIMARY_CONTAINER
+BG_SELECTED = ft.Colors.PRIMARY_CONTAINER
+BG_HOVER = overlay(0.06)
+FG_DISABLED = overlay(0.38)
+FG_MUTED = ft.Colors.OUTLINE  # 展开箭头 / 分组标题
+
+
+# ---------------------------------------------------------------------------
+# 数据节点
+# ---------------------------------------------------------------------------
+@dataclass
+class MenuItem:
+    """一个菜单项。既是叶子，也可以是子菜单的父节点（看 ``children``）。
+
+    Args:
+        key: 全局唯一标识。选中、展开都用它 —— 不要拿 ``text`` 当键，
+            文案是会跟着语言变的。
+        text: 显示文本。
+        icon: 可选图标。一级项配图标最有用（折叠成图标条后，图标就是唯一信息）。
+        children: 子项。非空即为"可展开"，本身**不可选中** —— 点它是展开/收起。
+        disabled: 禁用。整行置灰且不响应点击（展开也一样）。
+        dot: 在这一项前面加个圆点（常用来标"有新内容"）。有图标时不显示 ——
+            一个位置塞两个前导符号，谁都不清楚哪个是哪个。
+        badge: 右侧徽标，传 ``str`` / ``int``（如未读数）。``None`` 不显示。
+        tooltip: 悬停提示，默认用 ``text``（折叠态只显示图标，提示很有用）。
+        data: 挂给业务的载荷，原样不碰，回调里拿走。
+    """
+
+    key: str
+    text: str
+    icon: ft.IconData | None = None
+    children: list[MenuItem] = field(default_factory=list)
+    disabled: bool = False
+    dot: bool = False
+    badge: str | int | None = None
+    tooltip: str = ""
+    data: Any = None
+
+    @property
+    def is_leaf(self) -> bool:
+        """没有子项 = 可选中。"""
+        return not self.children
+
+
+@dataclass
+class MenuGroup:
+    """一组菜单项 + 一条分组标题。
+
+    分组**只影响视觉**：展开状态、选中逻辑照旧按整棵树算。所以把任意几项
+    包进 ``MenuGroup`` 都不会改变行为，只是多一行小标题。
+
+    Args:
+        text: 标题文字。折叠态不渲染（图标条里放不下，也没有意义）。
+        items: 组内菜单项。
+    """
+
+    text: str
+    items: list[MenuItem] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# 纯函数：树的遍历与规则（单测直接断言这几个）
+# ---------------------------------------------------------------------------
+def walk(nodes: Sequence[MenuItem | MenuGroup]) -> Iterator[MenuItem]:
+    """先序遍历所有菜单项（分组会被展开，不含标题本身）。"""
+    for node in nodes:
+        if isinstance(node, MenuGroup):
+            yield from walk(node.items)
+            continue
+        yield node
+        yield from walk(node.children)
+
+
+def _tops(nodes: Sequence[MenuItem | MenuGroup]) -> list[MenuItem]:
+    """顶层菜单项（分组拍平成它们里面的项）。"""
+    out: list[MenuItem] = []
+    for node in nodes:
+        if isinstance(node, MenuGroup):
+            out.extend(node.items)
+        else:
+            out.append(node)
+    return out
+
+
+def find_path(nodes: Sequence[MenuItem | MenuGroup], key: str) -> tuple[str, ...]:
+    """从根到 ``key`` 的祖先链（**含自身**）；找不到返回空元组。
+
+    用来判断"选中项在哪个父级下面"——要给它展开、给祖先加亮。
+    """
+
+    def dig(items: Sequence[MenuItem], trail: tuple[str, ...]) -> tuple[str, ...]:
+        for item in items:
+            here = (*trail, item.key)
+            if item.key == key:
+                return here
+            got = dig(item.children, here)
+            if got:
+                return got
+        return ()
+
+    return dig(_tops(nodes), ())
+
+
+def norm_selected(nodes: Sequence[MenuItem | MenuGroup], key: str) -> str:
+    """把选中键归一到"真的是一个可选中的项"，否则返回 ``""``。
+
+    三类要拦下来：键不存在（数据换过一轮）、指向父节点（它只负责展开）、
+    以及禁用项（选中了也点不回去，高亮只会让人困惑）。
+    """
+    if not key:
+        return ""
+    for item in walk(nodes):
+        if item.key == key:
+            return "" if (item.disabled or not item.is_leaf) else key
+    return ""
+
+
+def prune_expanded(
+    nodes: Sequence[MenuItem | MenuGroup], expanded: Sequence[str]
+) -> tuple[str, ...]:
+    """丢掉已经不存在、或已经没有子项的展开键。
+
+    数据是外部给的，可能整棵换掉（切权限、换模块）。不清理的话展开集合会
+    一直膨胀，而且下次恰好有同名键时，菜单会莫名其妙地"自己开着"。
+    """
+    parents = {item.key for item in walk(nodes) if item.children}
+    keep = [key for key in dict.fromkeys(expanded) if key in parents]
+    return tuple(keep)
+
+
+def toggle_expanded(
+    nodes: Sequence[MenuItem | MenuGroup],
+    expanded: Sequence[str],
+    key: str,
+    *,
+    accordion: bool = False,
+) -> tuple[str, ...]:
+    """点了一下 ``key``：开着的关上，关着的打开。
+
+    ``accordion`` 打开时**同一层级只留一个** —— 注意不是"全菜单只留一个"：
+    真按全局算，展开子级时父级必须留着，结果就是"子级永远只有一个开着的"，
+    和用户对"手风琴"的预期（每一列同时只开一个）不符。
+    """
+    current = list(dict.fromkeys(expanded))
+    if key in current:
+        current.remove(key)
+        return tuple(current)
+
+    if accordion:
+        path = find_path(nodes, key)
+        siblings = _siblings(nodes, path)
+        current = [k for k in current if k not in siblings]
+    current.append(key)
+    return tuple(current)
+
+
+def _siblings(nodes: Sequence[MenuItem | MenuGroup], path: Sequence[str]) -> set[str]:
+    """和 ``path`` 末项同级的、可展开的兄弟键（不含自己）。"""
+    if not path:
+        return set()
+    parent = path[-2] if len(path) > 1 else ""
+    pool = _tops(nodes)
+    if parent:
+        for item in walk(nodes):
+            if item.key == parent:
+                pool = item.children
+                break
+    return {item.key for item in pool if item.children and item.key != path[-1]}
+
+
+def visible_rows(
+    nodes: Sequence[MenuItem | MenuGroup],
+    expanded: Sequence[str],
+    *,
+    collapsed: bool = False,
+) -> tuple[tuple[MenuItem, int], ...]:
+    """当前该画出来的行 ``(项, 深度)``，按显示顺序。
+
+    ``collapsed`` 时只返回顶层 —— 折叠成图标条后没有地方放子项，硬留在树里
+    只会撑出一个空行。``expanded`` 里没有的父节点，其子树整支跳过。
+    """
+    if collapsed:
+        return tuple((item, 0) for item in _tops(nodes))
+
+    shown = set(expanded)
+    rows: list[tuple[MenuItem, int]] = []
+
+    def dig(items: Sequence[MenuItem], depth: int) -> None:
+        for item in items:
+            rows.append((item, depth))
+            if item.children and item.key in shown:
+                dig(item.children, depth + 1)
+
+    dig(_tops(nodes), 0)
+    return tuple(rows)
+
+
+def row_height(size: str) -> int:
+    """档位 → 行高。非法档位退回 ``default``（不给调用方抛异常的机会）。"""
+    return ROW_H.get(size, ROW_H["default"])
+
+
+# ---------------------------------------------------------------------------
+# 组件
+# ---------------------------------------------------------------------------
+@ft.observable
+@dataclass
+class Menu:
+    """侧边菜单。
+
+    Args:
+        items: 菜单项，元素是 :class:`MenuItem` 或 :class:`MenuGroup`。
+        selected_key: 当前选中项。点击会自动更新它（半受控）—— 外部要接管就
+            在 ``on_select`` 里回写自己的值。
+        expanded_keys: 展开的父项键。构造后由菜单自己维护；外部想"默认展开某组"
+            就传进来，后续的展开收起不会回调外部（要同步用 ``on_expand``）。
+        collapsed: 折叠成图标条（仅 ``vertical``）。文字、子项、分组标题都不渲染。
+        accordion: 手风琴 —— 同一层级同时只展开一个。
+        dot: 给所有叶子项前面加圆点（单项可用 ``MenuItem.dot`` 覆盖）。
+        size: ``"large"`` / ``"default"`` / ``"small"``，行高 48 / 40 / 32。
+        orientation: ``"vertical"`` 侧边 / ``"horizontal"`` 顶栏（只渲一层）。
+        width: 垂直菜单宽度。``None`` 跟随父容器。折叠态由调用方自己收窄容器，
+            这里不擅自改 —— 宽度是布局的事，不是菜单的事。
+        header: 菜单头部的任意控件（logo、标题、搜索框）。
+        footer: 菜单底部（版本号、账户切换…）。
+        show_collapse_arrow: 底部显示一枚折叠按钮。
+        on_select: 选中叶子项时触发，入参 :class:`MenuItem`。
+        on_expand: 展开集合变化时触发，入参 ``tuple[str, ...]``。
+        on_collapse_change: 折叠状态变化时触发，入参 ``bool``。
+
+    Notes:
+        ``type="horizontal"`` 只画一层（原因见模块文档第 2 条）。``header`` /
+        ``footer`` / ``dot`` / ``show_collapse_arrow`` 都只对垂直菜单有意义。
+    """
+
+    items: list = field(default_factory=list)
+    selected_key: str = ""
+    expanded_keys: tuple[str, ...] = ()
+    collapsed: bool = False
+    accordion: bool = False
+    dot: bool = False
+    size: str = "default"
+    orientation: str = "vertical"
+    width: int | None = 240
+    header: ft.Control | None = None
+    footer: ft.Control | None = None
+    show_collapse_arrow: bool = False
+    on_select: Callable[[MenuItem], None] | None = None
+    on_expand: Callable[[tuple[str, ...]], None] | None = None
+    on_collapse_change: Callable[[bool], None] | None = None
+
+    #: 当前悬停的行键（"" / "host" / "home" …）。存在实例上而不是 ``use_state``：
+    #: ``ui()`` 是被调用方**显式调用**的（``menu.ui()``），每次外层重绘都会重建
+    #: 组件实例，hooks 里的状态跟着清零 —— 悬停会闪。字段跟着 Menu 实例走，稳。
+    _hover: str = field(default="", init=False, repr=False)
+
+    # ------------------------------------------------------------------
+    # 对外的小动作
+    # ------------------------------------------------------------------
+    def select(self, key: str) -> None:
+        """选中某一项（不触发 ``on_select``，供外部同步用）。"""
+        self.selected_key = norm_selected(self.items, key)
+
+    def expand(self, *keys: str) -> None:
+        """强制展开这些父项（``on_expand`` 照常触发）。"""
+        merged = prune_expanded(self.items, (*self.expanded_keys, *keys))
+        if merged != self.expanded_keys:
+            self.expanded_keys = merged
+            if self.on_expand:
+                self.on_expand(merged)
+
+    def toggle(self, key: str) -> None:
+        """展开 / 收起某个父项。"""
+        merged = toggle_expanded(
+            self.items, self.expanded_keys, key, accordion=self.accordion
+        )
+        if merged == self.expanded_keys:
+            return  # 禁用的父项、或键根本不存在
+        self.expanded_keys = merged
+        if self.on_expand:
+            self.on_expand(merged)
+
+    def set_collapsed(self, value: bool) -> None:
+        """折叠 / 展开整条菜单。"""
+        if value == self.collapsed:
+            return
+        self.collapsed = value
+        if self.on_collapse_change:
+            self.on_collapse_change(value)
+
+    # ------------------------------------------------------------------
+    # 内部：归一与查找
+    # ------------------------------------------------------------------
+    def _repaint(self) -> None:
+        """请求重绘。
+
+        名字**不能**叫 ``_notify``：``@ft.observable`` 自己注入了 ``_notify(name)``，
+        覆盖了会在构造期直接 ``TypeError``。
+        """
+        notify = getattr(self, "notify", None)
+        if callable(notify):
+            notify()
+
+    def _effective_expanded(self) -> tuple[str, ...]:
+        """真正生效的展开集合：``expanded_keys`` + 选中项的祖先链。
+
+        **只算出来，不写回字段** —— 写回去就等于"用户永远收不起任何一个装着
+        选中项的父级"，那是个很招人烦的小毛病。渲染时父项的箭头也必须看这份
+        集合，否则会出现"子项明明露着、父项箭头却朝下"的自相矛盾。
+        """
+        expanded = prune_expanded(self.items, self.expanded_keys)
+        path = find_path(self.items, self.selected_key)
+        if not path:
+            return expanded
+        return tuple(dict.fromkeys((*expanded, *path[:-1])))
+
+    def _item_of(self, key: str) -> MenuItem | None:
+        for item in walk(self.items):
+            if item.key == key:
+                return item
+        return None
+
+    # ------------------------------------------------------------------
+    # 事件
+    # ------------------------------------------------------------------
+    def _click(self, e: ft.ControlEvent) -> None:
+        """整行的点击：叶子选中、父项展开。
+
+        ``data`` 里放的是键而不是项本身 —— 控件图里塞自定义对象在 Flet 的
+        序列化边界上迟早出事，键是安全的。
+        """
+        item = self._item_of(str(e.control.data))
+        if item is None or item.disabled:
+            return
+        if item.children:
+            # 折叠态点父项：先摊开菜单再展开这一组。用户点进去就是要看内容，
+            # 此时弹一个需要浮层的二级面板，代价远大于收益（见模块文档第 2 条）。
+            if self.collapsed:
+                self.set_collapsed(False)
+            self.toggle(item.key)
+            return
+        if item.key == self.selected_key:
+            return  # 再点一次同一个不算"换了"
+        self.selected_key = item.key
+        if self.on_select:
+            self.on_select(item)
+
+    # ------------------------------------------------------------------
+    # 渲染
+    # ------------------------------------------------------------------
+    @ft.component
+    def ui(self) -> ft.Control:
+        """构建菜单。"""
+        use_t()  # 折叠按钮的 tooltip 跟着语言切
+        if self.orientation == "horizontal":
+            return self._horizontal()
+        return self._vertical()
+
+    # -- 垂直 ----------------------------------------------------------
+    def _vertical(self) -> ft.Control:
+        expanded = self._effective_expanded()
+        rows = visible_rows(self.items, expanded, collapsed=self.collapsed)
+        ancestors = set(find_path(self.items, self.selected_key)[:-1])
+        body: list[ft.Control] = []
+
+        if self.header is not None and not self.collapsed:
+            body.append(
+                ft.Container(
+                    content=self.header, padding=ft.Padding.only(bottom=SPACE["2"])
+                )
+            )
+
+        for index, (item, depth) in enumerate(rows):
+            group = self._group_before(rows, index)
+            if group is not None:
+                body.append(self._group_title(group))
+            body.append(
+                self._row(
+                    item,
+                    depth,
+                    selected=item.key == self.selected_key,
+                    in_path=item.key in ancestors,
+                    expanded=item.key in expanded,
+                    hovered=self._hover == item.key,
+                )
+            )
+
+        if self.footer is not None and not self.collapsed:
+            body.append(
+                ft.Container(
+                    content=self.footer, padding=ft.Padding.only(top=SPACE["2"])
+                )
+            )
+        if self.show_collapse_arrow:
+            body.append(self._collapse_arrow())
+
+        return ft.Container(
+            width=None if self.collapsed else self.width,
+            content=ft.Column(
+                spacing=ROW_GAP,
+                tight=True,
+                # 折叠态的行是方块，得居中；展开态的行要撑满，靠 ``Text(expand=True)``
+                # 把 ``Row`` 顶到列宽，所以这里给 START 就够。
+                horizontal_alignment=(
+                    ft.CrossAxisAlignment.CENTER
+                    if self.collapsed
+                    else ft.CrossAxisAlignment.START
+                ),
+                controls=body,
+            ),
+        )
+
+    def _group_before(
+        self, rows: Sequence[tuple[MenuItem, int]], index: int
+    ) -> MenuGroup | None:
+        """``rows[index]`` 是不是某个分组的第一项；是就返回那个分组。
+
+        分组标题只在**组的第一项之前**出现。跟着"可见行"算而不是跟着原始
+        树算，是因为收起某个父级后，它下面的组标题也该跟着消失。
+        """
+        if self.collapsed:
+            return None
+        current = rows[index][0].key
+        for node in self.items:
+            if isinstance(node, MenuGroup) and node.items:
+                if node.items[0].key == current:
+                    return node
+                if any(item.key == current for item in node.items):
+                    return None  # 组内第一项已被收起，标题也跟着走
+        return None
+
+    def _group_title(self, group: MenuGroup) -> ft.Control:
+        """分组标题：小一号、更淡，只做视觉切分。"""
+        return ft.Container(
+            padding=ft.Padding.only(
+                left=LEAD, top=GROUP_TOP, bottom=SPACE["1"], right=LEAD
+            ),
+            content=ft.Text(
+                group.text,
+                size=FONT_SIZE["small"],
+                color=FG_MUTED,
+                weight=FONT_WEIGHT["medium"],
+                no_wrap=True,
+                overflow=ft.TextOverflow.ELLIPSIS,
+            ),
+        )
+
+    # -- 水平 ----------------------------------------------------------
+    def _horizontal(self) -> ft.Control:
+        """顶栏：只画一层。子项在这里不展开（原因见模块文档第 2 条）。"""
+        size = self._size_key
+        height = row_height(size)
+        text_size = ROW_TEXT[size]
+        icon_size = ROW_ICON[size]
+        # 顶栏只画一层，可当前选中项很可能是某个一级项的子项 —— 那就把它的
+        # **一级祖先**点亮。否则用户在"主机列表"页上，顶栏一片灰，等于没导航。
+        ancestors = set(find_path(self.items, self.selected_key)[:-1])
+        tabs: list[ft.Control] = []
+
+        for item in _tops(self.items):
+            selected = item.key == self.selected_key or item.key in ancestors
+            lit = self._hover == item.key and not item.disabled
+            tabs.append(
+                ft.Container(
+                    height=height,
+                    padding=ft.Padding.symmetric(horizontal=SPACE["4"]),
+                    alignment=ft.Alignment.CENTER,
+                    # 选中靠底部 2px 与主色字，不铺底色 —— 顶栏是页面的一部分，
+                    # 铺一块色会把它切成"卡片里的导航"，反而更碎。未选中也留一条
+                    # 透明边，换选中时文字不上下跳 2px。
+                    border=ft.Border.only(
+                        bottom=ft.BorderSide(
+                            2,
+                            ft.Colors.PRIMARY if selected else ft.Colors.TRANSPARENT,
+                        )
+                    ),
+                    content=ft.Row(
+                        spacing=ICON_GAP,
+                        tight=True,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            *(
+                                [
+                                    ft.Icon(
+                                        item.icon,
+                                        size=icon_size,
+                                        color=self._fg(item, selected, False, lit),
+                                    )
+                                ]
+                                if item.icon
+                                else []
+                            ),
+                            ft.Text(
+                                item.text,
+                                size=text_size,
+                                color=self._fg(item, selected, False, lit),
+                                weight=FONT_WEIGHT["medium"] if selected else None,
+                                no_wrap=True,
+                            ),
+                            *([self._badge(item)] if item.badge is not None else []),
+                        ],
+                    ),
+                    data=item.key,
+                    on_click=None if item.disabled else self._click,
+                    on_hover=(None if item.disabled else self._hover_handler(item.key)),
+                )
+            )
+        return ft.Row(spacing=0, tight=True, controls=tabs)
+
+    # -- 单行 ----------------------------------------------------------
+    def _row(
+        self,
+        item: MenuItem,
+        depth: int,
+        *,
+        selected: bool,
+        in_path: bool,
+        expanded: bool,
+        hovered: bool,
+    ) -> ft.Container:
+        """一行菜单项。折叠态只剩图标。"""
+        size = self._size_key
+        hint = item.tooltip or item.text
+
+        if self.collapsed:
+            # 折叠后只剩图标，选中项的**父级**也必须亮起来：选中项本身藏在
+            # 子菜单里看不见，整条图标栏里不给任何标记，用户就找不到自己在哪。
+            lit = selected or in_path
+            return ft.Container(
+                width=row_height(size),
+                height=row_height(size),
+                alignment=ft.Alignment.CENTER,
+                border_radius=RADIUS["lg"],
+                bgcolor=BG_SELECTED if lit else (BG_HOVER if hovered else None),
+                content=ft.Icon(
+                    item.icon or ft.Icons.CIRCLE_OUTLINED,
+                    size=ROW_ICON[size],
+                    color=FG_SELECTED if lit else self._fg(item, False, False, hovered),
+                ),
+                tooltip=hint,
+                data=item.key,
+                on_click=None if item.disabled else self._click,
+                on_hover=None if item.disabled else self._hover_handler(item.key),
+            )
+
+        leading: list[ft.Control] = []
+        if self._show_dot(item):
+            leading.append(self._dot(selected))
+        if item.icon is not None:
+            leading.append(
+                ft.Icon(
+                    item.icon,
+                    size=ROW_ICON[size],
+                    color=self._fg(item, selected, in_path, hovered),
+                )
+            )
+
+        trailing: list[ft.Control] = []
+        if item.badge is not None:
+            trailing.append(self._badge(item))
+        if item.children:
+            trailing.append(
+                ft.Container(
+                    width=CHEVRON_BOX,
+                    height=CHEVRON_BOX,
+                    alignment=ft.Alignment.CENTER,
+                    # 盒子要比图标大一圈，而且不裁剪：16px 的方盒转 180°，
+                    # 对角线 22.6 会顶出边界 —— Flet 的 Container 默认 HARD_EDGE，
+                    # 转出来就只剩一个"L"（真机第一版就是这样，看着像箭头坏了）。
+                    #
+                    # ``rotate`` 的单位是**弧度**不是圈（``LayoutControl`` 的文档：
+                    # 一整圈 ``math.pi * 2``），写 ``0.5`` 得到的是 28.6° 的歪箭头。
+                    # 旋转是**属性变化**，吃得到隐式动画；子项高度没法补间
+                    # （Flutter 不知道"内容高度"是多少），所以展开本身是瞬时的，
+                    # 靠这枚箭头把"发生了什么"交代清楚。
+                    clip_behavior=ft.ClipBehavior.NONE,
+                    rotate=math.pi if expanded else 0,
+                    animate_rotation=ft.Animation(
+                        DURATION["fast"], ft.AnimationCurve.EASE_OUT
+                    ),
+                    content=ft.Icon(ft.Icons.EXPAND_MORE, size=CHEVRON, color=FG_MUTED),
+                )
+            )
+
+        return ft.Container(
+            height=row_height(size),
+            padding=ft.Padding.only(left=LEAD + depth * self._indent, right=LEAD),
+            border_radius=RADIUS["lg"],
+            bgcolor=BG_SELECTED if selected else (BG_HOVER if hovered else None),
+            tooltip=hint,
+            data=item.key,
+            on_click=None if item.disabled else self._click,
+            on_hover=None if item.disabled else self._hover_handler(item.key),
+            content=ft.Row(
+                spacing=ICON_GAP,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    *leading,
+                    ft.Text(
+                        item.text,
+                        size=ROW_TEXT[size],
+                        color=self._fg(item, selected, in_path, hovered),
+                        weight=FONT_WEIGHT["medium"]
+                        if (selected or item.children)
+                        else None,
+                        no_wrap=True,
+                        overflow=ft.TextOverflow.ELLIPSIS,
+                        expand=True,
+                    ),
+                    *trailing,
+                ],
+            ),
+        )
+
+    @property
+    def _size_key(self) -> str:
+        """归一的尺寸键（非法值退回 ``default``）。"""
+        return self.size if self.size in ROW_H else "default"
+
+    @property
+    def _indent(self) -> int:
+        """每一级的缩进 = 图标宽 + 图标与文字的间距。
+
+        这样 ``depth=1`` 的文字起点正好压在父项文字的起点上：子项没有图标，
+        那截空白本身就是层级的线索。再额外加一档缩进，父子两行反而会"错位"
+        —— 真机第一版就是这么歪的（子项比父项还靠左 10px）。
+        """
+        return ROW_ICON[self._size_key] + ICON_GAP
+
+    def _fg(self, item: MenuItem, selected: bool, in_path: bool, hovered: bool) -> str:
+        """一行文字 / 图标的颜色。优先级：禁用 > 选中 > 祖先链 > 悬停 > 普通。"""
+        if item.disabled:
+            return FG_DISABLED
+        if selected:
+            return FG_SELECTED
+        if in_path:
+            return FG_ACTIVE
+        return FG_ACTIVE if hovered else FG
+
+    def _show_dot(self, item: MenuItem) -> bool:
+        """圆点只在"叶子 + 没有图标"时出现，避免一个位置两个前导符号。"""
+        return bool((item.dot or self.dot) and item.is_leaf and item.icon is None)
+
+    def _dot(self, selected: bool) -> ft.Control:
+        """小圆点：选中的那一项换成反相色，否则用主色。"""
+        return ft.Container(
+            width=DOT_SIZE,
+            height=DOT_SIZE,
+            border_radius=RADIUS["full"],
+            bgcolor=FG_SELECTED if selected else ft.Colors.PRIMARY,
+        )
+
+    def _badge(self, item: MenuItem) -> ft.Control:
+        """右侧徽标：主色胶囊。数字与短词都撑得住，长文本会截断。"""
+        return ft.Container(
+            padding=ft.Padding.symmetric(horizontal=SPACE["1"] + 2, vertical=1),
+            border_radius=RADIUS["full"],
+            bgcolor=ft.Colors.PRIMARY,
+            content=ft.Text(
+                str(item.badge),
+                size=FONT_SIZE["caption"],
+                color=ft.Colors.ON_PRIMARY,
+                weight=FONT_WEIGHT["medium"],
+                no_wrap=True,
+            ),
+        )
+
+    def _collapse_arrow(self) -> ft.Control:
+        """底部折叠按钮：自绘而不是 ``IconButton`` —— Material 会塞进 48 的
+        最小尺寸和一圈内边距，菜单底部就多出一块对不齐的空白。"""
+        return ft.Container(
+            height=COLLAPSE_H,
+            alignment=ft.Alignment.CENTER,
+            border_radius=RADIUS["lg"],
+            ink=True,
+            tooltip=t("ui.menu.expand") if self.collapsed else t("ui.menu.collapse"),
+            on_click=lambda _e: self.set_collapsed(not self.collapsed),
+            content=ft.Row(
+                spacing=ICON_GAP,
+                tight=True,
+                alignment=ft.MainAxisAlignment.CENTER,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Icon(
+                        ft.Icons.CHEVRON_RIGHT
+                        if self.collapsed
+                        else ft.Icons.CHEVRON_LEFT,
+                        size=CHEVRON,
+                        color=FG_MUTED,
+                    ),
+                    *(
+                        []
+                        if self.collapsed
+                        else [
+                            ft.Text(
+                                t("ui.menu.collapse"),
+                                size=FONT_SIZE["small"],
+                                color=FG_MUTED,
+                            )
+                        ]
+                    ),
+                ],
+            ),
+        )
+
+    def _hover_handler(self, key: str) -> Callable:
+        """行悬停：只记一个键，画面没变就不重绘。
+
+        ``e.data`` 是 ``"true"`` / ``"false"`` **字符串**，不是 bool（分页器踩过）。
+        离开的事件偶尔会晚到别的行上，所以退出时要比一下键 —— 否则快速划过两行
+        会把还亮着的那行抹掉。
+        """
+
+        def handler(e, _key=key):
+            on = str(e.data).strip().lower() == "true"
+            if on:
+                if self._hover == _key:
+                    return
+                self._hover = _key
+            else:
+                if self._hover != _key:
+                    return
+                self._hover = ""
+            self._repaint()
+
+        return handler
+
+
+# ---------------------------------------------------------------------------
+# 独立运行
+# ---------------------------------------------------------------------------
+@ft.component
+def App():
+    """Menu 组件运行示例。"""
+    # 实例必须跨渲染稳定：每次重建都会把展开 / 选中状态打回初始值。
+    # （``flet`` 没有 ``use_stable``，用 ``use_ref`` 兜住即可。）
+    holder = ft.use_ref(None)
+    if holder.current is None:
+        holder.current = Menu(
+            items=[
+                MenuItem("home", "概览", icon=ft.Icons.DASHBOARD_OUTLINED),
+                MenuItem("monitor", "监控", icon=ft.Icons.MONITOR_HEART_OUTLINED),
+                MenuGroup(
+                    "运维",
+                    [
+                        MenuItem(
+                            "host",
+                            "主机",
+                            icon=ft.Icons.DNS_OUTLINED,
+                            children=[
+                                MenuItem("host-list", "主机列表", dot=True),
+                                MenuItem("host-group", "主机分组"),
+                                MenuItem("host-tag", "标签管理", badge="12"),
+                            ],
+                        ),
+                        MenuItem(
+                            "network",
+                            "网络",
+                            icon=ft.Icons.LAN_OUTLINED,
+                            children=[
+                                MenuItem("vpc", "私有网络"),
+                                MenuItem("eip", "弹性 IP"),
+                            ],
+                        ),
+                    ],
+                ),
+                MenuItem(
+                    "archive",
+                    "归档",
+                    icon=ft.Icons.INVENTORY_2_OUTLINED,
+                    children=[MenuItem("archive-cold", "冷归档")],
+                ),
+                MenuItem("setting", "设置", icon=ft.Icons.SETTINGS_OUTLINED),
+                MenuItem(
+                    "audit",
+                    "审计日志",
+                    icon=ft.Icons.RECEIPT_LONG_OUTLINED,
+                    disabled=True,
+                ),
+            ],
+            selected_key="host-list",
+            expanded_keys=("host",),
+            show_collapse_arrow=True,
+            on_select=lambda item: print("select", item.key),
+            on_expand=lambda keys: print("expand", keys),
+            on_collapse_change=lambda v: print("collapsed", v),
+        )
+    return ft.Container(
+        padding=24,
+        bgcolor=ft.Colors.SURFACE,
+        content=ft.Row(
+            vertical_alignment=ft.CrossAxisAlignment.START,
+            controls=[holder.current.ui()],
+        ),
+    )
+
+
+if __name__ == "__main__":
+    ft.run(lambda page: page.render(App))

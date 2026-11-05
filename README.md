@@ -189,7 +189,7 @@ if __name__ == "__main__":
 
 ```
 src/ui/
-├── __init__.py              # re-exports all of flet + every CS UI component (708 names)
+├── __init__.py              # re-exports all of flet + every CS UI component (711 names)
 ├── app.py                   # legacy-style App entry point
 ├── ft_init.py               # Flet initialization
 ├── theme.py                 # theme / palette
@@ -276,6 +276,7 @@ src/ui/
 ├── navigation/              # Navigation
 │   ├── app_bar.py           #   AppBar
 │   ├── bread_crumb.py       #   BreadCrumb / Crumb
+│   ├── menu.py              #   Menu / MenuItem / MenuGroup
 │   └── pagination.py        #   Pagination / PaginationState
 └── utils/                   # Utilities
     ├── code_editor.py       #   Code
@@ -294,7 +295,7 @@ src/ui/
 | **Feedback** | AlertDialog, Loading, Message, Notification, ProgressBar |
 | **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, NumberInput, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch, Transfer, Cascader |
 | **Layout** | Card, Column, Container, Divider, Expander, GridView, ListView, PageLayout, Row, Stack, Step, Table, Tabs, View |
-| **Navigation** | AppBar, BreadCrumb, Pagination |
+| **Navigation** | AppBar, BreadCrumb, Menu, Pagination |
 
 **Two paradigms**:
 - **Static components** (`Button` / `Table` / `Rating` / `Step` / charts …) subclass Flet controls and are ready to use.

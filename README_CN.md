@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
 ```
 src/ui/
-├── __init__.py              # 导出 flet 全部内容 + 所有 CS UI 组件（708 个名字）
+├── __init__.py              # 导出 flet 全部内容 + 所有 CS UI 组件（711 个名字）
 ├── app.py                   # 传统式 App 入口
 ├── ft_init.py               # Flet 初始化
 ├── theme.py                 # 主题 / 配色
@@ -275,6 +275,7 @@ src/ui/
 ├── navigation/              # 导航
 │   ├── app_bar.py           #   AppBar
 │   ├── bread_crumb.py       #   BreadCrumb / Crumb
+│   ├── menu.py              #   Menu / MenuItem / MenuGroup
 │   └── pagination.py        #   Pagination / PaginationState
 └── utils/                   # 工具
     ├── code_editor.py       #   Code
@@ -293,7 +294,7 @@ src/ui/
 | **Feedback 反馈** | AlertDialog、Loading、Message、Notification、ProgressBar |
 | **Input 输入** | Button、Checkbox / CheckboxGroup、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker / DirPicker、ImagePicker、Input、MultiSelect、NumberInput、RadioGroup、Rating、SearchBar、SegmentedButton、SelectBox、Slider、Switch、Transfer、Cascader |
 | **Layout 布局** | Card、Column、Container、Divider、Expander、GridView、ListView、PageLayout、Row、Stack、Step、Table、Tabs、View |
-| **Navigation 导航** | AppBar、BreadCrumb、Pagination |
+| **Navigation 导航** | AppBar、BreadCrumb、Menu、Pagination |
 
 **双范式**：
 - **静态组件**（`Button` / `Table` / `Rating` / `Step` / 图表 …）直接继承 Flet 控件，构造即用。
