@@ -80,6 +80,12 @@ _ZH_CN: dict[str, object] = {
         },
         "table": {"number": "编号"},
         "codeview": {"title": "查看代码"},
+        "carousel": {
+            "prev": "上一张",
+            "next": "下一张",
+            "slide": "第 {n} 张",
+            "empty": "暂无内容",
+        },
         "calendar": {
             "title_day": "{year}年{num}月",
             "title_year": "{year}年",
@@ -262,6 +268,12 @@ _ZH_TW: dict[str, object] = {
         },
         "table": {"number": "編號"},
         "codeview": {"title": "檢視程式碼"},
+        "carousel": {
+            "prev": "上一張",
+            "next": "下一張",
+            "slide": "第 {n} 張",
+            "empty": "暫無內容",
+        },
         "calendar": {
             "title_day": "{year}年{num}月",
             "title_year": "{year}年",
@@ -444,6 +456,12 @@ _EN_US: dict[str, object] = {
         },
         "table": {"number": "#"},
         "codeview": {"title": "View code"},
+        "carousel": {
+            "prev": "Previous slide",
+            "next": "Next slide",
+            "slide": "Slide {n}",
+            "empty": "Nothing to show",
+        },
         "calendar": {
             "title_day": "{name} {year}",
             "title_year": "{year}",

@@ -39,6 +39,12 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
   months instead of paging, and selection / today / hover live inside a 30px pill so a wide cell
   never turns into a block of colour. Clicking a greyed neighbouring day jumps to that month —
   the grid is always exactly 42 cells, so the panel never changes height when you page
+- **Slides that slide** — `Carousel` puts N controls in one box and moves them one slot at a
+  time, so the edge of the next slide stays visible and the user knows which way to flip. Arrows
+  fade in on hover and are genuinely unclickable until then; dots switch from white-on-image to
+  theme roles when they sit outside. Autoplay pauses while the pointer rests, width is measured
+  after mount instead of being passed in, and looping wraps with a single instant step — cloning
+  a slide is not possible when a control can only have one parent
 - **Fields on a grid that lines up** — `Descriptions` lays a record out as a bordered grid by
   default: tinted label cells, hairline dividers, one rounded frame. `column` sets how many fields
   per row and `span` lets long values (addresses, notes) take two; if the last row runs short the
@@ -183,7 +189,7 @@ if __name__ == "__main__":
 
 ```
 src/ui/
-├── __init__.py              # re-exports all of flet + every CS UI component (705 names)
+├── __init__.py              # re-exports all of flet + every CS UI component (708 names)
 ├── app.py                   # legacy-style App entry point
 ├── ft_init.py               # Flet initialization
 ├── theme.py                 # theme / palette
@@ -210,6 +216,7 @@ src/ui/
 ├── data/                    # Static assets (fonts, images)
 ├── display/                 # Display components
 │   ├── calendar.py          #   Calendar (month panel, year zoom, per-cell content)
+│   ├── carousel.py          #   Carousel (slide strip, hover arrows, dots, autoplay)
 │   ├── descriptions.py      #   Descriptions / DescriptionsItem
 │   ├── heatmap.py           #   Heatmap / HeatmapItem (calendar heatmap)
 │   ├── image.py             #   Image
@@ -249,7 +256,8 @@ src/ui/
 │   ├── segmented_button.py  #   SegmentedButton
 │   ├── select_box.py        #   SelectBox
 │   ├── slider.py            #   Slider
-│   └── switch.py            #   Switch
+│   ├── switch.py            #   Switch
+│   └── transfer.py          #   Transfer / TransferItem (two-column shuttling)
 ├── layout/                  # Layout & containers
 │   ├── card.py              #   Card
 │   ├── column.py            #   Column
@@ -281,10 +289,10 @@ src/ui/
 |----------|-----------|
 | **Core** | ThemeProvider, ThemeSwitcher, `use_theme`, `theme_state` |
 | **Chart** | BarChart, LineChart, AreaChart, ScatterChart |
-| **Display** | Calendar, Descriptions, Heatmap, Image, ImageGridView, ListTile, LogContainer, Tree, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
+| **Display** | Calendar, Carousel, Descriptions, Heatmap, Image, ImageGridView, ListTile, LogContainer, Tree, Text / Header_1..5 / Quote / Link / Code / Markdown / Json |
 | **Display / Media** | Audio, AudioPlayer, Video, Pdf |
 | **Feedback** | AlertDialog, Loading, Message, Notification, ProgressBar |
-| **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, NumberInput, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch, Cascader |
+| **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, NumberInput, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch, Transfer, Cascader |
 | **Layout** | Card, Column, Container, Divider, Expander, GridView, ListView, PageLayout, Row, Stack, Step, Table, Tabs, View |
 | **Navigation** | AppBar, BreadCrumb, Paging |
 
@@ -446,10 +454,10 @@ python examples/demo.py
 | `/general` | Text / buttons / icons / chips |
 | `/layout` | Containers / lists / tables / steps |
 | `/navigation` | Breadcrumb / tabs / paging |
-| `/form` | Inputs / selectors / slider / rating |
+| `/form` | Inputs / selectors / transfer / slider / rating |
 | `/upload` | Files / directories / save / images |
 | `/feedback` | Message / notification / dialog / progress |
-| `/display` | Calendar / heatmap / logs / code / images |
+| `/display` | Calendar / carousel / heatmap / logs / code / images |
 | `/charts` | Line / area / bar / scatter charts |
 | `/media` | Audio / video / PDF |
 | `/about` | Migration cheat-sheet and design notes |

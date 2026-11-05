@@ -23,6 +23,7 @@ COMPONENT_MODULES: dict[str, str] = {
     "ButtonShape": "ui.core",
     "Calendar": "ui.display",
     "Card": "ui.layout",
+    "Carousel": "ui.display",
     "Cascader": "ui.input",
     "CascaderNode": "ui.input",
     "Checkbox": "ui.input",
