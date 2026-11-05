@@ -91,6 +91,7 @@ COMPONENT_MODULES: dict[str, str] = {
     "Message": "ui.feedback",
     "MultiSelect": "ui.input",
     "Notification": "ui.feedback",
+    "NumberAnimation": "ui.display",
     "NumberInput": "ui.input",
     "PAD": "ui.core",
     "PAD_LOOSE": "ui.core",

@@ -9,6 +9,7 @@ from .image_gridview import ImageGridView
 from .list_tile import ListTile
 from .log_container import LogContainer
 from .media import Audio, AudioPlayer, Pdf, Video, VideoMedia, build_playlist
+from .number_animation import NumberAnimation
 from .text import (
     Code,
     Header_1,
@@ -48,6 +49,7 @@ __all__ = [
     "ListTile",
     "LogContainer",
     "Markdown",
+    "NumberAnimation",
     "Pdf",
     "Quote",
     "SubTitle",
