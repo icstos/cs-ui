@@ -38,6 +38,15 @@
 .. note::
     别在组件函数里**每次渲染都新建** ``Menu(...)``：新实例意味着展开状态、选中状态
     每次都被重置回初始值。用 ``use_stable`` 把实例钉住，或把它放到状态容器里。
+
+设计取舍（改样式前先读）::
+
+    1. **选中是"淡主色底 + 主色字"，不是主色实底**。侧边栏一屏有几十行，
+       铺一块满饱和的色，视觉重量会压过页面正文本身。
+    2. **水平菜单只画一层**。下拉浮层需要锚点的**绝对坐标**，而 Flet 只给
+       ``on_size_change``（尺寸），不给位置（见 ``core/float_layer.py``）。
+       与其做一个位置会飘的假浮层，不如老实只画一层。
+    3. **图标比文字淡半档**。一列里八枚图标与八行文字同深度，整块会发糊。
 """
 
 from __future__ import annotations
@@ -50,7 +59,15 @@ from typing import Any
 import flet as ft
 
 from ui.core.i18n import t, use_t
-from ui.core.tokens import DURATION, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, overlay
+from ui.core.tokens import (
+    DURATION,
+    FONT_SIZE,
+    FONT_WEIGHT,
+    RADIUS,
+    SPACE,
+    hairline,
+    overlay,
+)
 
 __all__ = [
     "ORIENTATIONS",
@@ -88,22 +105,41 @@ CHEVRON = 16  # 展开箭头 / 右侧徽标的尺寸
 CHEVRON_BOX = 24  # 箭头的旋转包围盒（16 转 180° 需要 22.6 的空间）
 DOT_SIZE = 6  # 圆点直径
 GROUP_TOP = SPACE["3"]  # 12  分组标题上方的空档
-COLLAPSE_H = 40  # 折叠按钮那一行的高度
 
 # ---------------------------------------------------------------------------
 # 颜色：全走角色，明暗与主色自动跟随
+#
+# 照 Arco Menu 的分工（``item_default`` / ``bg_item_hover`` / ``bg_item_selected``
+# / ``item_selected`` / ``icon_default``）落到 M3 角色上：
+#
+#   行文字   on_surface_variant       行图标  outline（比文字淡一档）
+#   悬停     on_surface 字 + 6% 底    选中    主色字 + 12% 主色底
+#
+# 三个决定：
+#   * **选中不铺主色实底**。侧边栏一屏几十行，满饱和的蓝会压过页面正文；
+#     12% 主色只是"这块被点亮了"，重量还在正文这一侧。
+#   * **祖先（选中项的父级）也用主色字，但不给底**。一层淡底 + 主色字标记
+#     "你在哪"，再往上只留主色字标"你从哪来" —— 纯灰的祖先链看不出这层关系。
+#   * **底一律用 overlay 叠，不用 container 阶梯**。M3 的 container 在浅色下逐级
+#     变灰、暗色下逐级变亮，方向相反；overlay 两种模式都成立（Transfer 同款）。
 # ---------------------------------------------------------------------------
-#: 普通行：次要文字色（侧边栏里几十行，一律用正文色会整屏发亮）
+#: 普通行文字：次要正文色（侧边栏里几十行，一律用正文色会整屏发亮）
 FG = ft.Colors.ON_SURFACE_VARIANT
-#: 选中项的祖先：比普通行亮一档，表示"你要找的东西在这条下面"
+#: 悬停行文字：抬到正文色
 FG_ACTIVE = ft.Colors.ON_SURFACE
-#: 选中项：浅主色实底 + 反相文字。**不用主色实底** —— 十几个菜单项里有一块
-#: 满饱和的蓝，视觉重量会压过页面正文本身（分页器的当前页只有一个，两回事）。
-FG_SELECTED = ft.Colors.ON_PRIMARY_CONTAINER
-BG_SELECTED = ft.Colors.PRIMARY_CONTAINER
+#: 普通行图标：比文字再淡一档（Arco 的 ``icon_default = text-3``，文字是 text-2）
+FG_ICON = ft.Colors.OUTLINE
+#: 悬停行图标：跟进到次要正文色，但不必到正文色（图标比文字"轻"是常态）
+FG_ICON_HOVER = ft.Colors.ON_SURFACE_VARIANT
+#: 选中项 / 选中项祖先：主色。文字与图标同色 —— 这条链是"当前所在位置"，
+#: 应当整条一起亮，而不是只亮一行。
+FG_SELECTED = ft.Colors.PRIMARY
+BG_SELECTED = overlay(0.12, role=ft.Colors.PRIMARY)
 BG_HOVER = overlay(0.06)
 FG_DISABLED = overlay(0.38)
 FG_MUTED = ft.Colors.OUTLINE  # 展开箭头 / 分组标题
+#: 行状态的过渡：悬停底色硬切会"啪"地跳一下，120ms 让它是"漫过来"的
+ROW_ANIM = ft.Animation(DURATION["fast"], ft.AnimationCurve.EASE_OUT)
 
 
 # ---------------------------------------------------------------------------
@@ -566,12 +602,13 @@ class Menu:
                     height=height,
                     padding=ft.Padding.symmetric(horizontal=SPACE["4"]),
                     alignment=ft.Alignment.CENTER,
-                    # 选中靠底部 2px 与主色字，不铺底色 —— 顶栏是页面的一部分，
-                    # 铺一块色会把它切成"卡片里的导航"，反而更碎。未选中也留一条
-                    # 透明边，换选中时文字不上下跳 2px。
+                    # 选中靠底部 3px 与主色字，不铺底色 —— 顶栏是页面的一部分，
+                    # 铺一块色会把它切成"卡片里的导航"，反而更碎（Arco 的水平
+                    # 菜单同理：只有一条 label，没有块）。未选中也留同宽的透明边，
+                    # 换选中时文字不上下跳。
                     border=ft.Border.only(
                         bottom=ft.BorderSide(
-                            2,
+                            3,
                             ft.Colors.PRIMARY if selected else ft.Colors.TRANSPARENT,
                         )
                     ),
@@ -585,7 +622,7 @@ class Menu:
                                     ft.Icon(
                                         item.icon,
                                         size=icon_size,
-                                        color=self._fg(item, selected, False, lit),
+                                        color=self._icon_fg(item, selected, False, lit),
                                     )
                                 ]
                                 if item.icon
@@ -598,7 +635,11 @@ class Menu:
                                 weight=FONT_WEIGHT["medium"] if selected else None,
                                 no_wrap=True,
                             ),
-                            *([self._badge(item)] if item.badge is not None else []),
+                            *(
+                                [self._badge(item, lit=selected)]
+                                if item.badge is not None
+                                else []
+                            ),
                         ],
                     ),
                     data=item.key,
@@ -633,10 +674,13 @@ class Menu:
                 alignment=ft.Alignment.CENTER,
                 border_radius=RADIUS["lg"],
                 bgcolor=BG_SELECTED if lit else (BG_HOVER if hovered else None),
+                animate=ROW_ANIM,
                 content=ft.Icon(
                     item.icon or ft.Icons.CIRCLE_OUTLINED,
                     size=ROW_ICON[size],
-                    color=FG_SELECTED if lit else self._fg(item, False, False, hovered),
+                    color=FG_SELECTED
+                    if lit
+                    else self._icon_fg(item, False, False, hovered),
                 ),
                 tooltip=hint,
                 data=item.key,
@@ -645,20 +689,25 @@ class Menu:
             )
 
         leading: list[ft.Control] = []
+        # 圆点**悬挂**在左侧留白里：它的宽度从内边距里扣掉，文字 x 不变。
+        # 不扣的话，同一层里"带圆点"与"不带圆点"的两项文字会差 14px（文档页里
+        # 一眼就能看出歪），而扣掉之后圆点正好落在缩进的空当里，像条目标记。
+        pad_left = LEAD + depth * self._indent
         if self._show_dot(item):
-            leading.append(self._dot(selected))
+            leading.append(self._dot())
+            pad_left = max(0, pad_left - DOT_SIZE - ICON_GAP)
         if item.icon is not None:
             leading.append(
                 ft.Icon(
                     item.icon,
                     size=ROW_ICON[size],
-                    color=self._fg(item, selected, in_path, hovered),
+                    color=self._icon_fg(item, selected, in_path, hovered),
                 )
             )
 
         trailing: list[ft.Control] = []
         if item.badge is not None:
-            trailing.append(self._badge(item))
+            trailing.append(self._badge(item, lit=selected))
         if item.children:
             trailing.append(
                 ft.Container(
@@ -685,9 +734,10 @@ class Menu:
 
         return ft.Container(
             height=row_height(size),
-            padding=ft.Padding.only(left=LEAD + depth * self._indent, right=LEAD),
+            padding=ft.Padding.only(left=pad_left, right=LEAD),
             border_radius=RADIUS["lg"],
             bgcolor=BG_SELECTED if selected else (BG_HOVER if hovered else None),
+            animate=ROW_ANIM,
             tooltip=hint,
             data=item.key,
             on_click=None if item.disabled else self._click,
@@ -702,7 +752,7 @@ class Menu:
                         size=ROW_TEXT[size],
                         color=self._fg(item, selected, in_path, hovered),
                         weight=FONT_WEIGHT["medium"]
-                        if (selected or item.children)
+                        if (selected or in_path or item.children)
                         else None,
                         no_wrap=True,
                         overflow=ft.TextOverflow.ELLIPSIS,
@@ -729,69 +779,110 @@ class Menu:
         return ROW_ICON[self._size_key] + ICON_GAP
 
     def _fg(self, item: MenuItem, selected: bool, in_path: bool, hovered: bool) -> str:
-        """一行文字 / 图标的颜色。优先级：禁用 > 选中 > 祖先链 > 悬停 > 普通。"""
+        """一行**文字**的颜色。优先级：禁用 > 选中 / 祖先 > 悬停 > 普通。
+
+        选中项与它的祖先链同为**主色** —— 底只有一块（给选中项），颜色标记整条
+        "当前位置 → 来源"的关系。祖先用正文黑的话，这条关系就只能靠"比别的行深
+        一点"去猜，隔着几个分组根本看不出来。
+        """
         if item.disabled:
             return FG_DISABLED
-        if selected:
+        if selected or in_path:
             return FG_SELECTED
-        if in_path:
-            return FG_ACTIVE
         return FG_ACTIVE if hovered else FG
+
+    def _icon_fg(
+        self, item: MenuItem, selected: bool, in_path: bool, hovered: bool
+    ) -> str:
+        """一行**图标**的颜色：比文字淡半档，选中时跟文字一起转主色。"""
+        if item.disabled:
+            return FG_DISABLED
+        if selected or in_path:
+            return FG_SELECTED
+        return FG_ICON_HOVER if hovered else FG_ICON
 
     def _show_dot(self, item: MenuItem) -> bool:
         """圆点只在"叶子 + 没有图标"时出现，避免一个位置两个前导符号。"""
         return bool((item.dot or self.dot) and item.is_leaf and item.icon is None)
 
-    def _dot(self, selected: bool) -> ft.Control:
-        """小圆点：选中的那一项换成反相色，否则用主色。"""
+    def _dot(self) -> ft.Control:
+        """小圆点：始终主色 —— 它在选中行上落在 10% 主色底里，主色依然读得出来，
+        换成反相色反而会变成一块"比周围更暗"的杂点。"""
         return ft.Container(
             width=DOT_SIZE,
             height=DOT_SIZE,
             border_radius=RADIUS["full"],
-            bgcolor=FG_SELECTED if selected else ft.Colors.PRIMARY,
+            bgcolor=FG_SELECTED,
         )
 
-    def _badge(self, item: MenuItem) -> ft.Control:
-        """右侧徽标：主色胶囊。数字与短词都撑得住，长文本会截断。"""
+    def _badge(self, item: MenuItem, *, lit: bool = False) -> ft.Control:
+        """右侧计数：中性淡底胶囊。
+
+        原先用主色实底，结果一列菜单里全屏最重的一块是这个"12"—— 比选中行还重，
+        视线会被它拽走。改成中性淡底后它只提供信息、不参与层级竞争；行被选中时
+        转成淡主色底，免得压在淡蓝底上糊掉。
+        """
         return ft.Container(
             padding=ft.Padding.symmetric(horizontal=SPACE["1"] + 2, vertical=1),
             border_radius=RADIUS["full"],
-            bgcolor=ft.Colors.PRIMARY,
+            bgcolor=overlay(0.16, role=ft.Colors.PRIMARY) if lit else overlay(0.08),
             content=ft.Text(
                 str(item.badge),
                 size=FONT_SIZE["caption"],
-                color=ft.Colors.ON_PRIMARY,
+                color=FG_SELECTED if lit else FG,
                 weight=FONT_WEIGHT["medium"],
                 no_wrap=True,
             ),
         )
 
     def _collapse_arrow(self) -> ft.Control:
-        """底部折叠按钮：自绘而不是 ``IconButton`` —— Material 会塞进 48 的
-        最小尺寸和一圈内边距，菜单底部就多出一块对不齐的空白。"""
-        return ft.Container(
-            height=COLLAPSE_H,
-            alignment=ft.Alignment.CENTER,
+        """底部折叠按钮：一条与菜单行同高、同圆角、**左对齐**的操作行。
+
+        三处讲究：
+
+        * 自绘而不是 ``IconButton`` —— Material 会塞进 48 的最小尺寸和一圈内边距，
+          菜单底部就多出一块对不齐的空白。
+        * 左对齐而不是居中：居中会变成一个孤零零的"页脚"，和上面一列左对齐的行
+          没有共同的基准线；左对齐后箭头正好压在图标那一列上，读起来是"菜单的
+          最后一行"，而不是"另一个东西"。
+        * 上方一条细线：线以下是**控件**不是导航 —— 点它不切页面，只收起菜单。
+          没有这条线，它和禁用行的视觉差别几乎为零。
+        """
+        closed = self.collapsed
+        button = ft.Container(
+            # 与菜单行同高 —— 它是"菜单的最后一行"，不该自带另一套尺寸。
+            height=row_height(self._size_key),
+            # ``alignment`` 不只是对齐：设了它，Container 才会撑满可用宽度（Flutter
+            # 的 ``Align`` 无 widthFactor 时吃满约束）。没有它，这一行会缩成内容的
+            # 宽度，左对齐就退化成"整块居中"。
+            alignment=ft.Alignment.CENTER if closed else ft.Alignment.CENTER_LEFT,
+            padding=(
+                ft.Padding.symmetric(horizontal=SPACE["1"])
+                if closed
+                else ft.Padding.symmetric(horizontal=LEAD)
+            ),
             border_radius=RADIUS["lg"],
             ink=True,
-            tooltip=t("ui.menu.expand") if self.collapsed else t("ui.menu.collapse"),
-            on_click=lambda _e: self.set_collapsed(not self.collapsed),
+            tooltip=t("ui.menu.expand") if closed else t("ui.menu.collapse"),
+            on_click=lambda _e: self.set_collapsed(not closed),
             content=ft.Row(
                 spacing=ICON_GAP,
                 tight=True,
-                alignment=ft.MainAxisAlignment.CENTER,
+                alignment=(
+                    ft.MainAxisAlignment.CENTER
+                    if closed
+                    else ft.MainAxisAlignment.START
+                ),
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     ft.Icon(
-                        ft.Icons.CHEVRON_RIGHT
-                        if self.collapsed
-                        else ft.Icons.CHEVRON_LEFT,
+                        ft.Icons.CHEVRON_RIGHT if closed else ft.Icons.CHEVRON_LEFT,
                         size=CHEVRON,
                         color=FG_MUTED,
                     ),
                     *(
                         []
-                        if self.collapsed
+                        if closed
                         else [
                             ft.Text(
                                 t("ui.menu.collapse"),
@@ -802,6 +893,12 @@ class Menu:
                     ),
                 ],
             ),
+        )
+        return ft.Container(
+            margin=ft.Margin.only(top=SPACE["2"]),
+            padding=ft.Padding.only(top=SPACE["2"]),
+            border=ft.Border.only(top=hairline()),
+            content=button,
         )
 
     def _hover_handler(self, key: str) -> Callable:
