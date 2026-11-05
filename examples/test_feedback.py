@@ -1,4 +1,4 @@
-"""CS UI 反馈组件测试示例 - 展示进度条、加载、对话框、消息提示"""
+"""CS UI 反馈组件测试示例 - 展示进度条、加载、消息提示、通知、对话框"""
 
 import os
 import sys
@@ -9,15 +9,16 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import flet as ft
+
 from ui import (
-    ProgressBar,
-    Loading,
     AlertDialog,
-    Message,
     Button,
-    Text,
-    Divider,
     Column,
+    Divider,
+    Loading,
+    Message,
+    Notification,
+    ProgressBar,
     Row,
 )
 from ui.core.constants import StyleType
@@ -92,7 +93,7 @@ def main(page: ft.Page):
         ft.Text(
             "Feedback 反馈组件", size=28, weight=ft.FontWeight.BOLD, color="#1f2937"
         ),
-        ft.Text("进度条、加载状态、对话框和消息提示", size=14, color="#6b7280"),
+        ft.Text("进度条、加载状态、消息提示、通知和对话框", size=14, color="#6b7280"),
         Divider(),
         # 1. ProgressBar
         ft.Text("1. ProgressBar 进度条", size=18, weight=ft.FontWeight.BOLD),
@@ -133,9 +134,13 @@ def main(page: ft.Page):
             ],
         ),
         Divider(),
-        # 3. Message (SnackBar)
+        # 3. Message
         ft.Text("3. Message 消息提示", size=18, weight=ft.FontWeight.BOLD),
-        ft.Text("类似 SnackBar，支持多种语义风格", size=12, color="#6b7280"),
+        ft.Text(
+            "主动操作之后的回执：顶部居中、自动消失、不打断手上的事",
+            size=12,
+            color="#6b7280",
+        ),
         Row(
             spacing=8,
             controls=[
@@ -164,11 +169,68 @@ def main(page: ft.Page):
                         content="请注意保存数据", style_type=StyleType.WARNING
                     ).show(),
                 ),
+                Button(
+                    content=ft.Text("合并计数"),
+                    style_type=StyleType.SUCCESS,
+                    on_click=lambda e: Message(
+                        content="已保存", style_type=StyleType.SUCCESS, grouping=True
+                    ).show(),
+                ),
             ],
         ),
         Divider(),
-        # 4. AlertDialog
-        ft.Text("4. AlertDialog 对话框", size=18, weight=ft.FontWeight.BOLD),
+        # 4. Notification
+        ft.Text("4. Notification 通知", size=18, weight=ft.FontWeight.BOLD),
+        ft.Text(
+            "系统级通报：贴右上角、带标题、一直留到你处理它",
+            size=12,
+            color="#6b7280",
+        ),
+        Row(
+            spacing=8,
+            controls=[
+                Button(
+                    content=ft.Text("信息通知"),
+                    style_type=StyleType.INFO,
+                    on_click=lambda e: Notification(
+                        "系统将在 10 分钟后自动更新，请及时保存。",
+                        title="计划维护",
+                        style_type=StyleType.INFO,
+                    ).show(),
+                ),
+                Button(
+                    content=ft.Text("成功通知"),
+                    style_type=StyleType.SUCCESS,
+                    on_click=lambda e: Notification(
+                        "备份已完成，共 128 个文件。",
+                        title="备份成功",
+                        style_type=StyleType.SUCCESS,
+                    ).show(),
+                ),
+                Button(
+                    content=ft.Text("警告通知"),
+                    style_type=StyleType.WARNING,
+                    on_click=lambda e: Notification(
+                        "磁盘剩余空间不足 10%，建议尽快清理。",
+                        title="空间告急",
+                        style_type=StyleType.WARNING,
+                    ).show(),
+                ),
+                Button(
+                    content=ft.Text("错误通知"),
+                    style_type=StyleType.ERROR,
+                    on_click=lambda e: Notification(
+                        "无法连接到服务器，正在重试……",
+                        title="连接失败",
+                        style_type=StyleType.ERROR,
+                        duration=0,
+                    ).show(),
+                ),
+            ],
+        ),
+        Divider(),
+        # 5. AlertDialog
+        ft.Text("5. AlertDialog 对话框", size=18, weight=ft.FontWeight.BOLD),
         ft.Text("支持多种风格，带标题和操作按钮", size=12, color="#6b7280"),
         Row(
             spacing=8,

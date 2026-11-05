@@ -40,6 +40,26 @@
 4. **悬停只在"换行"时重绘**。每行各挂 ``on_enter`` / ``on_exit``，鼠标划过
    一列会来几十次事件；比较"当前悬停的那一行"，没变就 return。
 
+视觉分层（M3 的一个坑）
+-----------------------
+别用 ``SURFACE`` → ``SURFACE_CONTAINER_LOW`` → ``..._CONTAINER`` 这条阶梯去
+区分「面板 / 列头」：container 层级在浅色下逐级变灰、在暗色下逐级变亮，**方向
+是反的**。按浅色挑好的档位，切到暗色时列头就和列表反过来，看起来像是漏了样式。
+本组件统一用 :func:`~ui.core.tokens.overlay` 叠在面板色上 —— 同一个 alpha 在
+浅色下变暗、暗色下变亮，"谁更靠前"这层关系两种模式都成立，幅度也由 alpha 直接
+控制（列头 6%，悬停 6%，勾选行 10% 主色）。
+
+三处刻意的取舍：
+
+* **搜索框是线框，不是色块**。填充用 ``SURFACE_CONTAINER_HIGHEST``（Material
+  对 filled 输入框的建议）在窄列里会横出一条全列最重的色带，视线先落到搜索框
+  而不是列表；改成"面板底 + 一圈细线"之后它退成了背景里的一个工具。
+* **中间是两个 32px 方块，不是一条分段组**。两个箭头方向相反，本来就是两个
+  互不相干的动作；连成 40×81 的竖条后既像"一个开关"，比例上也成了根柱子。
+* **列表用 ``expand`` 吃剩余高度，不按 ``height - 列头 - 搜索`` 硬算**。
+  ``TextField`` 的真实高度由 Flutter 的 ``InputDecorator`` 决定，未必等于传进去
+  的 ``height``；算小了列表会顶出面板底边，空态会下沉几十像素。
+
 性能：一次渲染约 ``2 × 行数`` 个行控件，行是"复选框 + 一到两段文字"的扁结构；
 勾选一次重绘整棵树，实测 40 行 × 2 列约 2ms。列表超出高度时内部滚动，
 **不做分页** —— 桌面端滚轮比翻页自然，需要分段时请配合 ``show_search``。
@@ -64,6 +84,7 @@ from ui.core.tokens import (
     FONT_WEIGHT,
     RADIUS,
     SPACE,
+    elevation,
     hairline,
     overlay,
 )
@@ -81,15 +102,21 @@ __all__ = [
 
 # ---------------------------------------------------------------------------
 # 尺寸
+#
+# 横向只用一个栅格：面板内容左右各让 ``PAD`` 出去，所以搜索框、行色块、滚动条
+# 全在同一条竖线上。列头再多让一个 ``PAD`` —— 它比行少一层内边距，多让这一档
+# 才能让「全选框」和「行内复选框」落在同一条竖线上（差 4px 都看得出来）。
 # ---------------------------------------------------------------------------
 LIST_W = 240  # 单列宽度
 LIST_H = 320  # 单列高度（列头 + 搜索 + 列表）
-HEAD_H = 44  # 列头高度
-SEARCH_H = 32  # 搜索框本体高度
+HEAD_H = 48  # 列头高度
+SEARCH_H = 30  # 搜索框的目标高度（实际渲染由 InputDecorator 决定，约 40；别拿它算布局）
 SEARCH_PAD = SPACE["2"]  # 搜索区上下内边距
-ROW_PAD_V = 7  # 行上下内边距
+PAD = SPACE["2"]  # 8   面板内横向留白
+HEAD_PAD = SPACE["4"]  # 16  列头内边距 = PAD + 行内 PAD
+ROW_PAD_V = 6  # 行上下内边距（单行因此约 32px）
 ROW_GAP = 2  # 行与行之间的缝：没它时相邻两行的选中底色会连成一块
-ARROW = 36  # 中间箭头按钮边长
+ARROW = 32  # 中间箭头按钮边长
 BOX = 16  # 复选框边长
 BOX_HIT = 24  # 复选框命中宽度
 BOX_RADIUS = 4  # 复选框圆角
@@ -97,12 +124,33 @@ BOX_RADIUS = 4  # 复选框圆角
 #: 允许的移动方向
 DIRECTIONS: tuple[str, str] = ("left", "right")
 
+# ---------------------------------------------------------------------------
+# 配色
+#
+# 这里**不能**用 ``SURFACE`` → ``SURFACE_CONTAINER_LOW`` → ``..._CONTAINER``
+# 这条阶梯做分层：M3 的 container 层级在浅色下是"越来越灰"，暗色下是"越来越
+# 亮"，方向相反；一旦按浅色挑好档位，暗色下列头就会和列表反过来。
+#
+# 改用 ``overlay``：同一个 alpha 叠在面板色上，浅色下变暗、暗色下变亮，但两种
+# 模式里"列头都比列表离背景更远"这层关系不变。幅度也由 alpha 直接控制。
+# ---------------------------------------------------------------------------
+#: 面板底 —— 浅灰，在白卡片里有实体感；放在灰底页面上还有 1px 描边托着。
+PANEL_BG = ft.Colors.SURFACE_CONTAINER_LOW
+#: 列头底：面板色 + 6% 覆盖（浅色下略深、暗色下略亮，始终"头在前"）
+HEAD_BG = overlay(0.06)
 #: 悬停行底色
 HOVER_BG = overlay(0.06)
 #: 禁用字色
 DISABLED_FG = overlay(0.38)
 #: 勾选行底色（淡主色）
 PICKED_BG = overlay(0.10, role=ft.Colors.PRIMARY)
+#: 箭头点亮底色。比勾选行（0.10）**实**一档：勾选是"状态"，点亮是"按钮可用"，
+#: 两者同深浅时，用户会以为中间那格也被选中了。
+ARROW_BG = overlay(0.14, role=ft.Colors.PRIMARY)
+#: 箭头悬停底色
+ARROW_BG_HOVER = overlay(0.24, role=ft.Colors.PRIMARY)
+#: 不可用箭头的图标色 —— 不可用时不该占视觉重量，淡到"知道它在"就行
+FAINT = overlay(0.38)
 
 
 # ---------------------------------------------------------------------------
@@ -446,11 +494,18 @@ class Transfer(Label):
         return ft.Container(
             width=self.list_width,
             height=self.height,
-            bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
+            bgcolor=PANEL_BG,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             border_radius=RADIUS["lg"],
+            # 面板色与页面底色常常只差几个色号（M3 的 surface 阶梯本就极细），
+            # 单靠描边立不住一张"纸"。一层几乎看不见的阴影让它在任何底色上都成立。
+            shadow=elevation(1),
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
-            content=ft.Column(spacing=0, tight=True, controls=rows),
+            # 列表用 ``expand`` 吃掉剩余高度，**不要**按 ``height - 列头 - 搜索``
+            # 去算：TextField 的真实高度由 Flutter 的 InputDecorator 决定，
+            # 未必等于传进去的 ``height``（这里就多出约 6px）。算出来的值一旦偏小，
+            # 列表会被顶出面板底边，空态则会下沉几十像素 —— 而且只在下沉时才看得出来。
+            content=ft.Column(spacing=0, expand=True, controls=rows),
         )
 
     def _head(self, side: str) -> ft.Control:
@@ -460,19 +515,14 @@ class Transfer(Label):
         title = self._head_titles()[0 if side == "left" else 1]
         picked = sum(1 for item in visible if item.key in self._picked[side])
 
-        if picked:
-            counter = ft.Text(
-                f"{picked} / {len(visible)}",
-                size=FONT_SIZE["caption"],
-                color=ft.Colors.PRIMARY,
-                weight=FONT_WEIGHT["medium"],
-            )
-        else:
-            counter = ft.Text(
-                str(len(visible)),
-                size=FONT_SIZE["caption"],
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            )
+        # 常显 ``x / y``：只写 ``y`` 时读者要停下来判断这个数到底是总数还是已选数，
+        # 而 ``x / y`` 自带语义，勾选与否宽度也不跳。
+        counter = ft.Text(
+            f"{picked} / {len(visible)}",
+            size=FONT_SIZE["caption"],
+            color=ft.Colors.PRIMARY if picked else DISABLED_FG,
+            weight=FONT_WEIGHT["semibold"] if picked else None,
+        )
 
         controls: list[ft.Control] = []
         if self.show_select_all:
@@ -487,7 +537,7 @@ class Transfer(Label):
             ft.Text(
                 title,
                 size=FONT_SIZE["subtitle"],
-                weight=FONT_WEIGHT["medium"],
+                weight=FONT_WEIGHT["semibold"],
                 color=DISABLED_FG if self.disabled else ft.Colors.ON_SURFACE,
                 max_lines=1,
                 overflow=ft.TextOverflow.ELLIPSIS,
@@ -497,7 +547,9 @@ class Transfer(Label):
         controls.append(counter)
         return ft.Container(
             height=HEAD_H,
-            padding=ft.Padding.symmetric(horizontal=SPACE["2"]),
+            padding=ft.Padding.only(left=HEAD_PAD, right=SPACE["3"]),
+            # 列头给一块独立底色：整列从此分成"头"和"身"两段，标题才站得住。
+            bgcolor=HEAD_BG,
             border=ft.Border.only(bottom=hairline()),
             content=ft.Row(
                 spacing=SPACE["2"],
@@ -507,40 +559,37 @@ class Transfer(Label):
         )
 
     def _search(self, side: str) -> ft.Control:
-        """列内的搜索框。窄、无边框、贴一层淡底，不抢列头的层级。"""
+        """列内的搜索框：面板底 + 一圈细线，最安静的那种输入框。"""
         return ft.Container(
             padding=ft.Padding.only(
-                left=SPACE["2"], right=SPACE["2"], top=SEARCH_PAD, bottom=SEARCH_PAD
+                left=PAD, right=PAD, top=SEARCH_PAD, bottom=SEARCH_PAD
             ),
             content=ft.TextField(
                 value=self._query[side],
                 height=SEARCH_H,
                 dense=True,
                 filled=True,
-                # 用角色色而不是 overlay(0.04)：浅色下两者差不多，暗色下 4% 的白
-                # 在黑底上等于没有 —— 搜索框会变成一截浮着的占位文字。
-                fill_color=ft.Colors.SURFACE_CONTAINER_HIGHEST,
-                # 无边框但保留圆角：Flet 1.0 里圆角只能经 border 传，
-                # 直接用 NoInputBorder 会得到一个生硬的直角矩形。
+                # 填充用面板色、另给一圈描边：搜索是辅助动作，靠"填一块更深的
+                # 底色"来暗示输入框，会在整列里横出一条最重的色带，视线先过去。
+                # 有线框就够读成输入框了，色块留给"被勾选的行"这种真需要强调的地方。
+                fill_color=PANEL_BG,
+                # 圆角只能经 border 传，用 NoInputBorder 会得到一个生硬的直角矩形。
                 border=outline_input(
                     radius=RADIUS["md"],
-                    color=ft.Colors.TRANSPARENT,
+                    color=overlay(0.12) if self.disabled else ft.Colors.OUTLINE_VARIANT,
                     focused_color=ft.Colors.PRIMARY,
                 ),
                 text_size=FONT_SIZE["small"],
-                content_padding=ft.Padding.symmetric(
-                    horizontal=SPACE["2"], vertical=0
-                ),
+                content_padding=ft.Padding.symmetric(horizontal=SPACE["2"], vertical=0),
                 prefix=ft.Container(
                     width=20,
                     alignment=ft.Alignment.CENTER_LEFT,
-                    content=ft.Icon(
-                        ft.Icons.SEARCH, size=15, color=ft.Colors.OUTLINE
-                    ),
+                    content=ft.Icon(ft.Icons.SEARCH, size=15, color=ft.Colors.OUTLINE),
                 ),
                 hint_text=t("ui.transfer.search"),
                 hint_style=ft.TextStyle(
-                    size=FONT_SIZE["small"], color=ft.Colors.OUTLINE
+                    size=FONT_SIZE["small"],
+                    color=overlay(0.30) if self.disabled else ft.Colors.OUTLINE,
                 ),
                 read_only=self.disabled,
                 on_change=lambda e, s=side: self.set_query(s, e.control.value or ""),
@@ -550,28 +599,27 @@ class Transfer(Label):
     def _list(self, side: str) -> ft.Control:
         """可滚动的行列表；空态给一句"为什么空、下一步做什么"。"""
         visible = self.items(side)
-        body_h = self.height - HEAD_H
-        if self.show_search:
-            body_h -= SEARCH_H + SEARCH_PAD * 2
         if not visible:
             return ft.Container(
-                height=body_h,
+                expand=True,
                 alignment=ft.Alignment.CENTER,
                 content=self._empty(side),
             )
         return ft.Container(
-            height=body_h,
+            expand=True,
             content=ft.ListView(
                 spacing=ROW_GAP,
-                padding=ft.Padding.symmetric(
-                    horizontal=SPACE["1"], vertical=SPACE["1"]
-                ),
+                padding=ft.Padding.symmetric(horizontal=PAD, vertical=SEARCH_PAD),
                 controls=[self._row(item, side) for item in visible],
             ),
         )
 
     def _empty(self, side: str) -> ft.Control:
-        """空态：图标 + 一句主文 + 一句提示。"""
+        """空态：图标 + 一句主文 + 一句提示。
+
+        图标垫一块圆形淡底：320px 高的空面板里，一枚 22px 的线框图标会飘得
+        像渲染失败，给它一个"印章"就落地了。
+        """
         if side == "left":
             icon = ft.Icons.INBOX
             main = t("ui.transfer.empty_source")
@@ -583,21 +631,28 @@ class Transfer(Label):
         return ft.Container(
             padding=ft.Padding.symmetric(horizontal=SPACE["4"]),
             content=ft.Column(
-                spacing=SPACE["1"],
+                spacing=SPACE["2"],
                 tight=True,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Icon(icon, size=22, color=ft.Colors.OUTLINE_VARIANT),
+                    ft.Container(
+                        width=48,
+                        height=48,
+                        border_radius=RADIUS["full"],
+                        bgcolor=overlay(0.04),
+                        alignment=ft.Alignment.CENTER,
+                        content=ft.Icon(icon, size=24, color=ft.Colors.OUTLINE),
+                    ),
                     ft.Text(
                         main,
-                        size=FONT_SIZE["small"],
-                        color=ft.Colors.OUTLINE,
+                        size=FONT_SIZE["body"],
+                        color=ft.Colors.ON_SURFACE_VARIANT,
                         text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Text(
                         hint,
-                        size=FONT_SIZE["caption"],
-                        color=ft.Colors.OUTLINE_VARIANT,
+                        size=FONT_SIZE["small"],
+                        color=ft.Colors.OUTLINE,
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ],
@@ -631,16 +686,14 @@ class Transfer(Label):
                 ft.Text(
                     item.description,
                     size=FONT_SIZE["caption"],
-                    color=DISABLED_FG
-                    if blocked
-                    else ft.Colors.ON_SURFACE_VARIANT,
+                    color=DISABLED_FG if blocked else ft.Colors.ON_SURFACE_VARIANT,
                     max_lines=2,
                     overflow=ft.TextOverflow.ELLIPSIS,
                 )
             )
 
         box = ft.Container(
-            padding=ft.Padding.symmetric(horizontal=SPACE["2"], vertical=ROW_PAD_V),
+            padding=ft.Padding.symmetric(horizontal=PAD, vertical=ROW_PAD_V),
             border_radius=RADIUS["md"],
             bgcolor=bgcolor,
             content=ft.Row(
@@ -672,6 +725,10 @@ class Transfer(Label):
     def _arrows(self) -> ft.Control:
         """中间的两个箭头，垂直居中于两列。
 
+        做成**两个独立方块**而不是一条竖排的分段组：两个箭头方向相反，本来就是
+        两个互不相干的动作，连成一体反而像"一个开关"，而且 40×81 的竖条夹在
+        320 高的两列之间，比例上就是根柱子的形状。
+
         右移（主操作）在上、左移在下 —— 和 AntD 的 ``>`` / ``<`` 同序，
         也和"先挑出去、再拿回来"的阅读顺序一致。
         """
@@ -685,34 +742,27 @@ class Transfer(Label):
         )
 
     def _arrow(self, direction: str) -> ft.Control:
-        """箭头按钮：有可搬的条目就点亮（淡主色底 + 主色图标），否则只剩淡灰轮廓。"""
+        """箭头按钮：有可搬的条目就点亮（淡主色底 + 主色图标），否则只剩淡灰图标。"""
         active = self.is_move_ready(direction) and not self.disabled
         key = f"arrow:{direction}"
         hovered = active and self._hover == key
-        if active:
-            bgcolor = overlay(0.16, role=ft.Colors.PRIMARY) if hovered else PICKED_BG
-            border = None
-            color = ft.Colors.PRIMARY
-        else:
-            bgcolor = None
-            border = ft.Border.all(1, ft.Colors.OUTLINE_VARIANT)
-            color = ft.Colors.OUTLINE_VARIANT
 
-        tip = t(
-            "ui.transfer.move_right" if direction == "right" else "ui.transfer.move_left"
-        )
+        right = direction == "right"
+        tip = t("ui.transfer.move_right" if right else "ui.transfer.move_left")
         box = ft.Container(
             width=ARROW,
             height=ARROW,
             border_radius=RADIUS["md"],
-            bgcolor=bgcolor,
-            border=border,
+            bgcolor=(ARROW_BG_HOVER if hovered else ARROW_BG) if active else None,
+            border=ft.Border.all(
+                1, ft.Colors.PRIMARY if active else ft.Colors.OUTLINE_VARIANT
+            ),
             alignment=ft.Alignment.CENTER,
             tooltip=tip if active else None,
             content=ft.Icon(
-                ft.Icons.CHEVRON_RIGHT if direction == "right" else ft.Icons.CHEVRON_LEFT,
-                size=20,
-                color=color,
+                ft.Icons.CHEVRON_RIGHT if right else ft.Icons.CHEVRON_LEFT,
+                size=18,
+                color=ft.Colors.PRIMARY if active else FAINT,
             ),
         )
         if not active:
@@ -728,10 +778,16 @@ class Transfer(Label):
     # 复选框（自绘：16px 的方框比 ft.Checkbox 紧凑一半，且能画三态）
     # ------------------------------------------------------------------
     def _box(self, state: str, *, enabled: bool = True) -> ft.Control:
-        """复选框图形。``state`` 取 ``"checked"`` / ``"some"`` / ``"none"``。"""
+        """复选框图形。``state`` 取 ``"checked"`` / ``"some"`` / ``"none"``。
+
+        未选中用 ``overlay(0.45)`` 而不是更淡的灰：复选框是**唯一**说明"这行能
+        勾"的记号，框淡到快看不见时，整列看起来就只是几行字。
+        """
         filled = state != "none"
         bgcolor = None
-        border_color = overlay(0.30)
+        # 禁用时框线也要退一档：整体 disabled 的穿梭框里如果复选框和平时一样
+        # 清楚，用户会反复去点它，然后觉得"点了没反应"。
+        border_color = overlay(0.45) if enabled else overlay(0.26)
         if filled:
             bgcolor = ft.Colors.PRIMARY if enabled else overlay(0.26)
             border_color = bgcolor
