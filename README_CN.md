@@ -275,7 +275,7 @@ src/ui/
 ├── navigation/              # 导航
 │   ├── app_bar.py           #   AppBar
 │   ├── bread_crumb.py       #   BreadCrumb / Crumb
-│   └── paging.py            #   Paging / PagingState
+│   └── pagination.py        #   Pagination / PaginationState
 └── utils/                   # 工具
     ├── code_editor.py       #   Code
     ├── code_view.py         #   CodeView
@@ -293,7 +293,7 @@ src/ui/
 | **Feedback 反馈** | AlertDialog、Loading、Message、Notification、ProgressBar |
 | **Input 输入** | Button、Checkbox / CheckboxGroup、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker / DirPicker、ImagePicker、Input、MultiSelect、NumberInput、RadioGroup、Rating、SearchBar、SegmentedButton、SelectBox、Slider、Switch、Transfer、Cascader |
 | **Layout 布局** | Card、Column、Container、Divider、Expander、GridView、ListView、PageLayout、Row、Stack、Step、Table、Tabs、View |
-| **Navigation 导航** | AppBar、BreadCrumb、Paging |
+| **Navigation 导航** | AppBar、BreadCrumb、Pagination |
 
 **双范式**：
 - **静态组件**（`Button` / `Table` / `Rating` / `Step` / 图表 …）直接继承 Flet 控件，构造即用。
@@ -486,7 +486,7 @@ format_list(["A", "B", "C"])           # A、B、C       /  A, B, C
 
 组件已经全部走这一层：`DateInput` / `DateTimeInput` / `CalendarPanel` 的标题、
 月份格、星期表头、每周首日都由语言决定（`first_day_weekday=None` 即跟随语言），
-`Paging` 的总数走千分位，`MultiSelect` 的已选项走本地化连接符。
+`Pagination` 的总数走千分位，`MultiSelect` 的已选项走本地化连接符。
 
 ### 五、扩语言
 

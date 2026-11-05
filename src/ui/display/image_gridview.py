@@ -4,7 +4,7 @@
 
 .. note::
    本组件早期版本是一个 ``@ft.control`` 控件，在 ``init()`` 中直接构造
-   ``Paging`` 组件。flet 1.0.0 的组件必须在渲染上下文中创建，
+   ``Pagination`` 组件。flet 1.0.0 的组件必须在渲染上下文中创建，
    因此这里改为与其他有状态组件一致的 **observable 状态 + ``ui()`` 组件** 模式。
 
 用法::
@@ -23,7 +23,7 @@ import flet as ft
 
 from ui.core.i18n import t, use_t
 from ui.display.image import Image
-from ui.navigation.paging import Paging, PagingState
+from ui.navigation.pagination import Pagination, PaginationState
 
 __all__ = ["ImageGridView"]
 
@@ -42,7 +42,7 @@ class ImageGridView:
         img_file_paths: 图片路径或 URL 列表。
         num_item_per_page: 每页图片数量，默认 10。
         img_size: 初始缩略图边长，默认 160。
-        show_paging: 是否显示分页控件，默认 True。
+        show_pagination: 是否显示分页控件，默认 True。
         show_size_slider: 是否显示缩略图尺寸滑块，默认 True。
         grid_height: 网格区域高度，默认 420。
     """
@@ -51,7 +51,7 @@ class ImageGridView:
     img_file_paths: list[str | Path] = field(default_factory=list)
     num_item_per_page: int = 10
     img_size: int = DEFAULT_IMG_SIZE
-    show_paging: bool = True
+    show_pagination: bool = True
     show_size_slider: bool = True
     grid_height: int = 420
 
@@ -137,10 +137,10 @@ class ImageGridView:
             )
         )
 
-        if self.show_paging and self.num_pages > 1:
+        if self.show_pagination and self.num_pages > 1:
             controls.append(
-                Paging(
-                    PagingState(
+                Pagination(
+                    PaginationState(
                         sum_data_nums=self.num_items,
                         data_per_page_nums=self.num_item_per_page,
                         current_page=self.current_page,

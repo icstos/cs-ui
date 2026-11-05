@@ -269,14 +269,14 @@ src/ui/
 │   ├── page.py              #   PageLayout
 │   ├── row.py               #   Row
 │   ├── stack.py             #   Stack
-│   ├── table.py             #   Table (with paging)
+│   ├── table.py             #   Table (with pagination)
 │   ├── tabs.py              #   Tabs / Tab / TabBar / TabBarView
 │   ├── step.py              #   Step / StepItem
 │   └── view.py              #   View
 ├── navigation/              # Navigation
 │   ├── app_bar.py           #   AppBar
 │   ├── bread_crumb.py       #   BreadCrumb / Crumb
-│   └── paging.py            #   Paging / PagingState
+│   └── pagination.py        #   Pagination / PaginationState
 └── utils/                   # Utilities
     ├── code_editor.py       #   Code
     ├── code_view.py         #   CodeView
@@ -294,7 +294,7 @@ src/ui/
 | **Feedback** | AlertDialog, Loading, Message, Notification, ProgressBar |
 | **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, NumberInput, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch, Transfer, Cascader |
 | **Layout** | Card, Column, Container, Divider, Expander, GridView, ListView, PageLayout, Row, Stack, Step, Table, Tabs, View |
-| **Navigation** | AppBar, BreadCrumb, Paging |
+| **Navigation** | AppBar, BreadCrumb, Pagination |
 
 **Two paradigms**:
 - **Static components** (`Button` / `Table` / `Rating` / `Step` / charts …) subclass Flet controls and are ready to use.

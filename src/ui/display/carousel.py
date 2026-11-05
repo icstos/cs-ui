@@ -2,7 +2,7 @@
 
 ``Carousel``。它的职责很窄：**空间不够，但内容
 必须都摆出来**。所以它不做"图片查看器"（那是 :class:`~ui.display.ImageGridView`），
-也不做"分页列表"（那是 :class:`~ui.navigation.Paging`）——它只负责在同一块
+也不做"分页列表"（那是 :class:`~ui.navigation.Pagination`）——它只负责在同一块
 矩形里，把 N 个控件轮流搬到台前。
 
 用法::

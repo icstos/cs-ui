@@ -2,6 +2,6 @@
 
 from .app_bar import AppBar
 from .bread_crumb import BreadCrumb, Crumb
-from .paging import Paging, PagingState
+from .pagination import Pagination, PaginationState
 
-__all__ = ["AppBar", "BreadCrumb", "Crumb", "Paging", "PagingState"]
+__all__ = ["AppBar", "BreadCrumb", "Crumb", "Pagination", "PaginationState"]

@@ -6,7 +6,7 @@
 
 三条约定：
 
-1. **键按"归属 + 角色"命名**（``ui.paging.total``）。``ui.`` 前缀是留给框架的
+1. **键按"归属 + 角色"命名**（``ui.pagination.total``）。``ui.`` 前缀是留给框架的
    命名空间，应用自己的键不要用，避免将来扩展时撞车。
 2. **全部用 ``str.format`` 占位**，并且只占"短句内"的位置。语序差异靠
    *整句模板* 吸收（``"{n} {unit}"`` 与 ``"共 {n} {unit}"``），绝不把一句话
@@ -66,7 +66,7 @@ _ZH_CN: dict[str, object] = {
                 "slate": "石板灰",
             },
         },
-        "paging": {
+        "pagination": {
             "total": "共 {n} {unit}",
             "first": "首页",
             "prev": "上一页",
@@ -254,7 +254,7 @@ _ZH_TW: dict[str, object] = {
                 "slate": "石板灰",
             },
         },
-        "paging": {
+        "pagination": {
             "total": "共 {n} {unit}",
             "first": "首頁",
             "prev": "上一頁",
@@ -442,7 +442,7 @@ _EN_US: dict[str, object] = {
                 "slate": "Slate",
             },
         },
-        "paging": {
+        "pagination": {
             "total": "{n} {unit}",
             "first": "First page",
             "prev": "Previous page",
@@ -608,7 +608,7 @@ CATALOGS: dict[str, dict[str, object]] = {
 
 
 def _walk(messages: Mapping[str, object], prefix: str = "") -> dict[str, str]:
-    """把嵌套消息表拍平成 ``{"ui.paging.total": "..."}``（只读用途）。"""
+    """把嵌套消息表拍平成 ``{"ui.pagination.total": "..."}``（只读用途）。"""
     flat: dict[str, str] = {}
     for key, value in messages.items():
         path = f"{prefix}{key}"

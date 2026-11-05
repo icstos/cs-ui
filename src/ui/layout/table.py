@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 import flet as ft
 
 from ui.core.i18n import t, use_t
-from ui.navigation.paging import Paging, PagingState
+from ui.navigation.pagination import Pagination, PaginationState
 
 __all__ = ["Table", "TableState", "pandas_to_datatable"]
 
@@ -209,8 +209,8 @@ def Table(
     if not table_state.with_paged:
         return table_card
 
-    paging = Paging(
-        PagingState(
+    pagination = Pagination(
+        PaginationState(
             sum_data_nums=table_state.num_rows,
             data_per_page_nums=table_state.rows_per_page,
             current_page=page,
@@ -219,7 +219,7 @@ def Table(
     )
     return ft.Card(
         content=ft.Container(
-            content=ft.Column([table_card, paging], scroll=ft.ScrollMode.AUTO),
+            content=ft.Column([table_card, pagination], scroll=ft.ScrollMode.AUTO),
             padding=ft.Padding.only(left=20, right=20, top=10, bottom=10),
             bgcolor=ft.Colors.SURFACE,
         ),

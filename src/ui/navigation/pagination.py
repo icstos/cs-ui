@@ -1,4 +1,4 @@
-"""分页器 (Paging) —— 总数、页码、跳页与每页条数。
+"""分页器 (Pagination) —— 总数、页码、跳页与每页条数。
 
 
 布局：总数在左，页码 / 跳页 / 条数依次靠右。但**弹性给了页码那条**
@@ -9,11 +9,11 @@
 
 用法::
 
-    state = PagingState(sum_data_nums=1_286, on_change_page=load)
-    Column([Paging(state)])
+    state = PaginationState(sum_data_nums=1_286, on_change_page=load)
+    Column([Pagination(state)])
 
 ``use_t()`` 是本组件唯一的订阅点：语言一变重绘，外部持有的
-:class:`PagingState` 不受影响（页码、每页条数都不丢）。
+:class:`PaginationState` 不受影响（页码、每页条数都不丢）。
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from ui.core.i18n import t, use_t
 from ui.core.styles import outline_input
 from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, overlay
 
-__all__ = ["Paging", "PagingState", "get_center_pages"]
+__all__ = ["Pagination", "PaginationState", "get_center_pages"]
 
 _log = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ def _page_cell(
         data=page,
         on_click=on_click,
         on_hover=on_hover,
-        tooltip=t("ui.paging.page", n=page),
+        tooltip=t("ui.pagination.page", n=page),
     )
 
 
@@ -179,7 +179,7 @@ def _more_dot() -> ft.Control:
 
 
 def _pager(
-    state: PagingState,
+    state: PaginationState,
     total_pages: int,
     current: int,
     hovered: str,
@@ -205,14 +205,14 @@ def _pager(
         arrow(
             "first",
             ft.Icons.KEYBOARD_DOUBLE_ARROW_LEFT,
-            t("ui.paging.first"),
+            t("ui.pagination.first"),
             1,
             at_start,
         ),
         arrow(
             "prev",
             ft.Icons.KEYBOARD_ARROW_LEFT,
-            t("ui.paging.prev"),
+            t("ui.pagination.prev"),
             current - 1,
             at_start,
         ),
@@ -239,7 +239,7 @@ def _pager(
         arrow(
             "next",
             ft.Icons.KEYBOARD_ARROW_RIGHT,
-            t("ui.paging.next"),
+            t("ui.pagination.next"),
             current + 1,
             at_end,
         )
@@ -248,7 +248,7 @@ def _pager(
         arrow(
             "last",
             ft.Icons.KEYBOARD_DOUBLE_ARROW_RIGHT,
-            t("ui.paging.last"),
+            t("ui.pagination.last"),
             total_pages,
             at_end,
         )
@@ -270,14 +270,14 @@ def _label(text: str) -> ft.Text:
     return ft.Text(text, size=FONT_SIZE["body"], color=LABEL_FG)
 
 
-def _jumper(state: PagingState) -> ft.Row:
+def _jumper(state: PaginationState) -> ft.Row:
     """「前往 [__] 页」。英文没有"页"这个后缀，语言包给空串时不渲染那个字。"""
-    page_unit = t("ui.paging.page_unit")
+    page_unit = t("ui.pagination.page_unit")
     return ft.Row(
         spacing=SPACE["1"],
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
-            _label(t("ui.paging.goto")),
+            _label(t("ui.pagination.goto")),
             ft.TextField(
                 width=JUMP_W,
                 height=BTN,
@@ -294,7 +294,7 @@ def _jumper(state: PagingState) -> ft.Row:
     )
 
 
-def _size_picker(state: PagingState, unit: str) -> ft.Row:
+def _size_picker(state: PaginationState, unit: str) -> ft.Row:
     """「每页 [10] 项」。候选里**必须包含当前值**，否则 Flutter 侧匹配不到
     ``value``，下拉框显示空白且点不开（真机踩到：Table 用 rows_per_page=8，
     而候选只有 5/10/15/20/30/40/50）。"""
@@ -309,7 +309,7 @@ def _size_picker(state: PagingState, unit: str) -> ft.Row:
         spacing=SPACE["2"],
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
-            _label(t("ui.paging.per_page")),
+            _label(t("ui.pagination.per_page")),
             ft.Dropdown(
                 options=[ft.DropdownOption(str(n)) for n in options],
                 value=str(current),
@@ -332,7 +332,7 @@ def _size_picker(state: PagingState, unit: str) -> ft.Row:
 # ---------------------------------------------------------------------------
 @ft.observable
 @dataclass
-class PagingState:
+class PaginationState:
     sum_data_nums: int = 0  # 总数据条数
     on_change_page: Callable[[int], None] | None = None  # 页码变更回调
     on_change_per_page_nums: Callable[[int], None] | None = None  # 每页条数变更回调
@@ -399,20 +399,20 @@ def get_center_pages(current_page: int, sum_page_nums: int) -> list:
 
 
 @ft.component
-def Paging(state: PagingState):
+def Pagination(state: PaginationState):
     """分页器：总数 + 页码 + 跳页 + 每页条数。"""
     use_t()
     #: 当前悬停的控件键（"" / "p3" / "prev" …）。用 state 而不是直接改控件 ——
     #: component 渲染出的控件是冻结的，见 :func:`_hover_handler`。
     hovered, set_hovered = ft.use_state("")
 
-    unit = state.data_unit or t("ui.paging.unit")
+    unit = state.data_unit or t("ui.pagination.unit")
     total_pages = state.sum_page_nums
     # state 里的页码可能因为数据变少而越界；渲染用夹紧后的值，回调仍走 state
     current = min(max(state.current_page, 1), max(1, total_pages))
 
     total = ft.Text(
-        t("ui.paging.total", n=format_number(state.sum_data_nums), unit=unit),
+        t("ui.pagination.total", n=format_number(state.sum_data_nums), unit=unit),
         size=FONT_SIZE["body"],
         color=LABEL_FG,
         # 总数目然宽度、不参与弹性分配。弹性空间交给页码那条 ——
@@ -446,14 +446,14 @@ def Paging(state: PagingState):
 
 @ft.component
 def App():
-    paging_state = PagingState(
+    pagination_state = PaginationState(
         sum_data_nums=123,
         on_change_page=lambda page: print(f"当前页码: {page}"),
         on_change_per_page_nums=lambda per_page_nums: print(
             f"每页条数: {per_page_nums}"
         ),
     )
-    return Paging(paging_state)
+    return Pagination(pagination_state)
 
 
 if __name__ == "__main__":
