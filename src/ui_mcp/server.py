@@ -381,7 +381,7 @@ if _EXAMPLES_ON:
         返回 id 与摘要；用 get_example(id) 读源码。
 
         Args:
-            query: 关键词，如 "表单"、"分页表格"、"toast"、"上传"。
+            query: 关键词，如 "表单"、"分页表格"、"通知"、"上传"。
             limit: 最多返回条数。
         """
         return _examples.search(query, limit=limit)

@@ -272,7 +272,7 @@ def _instance_entries(cls: type) -> list[dict[str, Any]]:
 
 def _namedtuple_entries(cls: type) -> list[dict[str, Any]]:
     names = list(getattr(cls, "_fields", []) or [])
-    defaults = list(getattr(cls, "_field_defaults", {}) or {})
+    defaults = dict(getattr(cls, "_field_defaults", {}) or {})
     hints = typing.get_type_hints(cls) if names else {}
     entries = []
     for name in names:

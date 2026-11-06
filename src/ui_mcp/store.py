@@ -271,7 +271,7 @@ class ApiStore:
         include_internal: bool = False,
     ) -> list[dict[str, Any]]:
         items = self.entries("components") + self.entries("types")
-        # 函数组件（Table / Paging / ThemeProvider …）跟类组件一样是"能直接放进
+        # 函数组件（Table / Pagination / ThemeProvider …）跟类组件一样是"能直接放进
         # controls 的组件"，浏览时不该漏掉。
         items += [f for f in self.entries("functions") if f.get("kind") == "component"]
         out = []

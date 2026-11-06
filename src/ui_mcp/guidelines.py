@@ -79,7 +79,7 @@ page.show_dialog**（零像素、且不报错），MultiSelect / DateInput / Col
   Material 画，别自己写 hover 回调改 `bgcolor`；
 - `@ft.control` 子类挂在 render 树上**同样 frozen**，老组件里的 `self.update()`
   必须重写成 `use_state`（`Table` 就是这么改的，见 `get_api("Table")`）；
-- `Table` / `Paging` 这类换页组件：页码是 `use_state`，行数据由页码**纯函数派生**，
+- `Table` / `Pagination` 这类换页组件：页码是 `use_state`，行数据由页码**纯函数派生**，
   别在回调里改 `DataTable.rows`。
 
 `use_state` 的初值参数**每次渲染都会求值**：外部 observable 一变就会形成
@@ -115,8 +115,12 @@ page.show_dialog**（零像素、且不报错），MultiSelect / DateInput / Col
    （注意：`state()` 只是 demo 里的封装，**没有**从 `ui` 导出，要自己写或抄
    `examples/demo.py:207`。）
 3. 读值用数据对象字段（`name.value`），不是控件属性。
+4. **别把自己的内部方法叫 `_notify`**（也不要用 `notify`）。`@ft.observable` 已经
+   注入了 `_notify(name)` 做属性变更通知，签名不同 —— 覆盖它之后第一次给字段赋值
+   就 `TypeError: _notify() takes 1 positional argument but 2 were given`。
+   想主动请求重绘就另起名字（本项目用 `_repaint()` 里调 `self.notify()`）。
 
-另有**函数组件**：`Table`、`Paging`、`ThemeProvider`、`ThemeSwitcher` ——
+另有**函数组件**：`Table`、`Pagination`、`ThemeProvider`、`ThemeSwitcher` ——
 它们是 `@ft.component` 函数，直接当控件用，不需要 `.ui()`。
 
 想确认某个组件属于哪一类：`get_api("组件名")` 的 `pattern:` 行，
@@ -139,7 +143,7 @@ page.show_dialog**（零像素、且不报错），MultiSelect / DateInput / Col
 它们依赖 `page.overlay`，所以又回到 `rendering` 那条：必须
 `page.render` + `Router(manage_views=False)`，否则面板一片空白。
 
-已知限制（flet 1.0.5，非本项目 bug）：`Paging` 的"前往 __ 页"输入框、
+已知限制（flet 1.x，非本项目 bug）：`Pagination` 的"前往 __ 页"输入框、
 `ImageGridView` 的下拉在 frozen 树里点不开。""",
     },
     {
@@ -231,6 +235,25 @@ flet / Flutter 的 8 位十六进制是 **`#AARRGGBB`（透明度在前）**，
 - 页面字体在 `page.fonts` 注册后由 Theme 的 `font_family` 使用（demo 用 AlibabaPuHuiTi）。""",
     },
     {
+        "topic": "overlay",
+        "title": "浮层：page.overlay 的三条硬规则",
+        "tags": ["overlay", "浮层", "TransparentPointer", "Message", "Notification", "点击穿透"],
+        "body": """\
+- **撑满宽度的浮层节点会吞掉自己那条横带里的全部点击**。`left=0, right=0` 或
+  `expand=True` 的节点，即使里面只有一个居中卡片，也会挡住它下面的按钮（实测：
+  10×10 的节点不吞、撑满的吞）。居中摆放改用 `ft.TransparentPointer`（空白穿透、
+  子控件照常响应）；`ignore_interactions=True` **不行** —— 它连子控件一起放行，
+  关闭按钮就点不到了。四角摆放用普通 `Container`，保证 `on_click` 只触发一次。
+- **同一 page + 同一位置只挂一个节点**，新卡片只改里面 `Column.controls`。每次
+  push 都 `page.overlay.append` 的话，浮层节点会随消息条数线性增长，还会让
+  进出场动画互相打断。
+- **计时不要指望取消句柄**：`page.run_task` 返回的 Future 没有 `cancel()`。
+  用自增 token（`token += 1`，旧回调发现 token 不是最新就 return），合并计数与
+  悬停续计时才不会出现两个计时器抢着关同一条。
+- 进出场只动 `opacity` / `offset`（隐式动画在 Flutter 端插值，无逐帧回调）：
+  首帧以"透明 + 偏移"挂上，隔一帧（16ms）再改终值。见 `feedback/_overlay.py`。""",
+    },
+    {
         "topic": "verify",
         "title": "改完怎么验证（脚本清单）",
         "tags": ["验证", "测试", "探针", "截图"],
@@ -240,6 +263,9 @@ Python 侧不抛异常 **≠** Flutter 侧渲染成功：裸字符串混进 `con
 
     python scripts/_theme_logic.py                    # 令牌 + 主题逻辑（含 WCAG 断言）
     python scripts/_table_logic.py                    # Table 分页纯函数（34 条）
+    python scripts/_heatmap_logic.py                  # Heatmap 网格 / 色阶（76 条）
+    python scripts/_feedback_logic.py                 # Message / Notification 栈（54 条）
+    python scripts/_calendar_logic.py                 # Calendar 网格 / 状态机（74 条）
     python scripts/_color_picker_logic.py             # 颜色逻辑单测
     python scripts/_ui_audit.py <module>              # 单模块渲染审计（输出 @@OK@@）
     python scripts/smoke_test.py examples.demo main --routes /,/layout,/form,...
