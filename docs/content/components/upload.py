@@ -13,7 +13,7 @@ from ui import (
     FilePicker,
     FileSaver,
     ImagePicker,
-    toast_info,
+    Message,
     use_t,
 )
 
@@ -37,7 +37,7 @@ def _pickers() -> ft.Control:
     saver = kit.use_stable(FileSaver)
 
     def dump(_: ft.Event[Button]) -> None:
-        toast_info(
+        Message.info(
             tr(
                 "cat.upload.dump",
                 files=len(files.value or []),

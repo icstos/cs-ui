@@ -1,4 +1,4 @@
-"""布局组件：容器、列表、折叠面板、时间线、表格与页面骨架。"""
+"""布局组件：容器、列表、折叠面板、步骤条、表格与页面骨架。"""
 
 from __future__ import annotations
 
@@ -18,20 +18,21 @@ from ui import (
     PageLayout,
     Row,
     Stack,
-    Timeline,
-    TimelineItem,
+    Step,
+    StepItem,
     use_t,
 )
 
 _TABLE_CODE = '''Table(data_table=ft.DataTable(columns=[...], rows=[...]), rows_per_page=8)'''
 
-_TIMELINE_CODE = '''Timeline(
-    items=[
-        TimelineItem("Deploy", "09:12", "Build finished", done=True),
-        TimelineItem("Review", "10:30", "Waiting for approval", type="warning"),
-        TimelineItem("Release", "14:05", "Scheduled"),
+_STEP_CODE = '''Step(
+    steps=[
+        StepItem("Account", "Email and password"),
+        StepItem("Verify", "Click the link we sent"),
+        StepItem("Profile", "Avatar and preferences"),
+        StepItem("Done", "Enter the workspace"),
     ],
-    pending="In progress",
+    active=2,
 )'''
 
 
@@ -185,41 +186,41 @@ def _expanders() -> ft.Control:
 
 
 @ft.component
-def _timeline() -> ft.Control:
+def _steps() -> ft.Control:
     tr = use_t()
     return Column(
-        spacing=18,
+        spacing=22,
         controls=[
-            Timeline(
-                items=[
-                    TimelineItem(
-                        tr("cat.layout.timeline.t1"), "09:12",
-                        tr("cat.layout.timeline.d1"), done=True,
-                    ),
-                    TimelineItem(
-                        tr("cat.layout.timeline.t2"), "10:30",
-                        tr("cat.layout.timeline.d2"), type="warning",
-                    ),
-                    TimelineItem(
-                        tr("cat.layout.timeline.t3"), "14:05",
-                        tr("cat.layout.timeline.d3"), type="info",
-                    ),
-                    TimelineItem(
-                        tr("cat.layout.timeline.t4"), "—",
-                        tr("cat.layout.timeline.d4"),
-                    ),
+            Step(
+                steps=[
+                    StepItem(tr("cat.layout.step.t1"), tr("cat.layout.step.d1")),
+                    StepItem(tr("cat.layout.step.t2"), tr("cat.layout.step.d2")),
+                    StepItem(tr("cat.layout.step.t3"), tr("cat.layout.step.d3")),
+                    StepItem(tr("cat.layout.step.t4"), tr("cat.layout.step.d4")),
                 ],
-                pending=tr("cat.layout.timeline.pending"),
+                active=2,
             ),
-            Timeline(
-                mode="alternate",
-                line_fade=True,
-                density="compact",
-                time_position="hidden",
-                items=[
-                    TimelineItem("", "", tr("cat.layout.timeline.alt1"), type="info"),
-                    TimelineItem("", "", tr("cat.layout.timeline.alt2"), done=True),
-                    TimelineItem("", "", tr("cat.layout.timeline.alt3"), done=True),
+            Step(
+                direction="vertical",
+                active=1,
+                steps=[
+                    StepItem(tr("cat.layout.step.v1"), tr("cat.layout.step.vd1")),
+                    StepItem(
+                        tr("cat.layout.step.v2"),
+                        tr("cat.layout.step.vd2"),
+                        status="error",
+                    ),
+                    StepItem(tr("cat.layout.step.v3"), tr("cat.layout.step.vd3")),
+                ],
+            ),
+            Step(
+                simple=True,
+                active=1,
+                steps=[
+                    StepItem(tr("cat.layout.step.s1")),
+                    StepItem(tr("cat.layout.step.s2")),
+                    StepItem(tr("cat.layout.step.s3")),
+                    StepItem(tr("cat.layout.step.s4")),
                 ],
             ),
         ],
@@ -289,8 +290,8 @@ LAYOUT: Doc = (
     demo(_lists, hint_key="cat.layout.list.hint"),
     h2("cat.layout.expander.title"),
     demo(_expanders, hint_key="cat.layout.expander.hint"),
-    h2("cat.layout.timeline.title"),
-    demo(_timeline, hint_key="cat.layout.timeline.hint", code=_TIMELINE_CODE),
+    h2("cat.layout.step.title"),
+    demo(_steps, hint_key="cat.layout.step.hint", code=_STEP_CODE),
     h2("cat.layout.table.title"),
     demo(_table, hint_key="cat.layout.table.hint", code=_TABLE_CODE, padded=False),
     h2("cat.layout.page.title"),

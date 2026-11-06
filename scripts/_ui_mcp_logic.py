@@ -20,14 +20,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-import inspect  # noqa: E402
+import inspect
 
-import flet as ft  # noqa: E402
+import flet as ft
 
-from ui_mcp import paths  # noqa: E402
-from ui_mcp.docs import DocsIndex  # noqa: E402
-from ui_mcp.examples import ExamplesIndex  # noqa: E402
-from ui_mcp.store import api_store, render_text  # noqa: E402
+from ui_mcp import paths
+from ui_mcp.docs import DocsIndex
+from ui_mcp.examples import ExamplesIndex
+from ui_mcp.store import api_store, render_text
 
 PASSED = 0
 
@@ -80,7 +80,7 @@ check("别名导致的重复 Header_1 已合并", len([n for n in names if n == 
 # ---------------------------------------------------------------- 内省正确性
 print()
 print("=== 内省：字段归属 ===")
-import ui  # noqa: E402
+import ui
 
 button = api_store.get("Button")
 check("Button 自家字段数（height/style_type/shape/plain/is_primary）", len(button["properties"]), 5)
@@ -181,11 +181,12 @@ print()
 print("=== 示例与文档 ===")
 examples = ExamplesIndex()
 pages = {e["id"] for e in examples.all()}
-check_true("demo/FormPage 已索引", "demo/FormPage" in pages)
-form = examples.get("demo/FormPage")
-check_true("示例带源码", "def FormPage" in form["code"])
-check_true("示例带路由", form["route"] == "/form")
-page_slice = examples.get("demo/FormPage", start_line=1, max_lines=20)
+# examples/demo.py 早已拆成 examples/test_*.py，这里跟到现存的表单示例
+check_true("test_form/App 已索引", "test_form/App" in pages)
+form = examples.get("test_form/App")
+check_true("示例带源码", "def App" in form["code"])
+check_true("示例带路由字段", "route" in form)
+page_slice = examples.get("test_form/App", start_line=1, max_lines=20)
 check_true("示例支持分页读", page_slice["total_lines"] > 20 and len(page_slice["code"].splitlines()) <= 20)
 check_true("用法回填存在", bool(examples.usage.get("SelectBox")))
 check("未知示例给候选列表", "error" in examples.get("nope/nothing"), True)

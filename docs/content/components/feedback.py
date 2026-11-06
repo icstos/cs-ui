@@ -1,4 +1,4 @@
-"""反馈组件：轻提示、消息条、对话框、进度与加载。"""
+"""反馈组件：消息提示、通知、对话框、进度与加载。"""
 
 from __future__ import annotations
 
@@ -13,30 +13,44 @@ from ui import (
     Column,
     Loading,
     Message,
+    Notification,
     ProgressBar,
     StyleType,
-    Toast,
-    toast_info,
-    toast_success,
     use_t,
 )
 
-_TOAST_CODE = '''Toast(content="Saved", style_type=StyleType.SUCCESS).show(page=page)
+_MESSAGE_CODE = '''# 一句话的回执：顶部居中，3 秒后自己走开
+Message.success("已保存")
+Message.error("请求失败，请重试", duration=5000)
 
-# 快捷函数
-toast_success("Saved", page=page)
-toast_error("Upload failed", page=page)'''
+# 连点三次只留一条，带 ×3 计数
+Message("已保存", grouping=True).show(page=page)
+
+# 常驻 + 手动关
+Message("正在同步…", duration=0, show_close=True).show(page=page)'''
+
+_NOTIFY_CODE = '''# 系统级通报：默认贴右上角，带标题
+Notification.success("同步完成", "3 个组件已更新到最新版本")
+
+# 常驻，等用户处理完再关
+Notification(
+    title="连接中断",
+    content="正在重试…",
+    style_type=StyleType.ERROR,
+    duration=0,
+    position="bottom-right",
+)'''
 
 _DIALOG_CODE = '''AlertDialog(
     title="Delete this file?",
     msg="This action cannot be undone.",
     style_type=StyleType.WARNING,
-    on_yes_click=lambda _: toast_success("Deleted", page=page),
+    on_yes_click=lambda _: Message.success("Deleted"),
 ).show(page)'''
 
 
 @ft.component
-def _toasts() -> ft.Control:
+def _messages() -> ft.Control:
     tr = use_t()
     page = ft.context.page
     styles = (
@@ -47,23 +61,140 @@ def _toasts() -> ft.Control:
         ("warning", StyleType.WARNING),
         ("error", StyleType.ERROR),
     )
-    return ft.Column(
+
+    def show(style: StyleType, name: str):
+        def _handler(_e: ft.Event[Button]) -> None:
+            Message(
+                tr("cat.feedback.msg.body", kind=tr(f"cat.feedback.style.{name}")),
+                style_type=style,
+            ).show(page)
+
+        return _handler
+
+    return Column(
         spacing=12,
         controls=[
-            ft.Text(tr("cat.feedback.toast.hint"), size=12.5, color=kit.MUTED),
+            ft.Row(
+                wrap=True,
+                spacing=10,
+                run_spacing=10,
+                controls=[
+                    Button(tr(f"cat.feedback.style.{name}"), on_click=show(style, name))
+                    for name, style in styles
+                ],
+            ),
             ft.Row(
                 wrap=True,
                 spacing=10,
                 run_spacing=10,
                 controls=[
                     Button(
-                        tr(f"cat.feedback.style.{name}"),
-                        on_click=lambda _e, style=style, name=name: Toast(
-                            content=tr("cat.feedback.toast.msg", kind=tr(f"cat.feedback.style.{name}")),
-                            style_type=style,
-                        ).show(page=page),
-                    )
+                        tr("cat.feedback.msg.closable"),
+                        icon=ft.Icons.CLOSE_ROUNDED,
+                        on_click=lambda _e: Message(
+                            tr("cat.feedback.msg.closablebody"),
+                            duration=0,
+                            show_close=True,
+                        ).show(page),
+                    ),
+                    Button(
+                        tr("cat.feedback.msg.grouping"),
+                        on_click=lambda _e: Message(
+                            tr("cat.feedback.msg.groupbody"),
+                            style_type=StyleType.SUCCESS,
+                            grouping=True,
+                        ).show(page),
+                    ),
+                    Button(
+                        tr("cat.feedback.msg.long"),
+                        on_click=lambda _e: Message(
+                            tr("cat.feedback.msg.longbody"),
+                            style_type=StyleType.WARNING,
+                        ).show(page),
+                    ),
+                    Button(
+                        tr("cat.feedback.msg.closeall"),
+                        on_click=lambda _e: Message.close_all(page),
+                    ),
+                ],
+            ),
+        ],
+    )
+
+
+@ft.component
+def _notifications() -> ft.Control:
+    tr = use_t()
+    page = ft.context.page
+    styles = (
+        ("default", StyleType.DEFAULT),
+        ("info", StyleType.INFO),
+        ("success", StyleType.SUCCESS),
+        ("warning", StyleType.WARNING),
+        ("error", StyleType.ERROR),
+    )
+    corners = (
+        ("tl", "top-left"),
+        ("tr", "top-right"),
+        ("bl", "bottom-left"),
+        ("br", "bottom-right"),
+    )
+
+    def send(style: StyleType, name: str):
+        def _handler(_e: ft.Event[Button]) -> None:
+            Notification(
+                tr("cat.feedback.notify.body"),
+                title=tr(f"cat.feedback.style.{name}"),
+                style_type=style,
+            ).show(page)
+
+        return _handler
+
+    def corner(position: str, name: str):
+        def _handler(_e: ft.Event[Button]) -> None:
+            Notification(
+                tr("cat.feedback.notify.posbody", pos=tr(f"cat.feedback.notify.pos.{name}")),
+                title=tr("cat.feedback.notify.head"),
+                style_type=StyleType.INFO,
+                position=position,
+            ).show(page)
+
+        return _handler
+
+    return Column(
+        spacing=12,
+        controls=[
+            ft.Row(
+                wrap=True,
+                spacing=10,
+                run_spacing=10,
+                controls=[
+                    Button(tr(f"cat.feedback.style.{name}"), on_click=send(style, name))
                     for name, style in styles
+                ],
+            ),
+            ft.Row(
+                wrap=True,
+                spacing=10,
+                run_spacing=10,
+                controls=[
+                    *[
+                        Button(
+                            tr(f"cat.feedback.notify.pos.{name}"),
+                            on_click=corner(position, name),
+                        )
+                        for name, position in corners
+                    ],
+                    Button(
+                        tr("cat.feedback.notify.sticky"),
+                        icon=ft.Icons.PUSH_PIN_OUTLINED,
+                        on_click=lambda _e: Notification(
+                            tr("cat.feedback.notify.stickyBody"),
+                            title=tr("cat.feedback.notify.stickyTitle"),
+                            style_type=StyleType.WARNING,
+                            duration=0,
+                        ).show(page),
+                    ),
                 ],
             ),
         ],
@@ -80,16 +211,17 @@ def _dialog() -> ft.Control:
             title=tr("cat.feedback.dialog.title2"),
             msg=tr("cat.feedback.dialog.msg"),
             style_type=StyleType.WARNING,
-            on_yes_click=lambda _e: toast_success(
-                tr("cat.feedback.dialog.done"), page=page
-            ),
-            on_no_click=lambda _e: toast_info(tr("cat.feedback.dialog.cancel"), page=page),
+            on_yes_click=lambda _e: Message.success(
+                tr("cat.feedback.dialog.done")
+            ).show(page),
+            on_no_click=lambda _e: Message.info(tr("cat.feedback.dialog.cancel")).show(page),
         ).show(page)
 
-    def message(_: ft.Event[Button]) -> None:
-        Message(
-            content=tr("cat.feedback.message.body"),
-            style_type=StyleType.INFO,
+    def notify(_: ft.Event[Button]) -> None:
+        Notification(
+            tr("cat.feedback.notify.body"),
+            title=tr("cat.feedback.notify.head"),
+            style_type=StyleType.SUCCESS,
         ).show(page)
 
     return ft.Row(
@@ -102,9 +234,9 @@ def _dialog() -> ft.Control:
                 on_click=confirm,
             ),
             Button(
-                tr("cat.feedback.message.open"),
-                icon=ft.Icons.SUBJECT,
-                on_click=message,
+                tr("cat.feedback.dialog.notify"),
+                icon=ft.Icons.NOTIFICATIONS_OUTLINED,
+                on_click=notify,
             ),
         ],
     )
@@ -146,8 +278,10 @@ def _progress() -> ft.Control:
 
 FEEDBACK: Doc = (
     p("cat.feedback.intro"),
-    h2("cat.feedback.toast.title"),
-    demo(_toasts, hint_key="cat.feedback.toast.hint", code=_TOAST_CODE),
+    h2("cat.feedback.msg.title"),
+    demo(_messages, hint_key="cat.feedback.msg.hint", code=_MESSAGE_CODE),
+    h2("cat.feedback.notify.title"),
+    demo(_notifications, hint_key="cat.feedback.notify.hint", code=_NOTIFY_CODE),
     h2("cat.feedback.dialog.title"),
     demo(_dialog, hint_key="cat.feedback.dialog.hint", code=_DIALOG_CODE),
     h2("cat.feedback.progress.title"),

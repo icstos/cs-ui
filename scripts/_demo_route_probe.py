@@ -135,7 +135,7 @@ async def probe(page: ft.Page) -> None:
             "/general": {"Header_1", "Quote", "Link", "Chip"},
             # Table 自 2026-10 起从 `@ft.control` 子类改为 `@ft.component` 函数组件，
             # 树里不再有 `Table` 类型，改断言它渲染出的 Card + DataTable。
-            "/layout": {"PageLayout", "Timeline", "Expander", "Card", "DataTable"},
+            "/layout": {"PageLayout", "Step", "Expander", "Card", "DataTable"},
             "/navigation": {"BreadCrumb", "Crumb", "Tab", "NavigationBarDestination"},
             # /form 页的下拉类控件来自 SelectBox（底层 ft.DropdownM2）；
             # DateTimeInput 自 2026-09 起改为「月历 + 时间轮盘」，不再用 ft.Dropdown。

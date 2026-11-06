@@ -649,7 +649,7 @@ def demo_frame(item: Demo) -> ft.Control:
 # ---------------------------------------------------------------------------
 
 #: 语言切换后需要从旧实例搬移的用户输入字段。
-_CARRIED_FIELDS = ("value", "start_value", "end_value", "selected")
+_CARRIED_FIELDS = ("value", "start_value", "end_value", "selected", "target_keys")
 
 
 def use_stable[T](factory: Callable[[], T]) -> T:

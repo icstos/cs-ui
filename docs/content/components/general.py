@@ -163,7 +163,7 @@ def _markdown() -> ft.Control:
             "```\n"
         ),
         Divider(color=kit.BORDER),
-        Json(value='{"name": "cs-ui", "flet": "1.0.5", "python": ">=3.12"}'),
+        Json(value='{"name": "cs-ui", "flet": "1.1.0", "python": ">=3.12"}'),
     )
 
 

@@ -44,7 +44,7 @@ def is_blue(p: tuple[int, int, int]) -> bool:
 
 
 def is_gray_border(p: tuple[int, int, int]) -> bool:
-    """浅灰描边（Paging 的其他按钮边框）。"""
+    """浅灰描边（Pagination 的其他按钮边框）。"""
     r, g, b = p
     return abs(r - g) < 14 and abs(g - b) < 14 and 195 < r < 238
 
@@ -113,7 +113,7 @@ def find_boxes(
 
 
 def locate_page_buttons(path: str | Path) -> list[tuple[int, int]]:
-    """定位 Paging 的页码按钮，返回可直接点的逻辑坐标列表。
+    """定位 Pagination 的页码按钮，返回可直接点的逻辑坐标列表。
 
     先找**当前页**按钮的蓝色边框（整条分页器里唯一的蓝色），
     由此定出分页器行的 y；再在该行上按白色块（其他页码按钮的底色）等距外推。

@@ -10,7 +10,6 @@ Table 已从「命令式 ``@ft.control`` + ``self.update()``」重写为
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -91,7 +90,7 @@ print()
 print("=== with_paged=False（单页铺满）===")
 s3 = TableState(data_table=make_dt(12), rows_per_page=5, with_paged=False)
 check("全部行都在第一页", len(s3.build_rows(1)), 12)
-check("页数仍按 rows_per_page 算（供 Paging 用）", s3.num_pages, 3)
+check("页数仍按 rows_per_page 算（供 Pagination 用）", s3.num_pages, 3)
 check("首行下标为 0", s3.page_slice(1)[1], 0)
 
 print()
@@ -104,7 +103,7 @@ check("超过总页落到 1", s4.clamp_page(99), 1)
 
 print()
 print("=== 边界：空表 / 整除 / rows_per_page<=0 ===")
-# 注意：flet 1.0.5 的 DataTable.columns 是**必填**位置参数，所以"空表"
+# 注意：flet 1.x 的 DataTable.columns 是**必填**位置参数，所以"空表"
 # 只能用「有列名、无数据行」来构造 —— 这也正是 Table 不给 data_table 时的兜底形状。
 empty_dt = ft.DataTable(columns=[ft.DataColumn(ft.Text("列"))])
 check_no_raise(
@@ -139,11 +138,11 @@ b = [c.content.value for c in s.build_rows(2)[0].cells]
 check("两次调用结果一致", a, b)
 
 print()
-print("=== PagingState 能吃下 TableState 的派生值 ===")
-from ui.navigation.paging import PagingState
+print("=== PaginationState 能吃下 TableState 的派生值 ===")
+from ui.navigation.pagination import PaginationState
 
-ps = PagingState(sum_data_nums=s4.num_rows, data_per_page_nums=s4.rows_per_page)
-check("PagingState 算出的页数与 Table 一致", ps.sum_page_nums, s4.num_pages)
+ps = PaginationState(sum_data_nums=s4.num_rows, data_per_page_nums=s4.rows_per_page)
+check("PaginationState 算出的页数与 Table 一致", ps.sum_page_nums, s4.num_pages)
 
 print()
 print(f"RESULT: ALL PASS  (passed={PASSED})")

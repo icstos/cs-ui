@@ -1,4 +1,4 @@
-"""导航组件：面包屑、标签页、分页器与应用外壳。"""
+"""导航组件：面包屑、标签页、分页器、菜单与应用外壳。"""
 
 from __future__ import annotations
 
@@ -11,8 +11,11 @@ from ui import (
     BreadCrumb,
     Column,
     Crumb,
-    Paging,
-    PagingState,
+    Menu,
+    MenuGroup,
+    MenuItem,
+    Pagination,
+    PaginationState,
     Tab,
     TabBar,
     TabBarView,
@@ -103,9 +106,109 @@ def _tabs() -> ft.Control:
 
 
 @ft.component
-def _paging() -> ft.Control:
-    state = kit.use_stable(lambda: PagingState(sum_data_nums=1_286, data_per_page_nums=10))
-    return panel(Paging(state))
+def _pagination() -> ft.Control:
+    state = kit.use_stable(lambda: PaginationState(sum_data_nums=1_286, data_per_page_nums=10))
+    return panel(Pagination(state))
+
+
+_MENU_CODE = '''Menu(
+    items=[
+        MenuItem("home", "概览", icon=ft.Icons.DASHBOARD_OUTLINED),
+        MenuGroup("运维", [
+            MenuItem(
+                "host", "主机", icon=ft.Icons.DNS_OUTLINED,
+                children=[                       # 非空即可展开，本身不可选中
+                    MenuItem("hl", "主机列表"),
+                    MenuItem("hg", "主机分组"),
+                    MenuItem("ht", "标签管理", badge="12"),
+                ],
+            ),
+        ]),
+    ],
+    selected_key="hl",          # 选中项（外部改它即重绘）
+    expanded_keys=("host",),    # 默认展开哪几组
+    show_collapse_arrow=True,   # 底部折叠按钮
+    on_select=lambda item: ...,  # 叶子项被点中
+)'''
+
+
+def _menu_items(tr) -> list:
+    """菜单演示数据：文案跟着语言走，所以每项都取 ``tr``。"""
+    return [
+        MenuItem("home", tr("demo.menu.home"), icon=ft.Icons.DASHBOARD_OUTLINED),
+        MenuItem(
+            "monitor", tr("demo.menu.monitor"), icon=ft.Icons.MONITOR_HEART_OUTLINED
+        ),
+        MenuGroup(
+            tr("demo.menu.group"),
+            [
+                MenuItem(
+                    "host",
+                    tr("demo.menu.host"),
+                    icon=ft.Icons.DNS_OUTLINED,
+                    children=[
+                        MenuItem("hl", tr("demo.menu.host_list"), dot=True),
+                        MenuItem("hg", tr("demo.menu.host_group")),
+                        MenuItem("ht", tr("demo.menu.host_tag"), badge="12"),
+                    ],
+                ),
+                MenuItem(
+                    "net",
+                    tr("demo.menu.net"),
+                    icon=ft.Icons.LAN_OUTLINED,
+                    children=[
+                        MenuItem("vpc", tr("demo.menu.vpc")),
+                        MenuItem("eip", tr("demo.menu.eip")),
+                    ],
+                ),
+            ],
+        ),
+        MenuItem("setting", tr("demo.menu.setting"), icon=ft.Icons.SETTINGS_OUTLINED),
+        MenuItem(
+            "audit",
+            tr("demo.menu.audit"),
+            icon=ft.Icons.RECEIPT_LONG_OUTLINED,
+            disabled=True,
+        ),
+    ]
+
+
+@ft.component
+def _menu() -> ft.Control:
+    tr = use_t()
+    full = kit.use_stable(
+        lambda: Menu(
+            items=_menu_items(tr),
+            selected_key="hl",
+            expanded_keys=("host",),
+            width=228,
+            show_collapse_arrow=True,
+        )
+    )
+    mini = kit.use_stable(
+        lambda: Menu(
+            items=_menu_items(tr),
+            selected_key="hl",
+            expanded_keys=("host",),
+            collapsed=True,
+        )
+    )
+
+    def frame(control: ft.Control, width: int) -> ft.Control:
+        return ft.Container(
+            width=width,
+            padding=8,
+            bgcolor=ft.Colors.SURFACE,
+            border=ft.Border.all(1, kit.BORDER),
+            border_radius=10,
+            content=control,
+        )
+
+    return ft.Row(
+        spacing=16,
+        vertical_alignment=ft.CrossAxisAlignment.START,
+        controls=[frame(full.ui(), 244), frame(mini.ui(), 64)],
+    )
 
 
 NAVIGATION: Doc = (
@@ -114,8 +217,10 @@ NAVIGATION: Doc = (
     demo(_breadcrumb, hint_key="cat.navigation.crumb.hint"),
     h2("cat.navigation.tabs.title"),
     demo(_tabs, hint_key="cat.navigation.tabs.hint", code=_TABS_CODE, padded=False),
-    h2("cat.navigation.paging.title"),
-    demo(_paging, hint_key="cat.navigation.paging.hint", padded=False),
+    h2("cat.navigation.pagination.title"),
+    demo(_pagination, hint_key="cat.navigation.pagination.hint", padded=False),
+    h2("cat.navigation.menu.title"),
+    demo(_menu, hint_key="cat.navigation.menu.hint", code=_MENU_CODE, padded=False),
     h2("cat.navigation.shell.title"),
     p("cat.navigation.shell.desc"),
     code(_SHELL_CODE, "shell.py"),

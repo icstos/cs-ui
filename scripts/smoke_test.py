@@ -1,16 +1,16 @@
-"""无头渲染冒烟测试（flet 1.0.0）。
+"""无头渲染冒烟测试（flet 1.1）。
 
 在 ``AppView.FLET_APP_HIDDEN`` 模式下真实启动 Flet 运行时，渲染指定组件，
 （可选）依次访问所有路由，捕获组件构建期间的任何异常。
 
-这在没有人工点击 GUI 的情况下，能可靠地发现「组件在 1.0.0 下渲染即崩溃」的问题。
+这在没有人工点击 GUI 的情况下，能可靠地发现「组件在 flet 1.x 下渲染即崩溃」的问题。
 
 用法::
 
-    python scripts/smoke_test.py examples.demo              # 渲染 module 的 App
-    python scripts/smoke_test.py examples.demo Home         # 指定组件名
+    python scripts/smoke_test.py docs.app                   # 渲染 module 的 App
+    python scripts/smoke_test.py docs.app App --routes /,/about   # 逐个路由渲染
     python scripts/smoke_test.py ui.input.rating main       # 传统 main(page) 入口
-    python scripts/smoke_test.py examples.demo --routes /,/general,/form
+    python scripts/smoke_test.py ui.core.theme App          # 指定组件名
 
 退出码：0 = 全部渲染成功；1 = 存在异常。
 """
@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
-import flet as ft  # noqa: E402
+import flet as ft  # 必须在改过 sys.path 之后导入
 
 RESULT: dict[str, list[str]] = {"ok": [], "fail": []}
 
@@ -78,7 +78,7 @@ async def _probe(
 
     try:
         await page.window.close()
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110 - 关窗口失败不影响已经收完的结果
         pass
 
     ok, fail = len(RESULT["ok"]), len(RESULT["fail"])

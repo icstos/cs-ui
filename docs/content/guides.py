@@ -92,6 +92,14 @@ def Palette() -> ft.Control:
         on_click=lambda _: theme.toggle_mode(),
     )'''
 
+_SURFACES = '''from ui import theme_state
+
+# 默认：中性表面（浅色近白 / 深色 #121212）
+theme_state().set_surfaces("neutral")
+
+# Flet 1.0 的着色表面：容器带一点种子色偏
+theme_state().set_surfaces("tonal")'''
+
 _TOKENS = '''from ui import ELEVATION, RADIUS, SPACE
 
 Container(
@@ -186,6 +194,10 @@ THEMING: Doc = (
     h2("theme.modes.title"),
     p("theme.modes.desc"),
     code(_THEME, "theme.py"),
+    h2("theme.surfaces.title"),
+    p("theme.surfaces.desc"),
+    code(_SURFACES, "surfaces.py"),
+    p("theme.surfaces.tonal"),
     warn("theme.trap", "theme.trap_title"),
 )
 

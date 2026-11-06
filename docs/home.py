@@ -9,6 +9,7 @@ from docs.shell import site_footer
 from docs.site import (
     CATEGORIES,
     COMPONENT_TOTAL,
+    FLET_VERSION,
     GITHUB_URL,
     PACKAGE_VERSION,
     PYTHON_VERSION,
@@ -19,10 +20,10 @@ from ui import (
     Chip,
     Input,
     LineChart,
+    Notification,
     ProgressBar,
     Rating,
     Switch,
-    toast_success,
     use_t,
 )
 from ui.core.theme import use_theme
@@ -55,7 +56,7 @@ def _chip_row() -> list[ft.Control]:
             tone="info",
             icon=ft.Icons.TERMINAL,
         ),
-        kit.badge("Flet 1.0.5", tone="success", icon=ft.Icons.BOLT),
+        kit.badge(f"Flet {FLET_VERSION}", tone="success", icon=ft.Icons.BOLT),
         kit.badge(tr("home.meta.license"), tone="neutral", icon=ft.Icons.GAVEL),
     ]
 
@@ -707,7 +708,7 @@ def _tile_progress() -> ft.Control:
 
 
 @ft.component
-def _tile_paging() -> ft.Control:
+def _tile_pagination() -> ft.Control:
     tr = use_t()
     return ft.Row(
         spacing=8,
@@ -800,8 +801,8 @@ def _showcase() -> ft.Control:
                             route="/components/feedback",
                         ),
                         _tile(
-                            slug="paging",
-                            preview=_tile_paging(),
+                            slug="pagination",
+                            preview=_tile_pagination(),
                             route="/components/navigation",
                         ),
                     ],
@@ -940,11 +941,13 @@ def _playground() -> ft.Control:
                             ),
                             ft.Column(spacing=10, controls=[notify.ui(), compact.ui()]),
                             Button(
-                                tr("home.play.toast"),
+                                tr("home.play.notify"),
                                 is_primary=True,
                                 icon=ft.Icons.NOTIFICATIONS_ACTIVE_OUTLINED,
-                                on_click=lambda _e: toast_success(
-                                    tr("home.play.toast_text"), page=page
+                                on_click=lambda _e: Notification.success(
+                                    tr("home.play.notify_text"),
+                                    title=tr("home.play.notify"),
+                                    page=page,
                                 ),
                             ),
                         ],

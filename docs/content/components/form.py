@@ -9,6 +9,7 @@ import flet as ft
 from docs import kit
 from docs.blocks import Doc, code, demo, h2, note, p, tip, ul
 from ui import (
+    Cascader,
     Checkbox,
     CheckboxGroup,
     ColorPicker,
@@ -17,15 +18,20 @@ from ui import (
     DateTimeInput,
     Input,
     LayoutType,
+    Message,
     MultiSelect,
+    NumberInput,
     Radio,
     RangeSlider,
     Rating,
+    Row,
     SearchBar,
     SegmentedButton,
     SelectBox,
     Slider,
     Switch,
+    Transfer,
+    TransferItem,
     use_t,
 )
 
@@ -33,15 +39,23 @@ from ui import (
 _BOX = {"label_width": 72, "width": 200}
 
 _INPUT_CODE = '''Input(label="Name", value="Shawn", width=260)
-Input(label="Age", value="30", data_type="int", width=260)
-Input(label="Budget", value="199.9", data_type="float", width=260)'''
+Input(label="Folder", value="", data_type="dir", width=260)'''
 
-_DATE_CODE = '''DateInput(label="Birthday", value=date(1996, 5, 20))
-DateTimeInput(
-    label="Meeting",
-    value=datetime(2026, 3, 18, 9, 30),
-    minute_step=5,
-)'''
+_NUMBER_CODE = '''NumberInput(label="Quantity", value=12, min=1, max=99)
+NumberInput(label="Tax rate", value=0.13, step=0.01, precision=2, suffix="%",
+            controls_position="right")
+NumberInput(label="Price", value=199.9, step=0.1, precision=2, prefix="¥")'''
+
+_DATE_CODE = '''DateInput(label="Date", value=date(2026, 9, 26))
+DateInput(label="Week", type="week", value=date(2026, 9, 26))
+DateInput(label="Month", type="month", value=date(2026, 9, 1))
+DateInput(label="Year", type="year", value=date(2026, 1, 1))
+DateInput(label="Dates", type="dates", value=[date(2026, 9, 3), date(2026, 9, 8)])
+DateInput(label="Range", type="daterange",
+          value=(date(2026, 9, 1), date(2026, 9, 20)))
+DateInput(label="Months", type="monthrange",
+          value=(date(2026, 3, 1), date(2026, 9, 1)))
+DateTimeInput(label="Meeting", value=datetime(2026, 3, 18, 9, 30), minute_step=5)'''
 
 _STABLE_CODE = '''# 在 @ft.component 里固定实例：父组件重绘不会重建，输入不丢
 name = ft.use_ref(lambda: Input(label="Name", width=260)).current'''
@@ -56,16 +70,6 @@ def _inputs() -> ft.Control:
             label=tr("demo.field.name"), value="Shawn", **_BOX
         )
     )
-    age = kit.use_stable(
-        lambda: Input(
-            label=tr("demo.field.age"), value="30", data_type="int", **_BOX
-        )
-    )
-    budget = kit.use_stable(
-        lambda: Input(
-            label=tr("demo.field.budget"), value="199.9", data_type="float", **_BOX
-        )
-    )
     folder = kit.use_stable(
         lambda: Input(label=tr("demo.field.folder"), value="", data_type="dir", **_BOX)
     )
@@ -74,7 +78,45 @@ def _inputs() -> ft.Control:
         wrap=True,
         run_spacing=14,
         vertical_alignment=ft.CrossAxisAlignment.START,
-        controls=[name.ui(), age.ui(), budget.ui(), folder.ui()],
+        controls=[name.ui(), folder.ui()],
+    )
+
+
+@ft.component
+def _numbers() -> ft.Control:
+    tr = use_t()
+    qty = kit.use_stable(
+        lambda: NumberInput(
+            label=tr("demo.field.qty"), value=12, min=1, max=99, **_BOX
+        )
+    )
+    rate = kit.use_stable(
+        lambda: NumberInput(
+            label=tr("demo.field.rate"),
+            value=0.13,
+            step=0.01,
+            precision=2,
+            suffix="%",
+            controls_position="right",
+            **_BOX,
+        )
+    )
+    budget = kit.use_stable(
+        lambda: NumberInput(
+            label=tr("demo.field.budget"),
+            value=199.9,
+            step=0.1,
+            precision=2,
+            prefix="¥",
+            **_BOX,
+        )
+    )
+    return ft.Row(
+        spacing=18,
+        wrap=True,
+        run_spacing=14,
+        vertical_alignment=ft.CrossAxisAlignment.START,
+        controls=[qty.ui(), rate.ui(), budget.ui()],
     )
 
 
@@ -114,6 +156,71 @@ def _choices() -> ft.Control:
     )
 
 
+#: 级联演示数据：地名是专有名词，三语共用一份。
+_CASCADER_OPTIONS = [
+    {
+        "label": "浙江",
+        "children": [
+            {"label": "杭州", "children": [
+                {"label": "西湖区"}, {"label": "余杭区"},
+            ]},
+            {"label": "宁波", "children": [{"label": "海曙区"}]},
+        ],
+    },
+    {
+        "label": "江苏",
+        "children": [
+            {"label": "南京", "children": [{"label": "鼓楼区"}]},
+            {"label": "苏州", "children": [{"label": "姑苏区"}]},
+        ],
+    },
+    {"label": "北京", "children": [
+        {"label": "朝阳区"}, {"label": "海淀区"},
+    ]},
+]
+
+_CASCADE_CODE = '''Cascader(label="Region", options=_OPTIONS,
+           value=["浙江", "杭州", "西湖区"])
+Cascader(label="Cities", options=_OPTIONS, multiple=True,
+         value=[["浙江", "杭州"]], collapse_tags=True)
+Cascader(label="Search", options=_OPTIONS, filterable=True)
+Cascader(label="Any level", options=_OPTIONS, check_strictly=True,
+         value=["江苏"], show_all_levels=False)'''
+
+
+@ft.component
+def _cascader() -> ft.Control:
+    basic = kit.use_stable(
+        lambda: Cascader(
+            label="地区",
+            options=_CASCADER_OPTIONS,
+            value=["浙江", "杭州", "西湖区"],
+        )
+    )
+    multi = kit.use_stable(
+        lambda: Cascader(
+            label="多选",
+            options=_CASCADER_OPTIONS,
+            multiple=True,
+            value=[["浙江", "杭州"], ["江苏", "南京"]],
+            collapse_tags=True,
+        )
+    )
+    search = kit.use_stable(
+        lambda: Cascader(label="搜索", options=_CASCADER_OPTIONS, filterable=True)
+    )
+    strict = kit.use_stable(
+        lambda: Cascader(
+            label="任意级",
+            options=_CASCADER_OPTIONS,
+            check_strictly=True,
+            value=["北京"],
+            show_all_levels=False,
+        )
+    )
+    return Column(spacing=14, controls=[basic.ui(), multi.ui(), search.ui(), strict.ui()])
+
+
 @ft.component
 def _selects() -> ft.Control:
     tr = use_t()
@@ -134,13 +241,157 @@ def _selects() -> ft.Control:
     return Column(spacing=14, controls=[city.ui(), tags.ui()])
 
 
+_TRANSFER_CODE = '''Transfer(
+    data_source=[
+        TransferItem("name", "姓名"),
+        TransferItem("dept", "部门", description="一级 / 二级部门"),
+        TransferItem("id", "证件号", disabled=True),   # 两侧都搬不动
+    ],
+    target_keys=["name"],        # 已选，恒按 data_source 排序
+    titles=("可授权", "已授权"),
+    on_change=lambda keys, direction, moved: print(keys, direction, moved),
+)'''
+
+
+def _transfer_items(tr) -> list[TransferItem]:
+    """演示条目。``id`` 那条故意禁用：它搬不走，但照常显示、照常能被搜到。"""
+    return [
+        TransferItem("name", tr("cat.form.transfer.name")),
+        TransferItem(
+            "dept",
+            tr("cat.form.transfer.dept"),
+            description=tr("cat.form.transfer.dept_desc"),
+        ),
+        TransferItem(
+            "email",
+            tr("cat.form.transfer.email"),
+            description=tr("cat.form.transfer.email_desc"),
+        ),
+        TransferItem("phone", tr("cat.form.transfer.phone")),
+        TransferItem(
+            "id",
+            tr("cat.form.transfer.id"),
+            description=tr("cat.form.transfer.id_desc"),
+            disabled=True,
+        ),
+    ]
+
+
+@ft.component
+def _transfer() -> ft.Control:
+    tr = use_t()
+    page = ft.context.page
+
+    # on_change 必须在**构造期**定下来，而 use_state 的 setter 要等渲染时才有，
+    # 所以用一只可变盒子转手（同 Calendar 那节的理由）。
+    hook: list = [None]
+
+    def on_change(keys: list[str], direction: str, moved: list[str]) -> None:
+        key = (
+            "cat.form.transfer.moved"
+            if direction == "right"
+            else "cat.form.transfer.back"
+        )
+        Message.success(tr(key, n=len(moved)), page=page)
+        if hook[0] is not None:
+            hook[0](keys)
+
+    widget = kit.use_stable(
+        lambda: Transfer(
+            titles=(
+                tr("cat.form.transfer.src"),
+                tr("cat.form.transfer.dst"),
+            ),
+            data_source=_transfer_items(tr),
+            target_keys=["name", "phone"],
+            height=260,
+            on_change=on_change,
+        )
+    )
+    picked, set_picked = ft.use_state(["name", "phone"])
+    hook[0] = set_picked
+
+    titles = {item.key: item.title for item in widget.data_source}
+    summary = "、".join(titles.get(k, k) for k in picked) or tr(
+        "cat.form.transfer.nothing"
+    )
+    return Column(
+        spacing=14,
+        horizontal_alignment=ft.CrossAxisAlignment.START,
+        controls=[
+            widget.ui(),
+            ft.Text(
+                tr("cat.form.transfer.current", keys=summary),
+                size=12,
+                color=kit.MUTED,
+            ),
+        ],
+    )
+
+
+@ft.component
+def _transfer_plain() -> ft.Control:
+    tr = use_t()
+    widget = kit.use_stable(
+        lambda: Transfer(
+            titles=(
+                tr("cat.form.transfer.src"),
+                tr("cat.form.transfer.dst"),
+            ),
+            data_source=_transfer_items(tr)[:4],
+            target_keys=[],
+            show_search=False,
+            show_select_all=False,
+            one_way=True,
+            height=248,
+        )
+    )
+    return widget.ui()
+
+
+def _pair(left: ft.Control, right: ft.Control) -> ft.Control:
+    """两列并排：日期类输入框只有 220 宽，单列排下来太长。
+
+    每个子项都套一层 ``tight=True`` 的 Row —— ``DateInput`` 的根是"标签 + 输入框"，
+    默认会撑满可用宽度（主轴上取 max），不收紧就会变成"一项一行"。
+    """
+
+    def cell(control: ft.Control) -> ft.Control:
+        return ft.Row(tight=True, controls=[control])
+
+    return Row(spacing=20, run_spacing=14, wrap=True, controls=[cell(left), cell(right)])
+
+
+
 @ft.component
 def _dates() -> ft.Control:
     tr = use_t()
-    birthday = kit.use_stable(
-        lambda: DateInput(
-            label=tr("demo.field.birthday"), value=dt.date(1996, 5, 20)
-        )
+
+    def make(key: str, **kwargs):
+        # 宽度从 kwargs 里取，别写死在构造函数上 —— 区间那两项要传 300，
+        # 否则会撞成 "got multiple values for keyword argument 'width'"。
+        w = kwargs.pop("width", 220)
+
+        def build(k=key, kw=kwargs, width=w):
+            return DateInput(
+                label=tr(f"demo.field.{k}"), label_width=72, width=width, **kw
+            )
+
+        return kit.use_stable(build)
+
+    single = make("date", value=dt.date(2026, 9, 26))
+    week = make("week", type="week", value=dt.date(2026, 9, 26))
+    month = make("month", type="month", value=dt.date(2026, 9, 1))
+    year = make("year", type="year", value=dt.date(2026, 1, 1))
+    dates = make("dates", type="dates", value=[dt.date(2026, 9, 3), dt.date(2026, 9, 8), dt.date(2026, 9, 15)])
+    # 范围两端的文本接近 170px，220 的框会截断，单独给宽一点
+    daterange = make(
+        "daterange", type="daterange", width=300,
+        value=(dt.date(2026, 9, 1), dt.date(2026, 9, 20)),
+    )
+    monthrange = make(
+        "monthrange", type="monthrange", width=300,
+        value=(dt.date(2026, 3, 1), dt.date(2026, 9, 1)),
     )
     meeting = kit.use_stable(
         lambda: DateTimeInput(
@@ -150,7 +401,17 @@ def _dates() -> ft.Control:
             minute_step=5,
         )
     )
-    return Column(spacing=14, controls=[birthday.ui(), meeting.ui()])
+    return Column(
+        spacing=16,
+        horizontal_alignment=ft.CrossAxisAlignment.START,
+        controls=[
+            _pair(single.ui(), week.ui()),
+            _pair(month.ui(), year.ui()),
+            _pair(dates.ui(), meeting.ui()),
+            daterange.ui(),
+            monthrange.ui(),
+        ],
+    )
 
 
 @ft.component
@@ -277,10 +538,18 @@ FORM: Doc = (
     p("cat.form.intro"),
     h2("cat.form.input.title"),
     demo(_inputs, hint_key="cat.form.input.hint", code=_INPUT_CODE),
+    h2("cat.form.number.title"),
+    demo(_numbers, hint_key="cat.form.number.hint", code=_NUMBER_CODE),
     h2("cat.form.choice.title"),
     demo(_choices, hint_key="cat.form.choice.hint"),
     h2("cat.form.select.title"),
     demo(_selects, hint_key="cat.form.select.hint"),
+    h2("cat.form.transfer.title"),
+    demo(_transfer, hint_key="cat.form.transfer.hint", code=_TRANSFER_CODE),
+    h2("cat.form.transfer.plain_title"),
+    demo(_transfer_plain, hint_key="cat.form.transfer.plain_hint"),
+    h2("cat.form.cascader.title"),
+    demo(_cascader, hint_key="cat.form.cascader.hint", code=_CASCADE_CODE),
     h2("cat.form.date.title"),
     demo(_dates, hint_key="cat.form.date.hint", code=_DATE_CODE),
     h2("cat.form.slider.title"),

@@ -1,6 +1,6 @@
 """CS-UI 组件效果展示 Demo
 
-基于 src/ui 下各组件，使用 flet 0.86.0 声明式编程实现完整的组件效果展示。
+基于 src/ui 下各组件，使用 flet 1.1 声明式编程实现完整的组件效果展示。
 运行方式: python scripts/ui_demo.py
 """
 
@@ -8,7 +8,6 @@ import asyncio
 import datetime
 import math
 import os
-import random
 import sys
 import warnings
 
@@ -16,6 +15,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import flet as ft
+
 from ui import (
     # feedback
     AlertDialog,
@@ -43,7 +43,6 @@ from ui import (
     Image,
     Input,
     Json,
-    LayoutType,
     # chart
     LineChart,
     Link,
@@ -52,7 +51,7 @@ from ui import (
     LogContainer,
     Markdown,
     Message,
-    Paging,
+    Pagination,
     ProgressBar,
     Quote,
     Radio,
@@ -74,9 +73,9 @@ from ui import (
     VerticalDivider,
 )
 
-# 直接导入：navigation/__init__.py 未导出 PagingState，
+# 直接导入：navigation/__init__.py 未导出 PaginationState，
 # 加上 ui/__init__.py 末尾设置 __name__ = "cs-ui" 会破坏子模块回退导入
-from ui.navigation.paging import PagingState
+from ui.navigation.pagination import PaginationState
 
 # 颜色常量
 C_PRIMARY = "#1f6feb"
@@ -1171,7 +1170,7 @@ def DisplayPage():
 
 @ft.component
 def NavigationPage():
-    paging_state = PagingState(
+    pagination_state = PaginationState(
         sum_data_nums=128,
         data_per_page_nums=10,
         on_change_page=lambda page: print(f"当前页码: {page}"),
@@ -1212,13 +1211,13 @@ def NavigationPage():
             ),
         ),
         section(
-            "分页器 (Paging)",
+            "分页器 (Pagination)",
             "首页/上一页/页码/下一页/尾页 + 跳转 + 每页条数选择",
             ft.Container(
                 padding=ft.Padding.all(16),
                 border=ft.border.all(1, ft.Colors.GREY_300),
                 border_radius=8,
-                content=Paging(paging_state),
+                content=Pagination(pagination_state),
             ),
         ),
     )

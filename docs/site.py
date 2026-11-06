@@ -30,7 +30,7 @@ I18N_DIR: Final[Path] = DOCS_ROOT / "i18n" / "site"
 SITE_NAME: Final[str] = "cs-ui"
 GITHUB_URL: Final[str] = "https://github.com/icstos/cs-ui"
 FLET_URL: Final[str] = "https://flet.dev"
-FLET_VERSION: Final[str] = "1.0.5"
+FLET_VERSION: Final[str] = "1.1.0"
 PYTHON_VERSION: Final[str] = "3.12+"
 LICENSE_NAME: Final[str] = "MIT"
 
@@ -139,14 +139,15 @@ _COMPONENT_GROUPS: Final[dict[str, tuple[str, ...]]] = {
         "ListView",
         "GridView",
         "Expander",
-        "Timeline",
+        "Step",
         "Table",
         "Tabs",
         "PageLayout",
     ),
     "navigation": (
         "BreadCrumb",
-        "Paging",
+        "Pagination",
+        "Menu",
         "AppBar",
         "NavigationRail",
         "NavigationBar",
@@ -159,6 +160,7 @@ _COMPONENT_GROUPS: Final[dict[str, tuple[str, ...]]] = {
         "Radio",
         "SelectBox",
         "MultiSelect",
+        "Transfer",
         "Slider",
         "RangeSlider",
         "Rating",
@@ -169,13 +171,17 @@ _COMPONENT_GROUPS: Final[dict[str, tuple[str, ...]]] = {
         "SearchBar",
     ),
     "feedback": (
-        "Toast",
         "Message",
+        "Notification",
         "AlertDialog",
         "ProgressBar",
         "Loading",
     ),
     "display": (
+        "Calendar",
+        "Carousel",
+        "Descriptions",
+        "Heatmap",
         "ListTile",
         "LogContainer",
         "CodeEditor",
