@@ -84,7 +84,7 @@ class ImageGridView:
     # 状态变更
     #
     # 本类是 `@ft.observable`，**给字段赋值本身就会通知订阅者重渲染**，
-    # 不需要（也不能）再调 `self.notify()` —— flet 1.0.5 的 Control 上
+    # 不需要（也不能）再调 `self.notify()` —— flet 1.x 的 Control 上
     # 压根没有这个方法，旧代码里的 `self.notify()` 是 AttributeError。
     # ------------------------------------------------------------------
 

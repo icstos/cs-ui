@@ -5,7 +5,7 @@
 .. note::
    **本组件经历过一次范式迁移。** 早期是 ``@ft.control`` 子类，在 ``set_page()``
    里调 ``self.update()`` 换页。但 demo 走的是 ``page.render(App)`` 根视图路径，
-   flet 1.0.5 会把整棵树标记为 **frozen**，``update()`` 第一件事就查 ``_frozen``
+   flet 1.x 会把整棵树标记为 **frozen**，``update()`` 第一件事就查 ``_frozen``
    → ``RuntimeError: Frozen control cannot be updated.``（点击「下一页」必崩）。
 
    现在改为 ``@ft.component`` 函数组件：页码是 ``use_state``，行数据由页码**派生**，

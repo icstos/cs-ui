@@ -1,7 +1,9 @@
-import flet as ft
-from dataclasses import dataclass, field
 from collections.abc import Callable
-from ui.core.styles import outline_input
+from dataclasses import dataclass, field
+
+import flet as ft
+
+from ui.core.styles import INPUT_RADIUS, outline_input
 from ui.input.input import Label
 
 ICON_SIZE = 18
@@ -21,7 +23,9 @@ class SelectBox(Label):
     value: str | None = None
     options: list[str | ft.dropdownm2.Option] = field(default_factory=list)
     dense: bool = True
-    filled: bool = True
+    #: 是否铺底色。默认 False —— 与 :class:`~ui.input.input.Input`、
+    #: ``MultiSelect`` 一样走"描边 + 透明底"，一排表单里不会出现一个灰块。
+    filled: bool = False
     editable: bool = True
     on_change: Callable | None = None
 
@@ -53,8 +57,11 @@ class SelectBox(Label):
             filled=self.filled,
             # editable=self.editable,
             content_padding=ft.Padding.only(left=PADDING),
-            bgcolor=ft.Colors.GREY_200,
-            border=outline_input(6, ft.Colors.GREY_200, ft.Colors.BLUE),
+            # 以前是 bgcolor=GREY_200 + 同色描边：固定色值不跟主题，暗色下
+            # 直接变成一块亮灰。描边走角色，明暗都由 Flutter 解析。
+            border=outline_input(
+                INPUT_RADIUS, ft.Colors.OUTLINE_VARIANT, ft.Colors.PRIMARY
+            ),
             on_change=_on_select,
             height=INPUT_HEIGHT,
         )

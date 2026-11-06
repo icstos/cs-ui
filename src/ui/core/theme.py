@@ -1,6 +1,6 @@
-"""主题运行时：明暗模式 + 主色种子 + 声明式订阅。
+"""主题运行时：明暗模式 + 表面策略 + 主色种子 + 声明式订阅。
 
-框架层只做三件事，其余交给 Flutter：
+框架层只做四件事，其余交给 Flutter：
 
 1. **主色种子** → ``ft.Theme(color_scheme_seed=...)``。Flutter 由这一个色值
    **推导整套 Material 3 色板**（``primary`` / ``secondary`` / ``surface`` /
@@ -8,8 +8,15 @@
    的事，不需要维护任何调色板表。
 2. **明暗模式** → ``page.theme_mode``（``SYSTEM`` / ``LIGHT`` / ``DARK``）。
    ``SYSTEM`` 时跟随系统，监听 :attr:`flet.Page.platform_brightness` 的变化。
-3. **把主题推给组件** → :func:`ThemeProvider` 组件 + :func:`use_theme` 订阅钩子。
+3. **表面策略** → ``ft.Theme(surfaces=...)``。Flet 1.1 起默认为中性表面
+   （浅色近白、深色 ``#121212``），主色只驱动强调色；传 ``tonal`` 可回到 1.0 的
+   着色表面。两种策略都只是换一组表面色，组件一行都不用改（见 :data:`SURFACES`）。
+4. **把主题推给组件** → :func:`ThemeProvider` 组件 + :func:`use_theme` 订阅钩子。
    组件读一次 :attr:`ThemeState.mode` 就登记了依赖，模式一变自动重绘。
+
+输入类控件的统一外观（描边、字号、内边距）也在这一层通过
+``input_decoration_theme`` / ``text_field_theme`` 下发 —— 组件自己的设置优先，
+没写的落到主题，见 :func:`build_theme`。
 
 用法（应用入口）::
 
@@ -39,15 +46,20 @@ from dataclasses import dataclass
 import flet as ft
 
 from ui.core.i18n import use_t
+from ui.core.styles import outline_input
 from ui.core.tokens import (
+    FONT_SIZE,
     PRIMARY_SEEDS,
+    RADIUS,
     SEMANTIC_ROLES,
+    SPACE,
     semantic,
     semantic_text,
 )
 
 __all__ = [
     "MODES",
+    "SURFACES",
     "ThemeProvider",
     "ThemeState",
     "ThemeSwitcher",
@@ -62,6 +74,14 @@ __all__ = [
 #: ``ThemeState.mode`` 的合法取值
 MODES: tuple[str, ...] = ("system", "light", "dark")
 
+#: ``ThemeState.surfaces`` 的合法取值（Flet 1.1 起默认中性）：
+#:
+#: * ``neutral`` —— 表面是纯中性灰（浅色近白、深色 ``#121212``），主色只驱动
+#:   强调色（按钮、开关、焦点环）。层次干净，卡片和白底不会互相串色。
+#: * ``tonal`` —— 旧的着色表面：容器色阶里带一点种子色的偏色，整体更"有调性"，
+#:   代价是淡紫/淡蓝的灰容易显脏。
+SURFACES: tuple[str, ...] = ("neutral", "tonal")
+
 
 def _norm_mode(mode: str | None) -> str:
     """把模式归一到 ``system`` / ``light`` / ``dark``（非法值退回 ``system``）。
@@ -72,6 +92,16 @@ def _norm_mode(mode: str | None) -> str:
     """
     m = str(mode if mode is not None else "").strip().lower()
     return m if m in MODES else "system"
+
+
+def _norm_surfaces(name: str | None) -> str:
+    """把表面策略归一到 ``neutral`` / ``tonal``（非法值退回中性）。
+
+    与 :func:`_norm_mode` 同理：写错一个枚举名不该让整页起不来，退回 1.1 的
+    默认观感即可。
+    """
+    s = str(name if name is not None else "").strip().lower()
+    return s if s in SURFACES else "neutral"
 
 
 @ft.observable
@@ -87,6 +117,10 @@ class ThemeState:
 
     mode: str = "system"  # system / light / dark
     primary: str = PRIMARY_SEEDS["blue"]  # 品牌色种子（喂给 color_scheme_seed）
+    #: 表面策略：``neutral``（Flet 1.1 默认）/ ``tonal``（旧的着色表面）。
+    #: 放在状态里而不是写成常量，是因为"换一种表面"和"换主色"是同一类决定 ——
+    #: 都由主题运行时统一下发，组件不需要知道。
+    surfaces: str = "neutral"
     font_family: str | None = None  # None = 用 Flutter 默认
     platform_brightness: str = "light"  # 系统亮度，仅 mode=="system" 时生效
     _bound: bool = False  # 是否已挂过 platform_brightness 监听
@@ -115,6 +149,15 @@ class ThemeState:
         text = str(primary).strip() if primary is not None else ""
         self.primary = text or PRIMARY_SEEDS["blue"]
 
+    def set_surfaces(self, name: str) -> None:
+        """切换表面策略（``neutral`` / ``tonal``）。
+
+        中性表面是 Flet 1.1 的默认：容器是纯中性灰，主色只出现在强调色上。
+        旧项目若依赖"淡主色底的容器"，把这里设成 ``tonal`` 即可整体回退，
+        不用改任何组件。
+        """
+        self.surfaces = _norm_surfaces(name)
+
     def toggle_mode(self) -> None:
         """明暗互切 —— 永远切到与**当前看到的**相反的那一档。
 
@@ -135,7 +178,7 @@ _state = ThemeState()
 
 #: 主题 context。默认值就是上面的单例，所以**没挂 Provider 也能用**；
 #: 真正的价值在于 :func:`ft.use_context` 碰到 ``Observable`` 值会**自动订阅** ——
-#: 而"在组件体里读 observable 字段"是**不会**订阅的（flet 1.0.5 只在
+#: 而"在组件体里读 observable 字段"是**不会**订阅的（flet 1.x 只在
 #: 「组件参数是 Observable」「use_state」「use_context」这三处订阅）。
 #: 换句话说：走 context 才有声明式的自动重绘，直接读全局单例是静默失效的。
 theme_context = ft.create_context(default_value=_state)
@@ -174,11 +217,42 @@ def build_theme(state: ThemeState) -> ft.Theme:
 
     滚动条与路由动画按**桌面端**调过：Windows 上 4px 细滚动条、隐藏轨道
     （只在滚动时出现），路由切换不做横向滑动（桌面端该做的是淡入）。
+
+    输入类控件的统一外观也在这里（Flet 1.1 的 ``input_decoration_theme`` /
+    ``text_field_theme``）：**组件自己传的优先，没传的落在这里**。放在主题层
+    而不是每个组件里复制一遍，是因为"输入框长什么样"是全局决定 —— 改一次
+    全框架一致，也不会出现某个页面忘了写 ``border`` 就退回 Material 默认。
     """
     return ft.Theme(
         color_scheme_seed=state.primary,
         use_material3=True,
         font_family=state.font_family,
+        # Flet 1.1 把默认表面从"带种子色偏的灰"换成了中性灰。这里显式写出来而
+        # 不是靠默认值：表面策略是本框架的一个可选项（见 SURFACES），而且下一个
+        # 读代码的人该知道"为什么卡片是纯灰而不是淡蓝"。
+        surfaces=ft.ThemeSurfaces(_norm_surfaces(state.surfaces)),
+        # 桌面端用鼠标点，不需要 Material 给每个可点元素强塞 48px 命中区 ——
+        # 那会让 32 高的行、图标按钮、紧凑工具栏全部虚胖。
+        material_tap_target_size=ft.MaterialTapTargetSize.SHRINK_WRAP,
+        input_decoration_theme=ft.InputDecorationTheme(
+            # 描边而不是填充块：中性表面下填充是"一块灰"，和卡片底糊在一起；
+            # 描边在任何底色上都能读出输入区的边界。
+            border=outline_input(color=ft.Colors.OUTLINE_VARIANT),
+            filled=False,
+            dense=True,
+            content_padding=ft.Padding.symmetric(
+                horizontal=SPACE["3"], vertical=SPACE["2"]
+            ),
+            hint_style=ft.TextStyle(
+                size=FONT_SIZE["body"], color=ft.Colors.ON_SURFACE_VARIANT
+            ),
+            label_style=ft.TextStyle(size=FONT_SIZE["body"]),
+            helper_style=ft.TextStyle(size=FONT_SIZE["caption"]),
+        ),
+        # 编辑中的文字与框架正文同档（Material 默认 16，比正文大一号）
+        text_field_theme=ft.TextFieldTheme(
+            text_style=ft.TextStyle(size=FONT_SIZE["body"], color=ft.Colors.ON_SURFACE)
+        ),
         scrollbar_theme=ft.ScrollbarTheme(
             thickness=4,
             radius=10,
@@ -199,13 +273,15 @@ def build_theme(state: ThemeState) -> ft.Theme:
             windows=ft.PageTransitionTheme.NONE,
             linux=ft.PageTransitionTheme.NONE,
         ),
-        # 菜单默认取 M3 的 surfaceContainerHigh（带主色偏的灰），在白底卡片
-        # 界面上会显得脏。改用容器最低层（浅色下接近纯白、深色下接近底色），
+        # 菜单默认取 M3 的 surfaceContainerHigh（浅色下比卡片底更灰一档），
+        # 浮在白底卡片上会显得脏。改用容器最低层（浅色接近纯白、深色接近底色），
         # 再补一点阴影，菜单才像「浮在页面上」而不是另一块面板。
         popup_menu_theme=ft.PopupMenuTheme(
             color=ft.Colors.SURFACE_CONTAINER_LOWEST,
             elevation=8,
             shape=ft.RoundedRectangleBorder(radius=10),
+            # 1.1 新增：菜单项悬停高亮的圆角。不设的话是直角，跟容器圆角打架。
+            border_radius=RADIUS["lg"],
             menu_padding=ft.Padding.symmetric(vertical=6),
             label_text_style=ft.TextStyle(size=13),
         ),
@@ -278,7 +354,13 @@ def _ThemeBridge(*, state: ThemeState, build: Callable[[], ft.Control]) -> ft.Co
     ``use_effect``。这是不依赖私有 API 的唯一可靠做法。
     """
     page = ft.context.page
-    deps = (state.mode, state.primary, state.platform_brightness, state.font_family)
+    deps = (
+        state.mode,
+        state.primary,
+        state.platform_brightness,
+        state.font_family,
+        state.surfaces,
+    )
     # 空依赖 -> 只在首次渲染调用一次，主题变化时复用同一棵子树
     node = ft.use_memo(build, [])
     ft.use_effect(lambda: apply_theme(page, state), list(deps))

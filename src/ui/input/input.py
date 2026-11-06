@@ -1,12 +1,16 @@
-import flet as ft
+from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from dataclasses import dataclass
+
+import flet as ft
 
 from ui.core.styles import outline_input
+from ui.core.tokens import FONT_SIZE as TYPE_SCALE
 
 ICON_SIZE = 16
-FONT_SIZE = 16
+#: 标签字号：比正文大一档（正文 13），标签仍然略重，但不至于压过输入内容。
+#: 以前写死 16，比输入文字大一号，两行挤在一起时读起来像两个标题。
+LABEL_SIZE = TYPE_SCALE["subtitle"]
 BORDER_RADIUS = 8
 DEFAULT_FORM_HEIGHT = 36
 SPACING = 10  # Column或ROW的controls之间的间隔
@@ -41,7 +45,7 @@ class Label:
                 spans=spans,
                 text_align=ft.TextAlign.START if self.is_vertical else ft.TextAlign.END,
                 width=self.label_width,
-                size=FONT_SIZE,
+                size=LABEL_SIZE,
             )
         else:
             return None
@@ -76,7 +80,7 @@ class Input(Label):
         """文本类输入的回写（数字类型走 :meth:`_on_number_change`）。"""
         self.value = e.data
 
-    def _on_number_change(self, value: int | float | None) -> None:
+    def _on_number_change(self, value: float | None) -> None:
         """NumberInput 的值回写到 ``Input.value``，外部读到的始终是最新值。"""
         self.value = value
         self.last_value = value
@@ -193,7 +197,6 @@ class Input(Label):
             value=str(self.value) if self.value is not None else "",
             cursor_color=ft.Colors.PRIMARY,
             selection_color=ft.Colors.with_opacity(0.24, ft.Colors.PRIMARY),
-            fill_color=ft.Colors.SURFACE_CONTAINER_HIGHEST,
             hover_color=ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY),
             border=outline_input(
                 BORDER_RADIUS, ft.Colors.OUTLINE_VARIANT, ft.Colors.PRIMARY
@@ -201,7 +204,10 @@ class Input(Label):
             cursor_width=1,
             hint_text=self.hint_text,
             multiline=self.multiline,
-            filled=True,
+            # 描边 + 透明底。以前铺 ``SURFACE_CONTAINER_HIGHEST``：那是 M3 里
+            # 最重的一档容器色，在 1.1 的中性表面下就成了一块灰 —— 和卡片底、
+            # 和旁边的只读框全糊在一起，边界只剩一圈比它更淡的线。
+            filled=False,
             height=DEFAULT_FORM_HEIGHT,
             text_align=text_align,
             keyboard_type=keyboard_type,
