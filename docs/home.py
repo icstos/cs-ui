@@ -576,7 +576,9 @@ def _features() -> ft.Control:
                     controls=[
                         _feature_large(slug="reactive", body=_counter_demo()),
                         _feature_large(slug="themed", body=_palette_demo()),
-                        _feature_small(slug="i18n", icon=ft.Icons.TRANSLATE, tone="info"),
+                        _feature_small(
+                            slug="i18n", icon=ft.Icons.TRANSLATE, tone="info"
+                        ),
                         _feature_small(
                             slug="typed", icon=ft.Icons.DATA_OBJECT, tone="success"
                         ),
@@ -725,10 +727,7 @@ def _tile_pagination() -> ft.Control:
                     weight=ft.FontWeight.W_600,
                 ),
             ),
-            *[
-                ft.Text(str(n), size=11.5, color=kit.MUTED)
-                for n in (2, 3, 4, "…", 12)
-            ],
+            *[ft.Text(str(n), size=11.5, color=kit.MUTED) for n in (2, 3, 4, "…", 12)],
         ],
     )
 
@@ -816,7 +815,7 @@ def _showcase() -> ft.Control:
 # 代码 + 试玩 + 收尾
 # ---------------------------------------------------------------------------
 
-_CODE = '''@ft.component
+_CODE = """@ft.component
 def Orders() -> ft.Control:
     query, set_query = ft.use_state("")
     rows = ft.use_memo(lambda: search(query), [query])
@@ -830,7 +829,7 @@ def Orders() -> ft.Control:
             Input(label="Search", on_change=on_change).ui(),
             Table(data_table=to_table(rows), rows_per_page=10),
         ],
-    )'''
+    )"""
 
 
 @ft.component
@@ -917,7 +916,9 @@ def _playground() -> ft.Control:
                                 ],
                             ),
                             kit.badge(
-                                tr("home.play.badge"), tone="success", icon=ft.Icons.BOLT
+                                tr("home.play.badge"),
+                                tone="success",
+                                icon=ft.Icons.BOLT,
                             ),
                         ],
                     ),

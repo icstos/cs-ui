@@ -58,12 +58,12 @@ from dataclasses import dataclass
 import flet as ft
 from flet import canvas as fcanvas
 
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.float_layer import use_float_layer
 from ui.core.i18n import t, use_t
 from ui.core.styles import outline_input
 from ui.input.input import Label
 from ui.input.panel_field import (
-    DISABLED_FG,
     FIELD_HEIGHT,
     FIELD_RADIUS,
     FIELD_WIDTH,
@@ -76,7 +76,7 @@ from ui.input.panel_field import (
     place_panel,
 )
 
-__all__ = ["ColorPicker", "DEFAULT_PRESETS"]
+__all__ = ["DEFAULT_PRESETS", "ColorPicker"]
 
 # ---------------------------------------------------------------------------
 # 面板尺寸
@@ -150,20 +150,60 @@ _HEX_ORDERS = ("last", "first")
 #: 色值取自 Ant Design 公开调色板的 day-6 / day-4 / day-7。
 DEFAULT_PRESETS: tuple[tuple[str, ...], ...] = (
     (
-        "#FFFFFF", "#FAFAFA", "#F5F5F5", "#E8E8E8", "#D9D9D9", "#C0C0C0",
-        "#A6A6A6", "#8C8C8C", "#737373", "#595959", "#262626", "#000000",
+        "#FFFFFF",
+        "#FAFAFA",
+        "#F5F5F5",
+        "#E8E8E8",
+        "#D9D9D9",
+        "#C0C0C0",
+        "#A6A6A6",
+        "#8C8C8C",
+        "#737373",
+        "#595959",
+        "#262626",
+        "#000000",
     ),
     (
-        "#F5222D", "#FA541C", "#FA8C16", "#FAAD14", "#FADB14", "#A0D911",
-        "#52C41A", "#13C2C2", "#1890FF", "#2F54EB", "#722ED1", "#EB2F96",
+        "#F5222D",
+        "#FA541C",
+        "#FA8C16",
+        "#FAAD14",
+        "#FADB14",
+        "#A0D911",
+        "#52C41A",
+        "#13C2C2",
+        "#1890FF",
+        "#2F54EB",
+        "#722ED1",
+        "#EB2F96",
     ),
     (
-        "#FF7875", "#FF9C6E", "#FFC069", "#FFD666", "#FFF566", "#D3F261",
-        "#95DE64", "#5CDBD3", "#69C0FF", "#85A5FF", "#B37FEB", "#FF85C0",
+        "#FF7875",
+        "#FF9C6E",
+        "#FFC069",
+        "#FFD666",
+        "#FFF566",
+        "#D3F261",
+        "#95DE64",
+        "#5CDBD3",
+        "#69C0FF",
+        "#85A5FF",
+        "#B37FEB",
+        "#FF85C0",
     ),
     (
-        "#CF1322", "#D4380D", "#D46B08", "#D48806", "#D4B106", "#7CB305",
-        "#389E0D", "#08979C", "#096DD9", "#1D39C4", "#531DAB", "#C41D7F",
+        "#CF1322",
+        "#D4380D",
+        "#D46B08",
+        "#D48806",
+        "#D4B106",
+        "#7CB305",
+        "#389E0D",
+        "#08979C",
+        "#096DD9",
+        "#1D39C4",
+        "#531DAB",
+        "#C41D7F",
     ),
 )
 
@@ -362,7 +402,7 @@ def parse_color(
     if named:
         return int(named[1:3], 16), int(named[3:5], 16), int(named[5:7], 16), 255
 
-    digits = low[1:] if low.startswith("#") else low
+    digits = low.removeprefix("#")
     if not _HEX_DIGITS.fullmatch(digits):
         return None
     if len(digits) == 3:
@@ -784,7 +824,7 @@ class ColorPicker(PanelField, Label):
         )
 
     def _raw_text(self) -> str:
-        """"原值透传"时给输入框看的文本。
+        """ "原值透传"时给输入框看的文本。
 
         原值本身要原样交给 Flutter 去解析（``bgcolor=ft.Colors.PRIMARY``），
         但 ``str(ft.Colors.PRIMARY)`` 是 ``"Colors.PRIMARY"`` —— 塞进输入框太丑，
@@ -859,7 +899,11 @@ class ColorPicker(PanelField, Label):
             return []
         if isinstance(presets[0], (list, tuple)):
             return [[str(c) for c in row] for row in presets]  # type: ignore[union-attr]
-        cols = self.preset_cols if self.preset_cols and self.preset_cols > 0 else PRESET_COLS
+        cols = (
+            self.preset_cols
+            if self.preset_cols and self.preset_cols > 0
+            else PRESET_COLS
+        )
         flat = [str(c) for c in presets]
         return [flat[i : i + cols] for i in range(0, len(flat), cols)]
 
@@ -1164,7 +1208,9 @@ class ColorPicker(PanelField, Label):
                         tooltip=ft.Tooltip(message=t("ui.color.revert")),
                         content=self._swatch(self._orig, w=half, h=ROW_H, radius=0),
                     ),
-                    ft.Container(width=1, height=ROW_H, bgcolor=ft.Colors.OUTLINE_VARIANT),
+                    ft.Container(
+                        width=1, height=ROW_H, bgcolor=ft.Colors.OUTLINE_VARIANT
+                    ),
                     self._swatch(
                         self._rgba, raw=self._unsupported, w=half - 1, h=ROW_H, radius=0
                     ),
@@ -1352,14 +1398,20 @@ class ColorPicker(PanelField, Label):
         """页脚：左「还原」，右「清除 / 完成」。"""
         controls: list[ft.Control] = [
             self._link_button(
-                "revert", t("ui.common.revert"), self.revert, enabled=self._orig is not None
+                "revert",
+                t("ui.common.revert"),
+                self.revert,
+                enabled=self._orig is not None,
             ),
             ft.Container(expand=True),
         ]
         if self.clearable:
             controls.append(
                 self._link_button(
-                    "clear", t("ui.common.clear"), self.clear, enabled=self.value is not None
+                    "clear",
+                    t("ui.common.clear"),
+                    self.clear,
+                    enabled=self.value is not None,
                 )
             )
         controls.append(self._link_button("done", t("ui.common.done"), self.close))
@@ -1410,67 +1462,232 @@ class ColorPicker(PanelField, Label):
 
 
 # ---------------------------------------------------------------------------
-# 示例
+# 独立运行：组件介绍 + 示例 + API
 # ---------------------------------------------------------------------------
-@ft.component
-def App() -> ft.Control:
-    """ColorPicker 组件运行示例。"""
-    brand = ColorPicker(
-        label="品牌色",
-        value="#1F6FEB",
-        on_change=lambda v: print(f"[ColorPicker] 品牌色 -> {v}"),
+def _caption(text: str) -> ft.Control:
+    return ft.Text(
+        text,
+        size=12.5,
+        color=ft.Colors.ON_SURFACE_VARIANT,
+        style=ft.TextStyle(height=1.6),
     )
-    accent = ColorPicker(
-        label="强调色",
-        value="#10B981",
-        allow_alpha=False,
-        format="hsl",
-        placeholder="选个强调色",
-    )
-    overlay = ColorPicker(
-        label="叠加层",
-        value="#7C3AEDB3",  # 8 位 + hex_alpha="last" => #7C3AED 的 70% 不透明
-        default="#7C3AED",
-        preset_cols=8,
-    )
-    compact = ColorPicker(value="#EF4444", show_value=False, width=64)
-    no_preset = ColorPicker(label="无预设色板", value="#F59E0B", presets=None)
-    frozen = ColorPicker(label="只读", value="#94A3B8", disabled=True, clearable=False)
 
-    return ft.Column(
+
+@ft.component
+def _echo(field: ColorPicker) -> ft.Control:
+    """把当前颜色读出来 —— ColorPicker 是 observable，拖动时这里跟着重绘。"""
+    if field.value is None:
+        detail = "（未选择）"
+    else:
+        detail = f"{field.value} · CSS 8 位 {field.hex8} · alpha {field.rgba[3]:.2f}"
+    return ft.Row(
+        spacing=10,
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
-            ft.Text("ColorPicker 颜色选择器", size=20, weight=ft.FontWeight.BOLD),
-            ft.Text(
-                "点框体挂出取色面板（悬浮、不推下方内容）：左上下拖动改饱和/明度，"
-                "右侧色相条、下沿透明度条都能拖；十六进制框与 R/G/B(/A) 数值框实时联动。",
-                size=13,
-                color="#6B7280",
+            ft.Container(
+                width=22,
+                height=22,
+                border_radius=ft.BorderRadius.all(4),
+                border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+                bgcolor=field.value,
             ),
-            ft.Divider(),
-            brand.ui(),
-            ft.Divider(),
-            accent.ui(),
-            ft.Divider(),
-            overlay.ui(),
-            ft.Divider(),
-            no_preset.ui(),
-            ft.Divider(),
-            frozen.ui(),
-            ft.Divider(),
-            ft.Text("折叠成纯色块按钮（show_value=False）", size=13, color="#6B7280"),
-            ft.Row(controls=[compact.ui()]),
-            ft.Divider(),
-            ft.Button(
-                content="打印当前值",
-                on_click=lambda _: print(
-                    f"{brand.value} / {accent.value} / {overlay.value} / "
-                    f"{compact.value} / {no_preset.value} / {frozen.value}"
-                ),
+            _caption(detail),
+        ],
+    )
+
+
+@ft.component
+def _basic() -> ft.Control:
+    field = ft.use_memo(
+        lambda: ColorPicker(label="品牌色", value="#1F6FEB"),
+        [],
+    )
+    return ft.Column(
+        spacing=10,
+        controls=[
+            field.ui(),
+            _echo(field),
+            ft.Row(
+                spacing=8,
+                controls=[
+                    ft.Button(
+                        "换成绿色", on_click=lambda _: field.set_color("#10B981")
+                    ),
+                    ft.Button("清空", on_click=lambda _: field.clear()),
+                ],
             ),
         ],
-        spacing=14,
     )
+
+
+@ft.component
+def _alpha() -> ft.Control:
+    field = ft.use_memo(
+        lambda: ColorPicker(
+            label="叠加层",
+            value="#7C3AEDB3",  # 8 位、hex_alpha="last" => #7C3AED 的 70%
+            default="#7C3AED",
+            format="hsl",
+        ),
+        [],
+    )
+    return ft.Column(
+        spacing=10,
+        controls=[
+            field.ui(),
+            _echo(field),
+            ft.Button(
+                "降到 40% 不透明",
+                on_click=lambda _: field.set_color("#7C3AED66"),
+            ),
+        ],
+    )
+
+
+@ft.component
+def _compact() -> ft.Control:
+    swatch = ft.use_memo(
+        lambda: ColorPicker(value="#EF4444", show_value=False, width=64),
+        [],
+    )
+    picker = ft.use_memo(
+        lambda: ColorPicker(label="无预设色板", value="#F59E0B", presets=None),
+        [],
+    )
+    return ft.Column(
+        spacing=12,
+        controls=[
+            ft.Row(
+                spacing=10,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[swatch.ui(), _caption("show_value=False：折叠成纯色块按钮")],
+            ),
+            picker.ui(),
+            _echo(picker),
+            _caption("presets=None 时整块预设色板隐藏，面板只剩取色区与数值行。"),
+        ],
+    )
+
+
+_BASIC_CODE = """color = ColorPicker(label="品牌色", value="#1F6FEB")
+
+Column([
+    color.ui(),
+    ft.Text(f"value = {color.value}"),   # flet 原生：#RRGGBB / #RRGGBB,0.8
+    ft.Text(f"CSS 8 位 = {color.hex8}"),  # 需要 #RRGGBBAA 时读这个
+])"""
+
+SPEC = Spec(
+    name="ColorPicker",
+    summary="取色面板：SV 区、色相与透明度条、十六进制与 RGB/HSL 同屏联动。",
+    definition=(
+        "颜色选择器把「挑颜色」拆成互相联动的几块：SV 区定饱和度与明度，色相条定色相，"
+        "透明度条定 alpha；下面的十六进制框与 RGB / HSL 数值框可以反过来精确输入。"
+        "折叠态只是色块加当前色值，而 value 本身就是 flet 能直接用的颜色串，不需要再转一次。"
+    ),
+    anatomy=[
+        ("折叠态", "22px 色块 + 十六进制文本 + 下拉箭头；半透明时色块垫棋盘格。"),
+        (
+            "取色区",
+            "横轴饱和度、纵轴明度；右侧竖向色相条 0° → 360°。两处都能点、能拖。",
+        ),
+        (
+            "透明度条",
+            "棋盘格衬底 + 「全透明 → 当前色」渐变；allow_alpha=False 时整条与 A 框一起隐藏。",
+        ),
+        (
+            "数值行",
+            "十六进制 + R/G/B（或 H/S/L）+ A；边打字边生效，回车 / 失焦时归一。",
+        ),
+        (
+            "原 / 新对比",
+            "左半是打开面板那一刻的原色，点它还原；右半是当前色，改坏了有退路。",
+        ),
+        (
+            "预设色板",
+            "默认 12 × 4；点一下即选中并把透明度归 1。presets=None 时整块隐藏。",
+        ),
+    ],
+    when=[
+        "主题色、品牌色、标签色这类需要精确取值的字段",
+        "需要从预设色板快速选一个，再微调饱和度 / 明度",
+        "颜色带透明度（蒙层、背景高亮），并且要直接喂给 flet 控件",
+    ],
+    avoid=[
+        "只有三五个固定颜色：用 SelectBox / Chip 列出来，打开整块取色面板是杀鸡用牛刀",
+        "颜色由设计规范锁定、用户不能改：展示色块即可，别给可点入口",
+        "要把 #RRGGBBAA 当 CSS 串落库：先读 hex8，value 是 flet 原生格式，直接当 CSS 会错位",
+    ],
+    examples=[
+        Example(
+            "基础用法",
+            _basic,
+            hint="受控色块 + 代码改色：按钮调 set_color / clear，色块与 hex8 读数一起更新。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "透明度与 HSL",
+            _alpha,
+            hint="8 位十六进制按 CSS 顺序读入；面板里的数值行切到 HSL，透明度条可继续微调。",
+        ),
+        Example(
+            "紧凑与无预设",
+            _compact,
+            hint="show_value=False 收成纯色块按钮；presets=None 隐藏整块色板，适合只做微调的面板。",
+        ),
+    ],
+    api=[
+        Api(
+            "value",
+            "str | None",
+            "None",
+            "当前颜色，flet 原生色串（#RRGGBB / #RRGGBB,0.8）",
+        ),
+        Api("default", "str", "'#1F6FEB'", "未选择时面板的起步色"),
+        Api(
+            "show_value", "bool", "True", "折叠态是否显示十六进制文本；False 时只剩色块"
+        ),
+        Api("allow_alpha", "bool", "True", "是否允许透明度；关闭后透明度条与 A 框隐藏"),
+        Api(
+            "hex_alpha",
+            "str",
+            "'last'",
+            "8 位十六进制的顺序：last = CSS #RRGGBBAA，first = flet #AARRGGBB",
+        ),
+        Api("format", "str", "'rgb'", "数值三件套的记法：rgb / hsl，可在面板里切换"),
+        Api(
+            "presets",
+            "Sequence | None",
+            "DEFAULT_PRESETS",
+            "预设色板；None 或空则整块隐藏",
+        ),
+        Api("preset_cols", "int | None", "None", "扁平 presets 每行几列；None 用 12"),
+        Api("clearable", "bool", "True", "是否显示框内 × 与页脚「清除」"),
+        Api(
+            "on_change",
+            "Callable[[str | None], None] | None",
+            "None",
+            "颜色变化回调，清空时收到 None；按值去重",
+        ),
+    ],
+    notes=[
+        info(
+            "value 是 flet 原生色串：不透明是 #RRGGBB，带透明度是 #RRGGBB,0.8。"
+            "需要 CSS 顺序的 #RRGGBBAA 读 hex8，不要把 value 原样当 CSS 串。"
+        ),
+        tip(
+            "面板内部以 HSV 为主状态：拖到纯灰（s=0）或纯黑（v=0）时色相不会丢；"
+            "只有外部换值时才从 RGB 反推一次，色相条不会在拖动中自己跳走。棋盘格与"
+            "色相条保留固定 RGB —— 它们是颜色标尺，跟着主题变色会让同一色号看起来不同。"
+        ),
+        warn(
+            "主题角色（ft.Colors.PRIMARY）在 Python 侧解析不出 RGB：折叠态照常把原值交给"
+            "Flutter，面板以中性色起步；用户动一下之后值才会变成具体的十六进制。"
+        ),
+    ],
+    tags=("颜色", "取色", "color", "picker", "hex", "alpha", "表单"),
+)
 
 
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

@@ -46,6 +46,9 @@ from typing import Any
 
 import flet as ft
 
+from ui.core.doc import Api, Example, Spec, info, run, tip
+from ui.core.tokens import FONT_SIZE
+
 __all__ = ["Step", "StepItem"]
 
 # ---------------------------------------------------------------------------
@@ -55,8 +58,8 @@ DOT = 26  # 圆点直径
 DOT_SMALL = 22  # 简洁模式的序号徽章
 LINE = 2  # 连接线粗细
 
-TITLE_SIZE = 14
-DESC_SIZE = 12
+TITLE_SIZE = FONT_SIZE["subtitle"]  # 14
+DESC_SIZE = FONT_SIZE["small"]  # 12
 TEXT_GAP = 10  # 圆点行与标题的间距
 DESC_GAP = 3  # 标题与描述的间距
 
@@ -142,11 +145,7 @@ class Step(ft.Container):
     @property
     def _centered(self) -> bool:
         """文字是否居中 —— 只有横向平铺才居中；垂直轴轨和简洁模式一律左对齐。"""
-        return (
-            self.align_center
-            and not self.simple
-            and self.direction != "vertical"
-        )
+        return self.align_center and not self.simple and self.direction != "vertical"
 
     def _status(self, index: int) -> str:
         """该步状态：显式 ``status`` 优先，否则按与 active 的位置关系推导。"""
@@ -169,9 +168,7 @@ class Step(ft.Container):
         if segment <= 0 or segment >= len(self._items):
             return None
         return (
-            ft.Colors.PRIMARY
-            if self._current >= segment
-            else ft.Colors.OUTLINE_VARIANT
+            ft.Colors.PRIMARY if self._current >= segment else ft.Colors.OUTLINE_VARIANT
         )
 
     def _seg(self, segment: int) -> ft.Control:
@@ -196,9 +193,7 @@ class Step(ft.Container):
         if status in ("finish", "error"):
             return ft.Container(
                 **common,
-                bgcolor=(
-                    ft.Colors.PRIMARY if status == "finish" else ft.Colors.ERROR
-                ),
+                bgcolor=(ft.Colors.PRIMARY if status == "finish" else ft.Colors.ERROR),
                 alignment=ft.Alignment.CENTER,
                 content=_glyph(icon, size, index, ft.Colors.ON_PRIMARY),
             )
@@ -225,9 +220,7 @@ class Step(ft.Container):
         text = ft.Text(
             self._items[index].title,
             size=TITLE_SIZE,
-            weight=(
-                ft.FontWeight.W_600 if status in ("process", "finish") else None
-            ),
+            weight=(ft.FontWeight.W_600 if status in ("process", "finish") else None),
             color=TEXT_COLORS.get(status, ft.Colors.ON_SURFACE),
             text_align=ft.TextAlign.CENTER if self._centered else ft.TextAlign.LEFT,
             no_wrap=True,
@@ -325,9 +318,19 @@ class Step(ft.Container):
             rail = ft.Stack(
                 width=side,
                 controls=[
+                    # 轴轨按圆点拆成两段：以上是「进入这一步」的那一段，以下是
+                    # 「离开」的那一段。整条同色会让当前步上方的线提前变灰，
+                    # 和横向模式画出来的进度对不上。
                     ft.Container(
                         left=(side - LINE) / 2,
-                        top=0 if index > 0 else side / 2,
+                        top=0,
+                        height=side / 2,
+                        width=LINE,
+                        bgcolor=self._line_color(index) or HIDDEN,
+                    ),
+                    ft.Container(
+                        left=(side - LINE) / 2,
+                        top=side / 2,
                         bottom=0,
                         width=LINE,
                         bgcolor=self._line_color(index + 1) or HIDDEN,
@@ -456,7 +459,7 @@ class Step(ft.Container):
         try:
             self.content = self._build()
             self.update()
-        except Exception:  # noqa: BLE001 - 尚未挂到页面时只回调，不刷新
+        except Exception:  # noqa: BLE001, S110 - 尚未挂到页面时只回调，不刷新
             pass
         if self.on_change is not None:
             self.on_change(index)
@@ -497,3 +500,244 @@ def _glyph(
         weight=ft.FontWeight.W_600,
         color=color,
     )
+
+
+# ---------------------------------------------------------------------------
+# 示例（也是本组件的视觉验收页）
+# ---------------------------------------------------------------------------
+_MUTED = ft.Colors.ON_SURFACE_VARIANT
+
+
+def _echo(active: int, steps: tuple[StepItem, ...]) -> ft.Control:
+    """把当前步读出来 —— 步骤条是受控的，它只画「第几步」，流程归调用方。"""
+    index = min(max(active, 0), len(steps) - 1)
+    return ft.Text(
+        f"active = {active} · 第 {index + 1} 步「{steps[index].title}」",
+        size=FONT_SIZE["small"],
+        color=_MUTED,
+    )
+
+
+_STEPS = (
+    StepItem("填写信息", "账号与联系方式"),
+    StepItem("验证邮箱", "点击邮件里的链接"),
+    StepItem("设置偏好", "语言、时区与通知"),
+    StepItem("完成", "开始使用"),
+)
+
+
+@ft.component
+def _basic() -> ft.Control:
+    """横向四步：已完成打勾，当前步高亮，点哪步跳哪步。"""
+    active, set_active = ft.use_state(1)
+    return ft.Column(
+        spacing=16,
+        controls=[
+            Step(
+                steps=list(_STEPS),
+                active=active,
+                clickable=True,
+                on_change=set_active,
+            ),
+            _echo(active, _STEPS),
+        ],
+    )
+
+
+_VERTICAL_STEPS = (
+    StepItem("准备镜像", "约 1.2 GB，走内网仓库"),
+    StepItem("构建容器", "缓存命中时约 30 秒"),
+    StepItem("推送镜像", "推送到 registry.example"),
+    StepItem("滚动更新", "每批 2 个实例，失败自动回滚"),
+)
+
+
+@ft.component
+def _vertical() -> ft.Control:
+    """竖向：左侧一条轴轨，描述跟在标题下面。"""
+    active, set_active = ft.use_state(1)
+    return ft.Column(
+        spacing=12,
+        controls=[
+            ft.Container(
+                width=360,
+                content=Step(
+                    steps=list(_VERTICAL_STEPS),
+                    active=active,
+                    direction="vertical",
+                    clickable=True,
+                    on_change=set_active,
+                ),
+            ),
+            _echo(active, _VERTICAL_STEPS),
+        ],
+    )
+
+
+@ft.component
+def _simple_and_error() -> ft.Control:
+    """简洁模式收成一行；出错态把当前步换成红色叉。"""
+    active, set_active = ft.use_state(2)
+    return ft.Column(
+        spacing=12,
+        controls=[
+            ft.Text(
+                "simple：一行装下整条流程，适合放进工具栏",
+                size=FONT_SIZE["small"],
+                color=_MUTED,
+            ),
+            Step(steps=list(_STEPS), active=active, simple=True, on_change=set_active),
+            ft.Text(
+                "error：第 3 步失败，前面的步骤仍然算已完成",
+                size=FONT_SIZE["small"],
+                color=_MUTED,
+            ),
+            Step(
+                steps=[
+                    StepItem("校验文件"),
+                    StepItem("上传"),
+                    StepItem("写入", "磁盘已满", status="error"),
+                    StepItem("完成"),
+                ],
+                active=2,
+            ),
+        ],
+    )
+
+
+_BASIC_CODE = """@ft.component
+def Wizard():
+    active, set_active = ft.use_state(1)
+    return Step(
+        steps=[
+            StepItem("填写信息", "账号与联系方式"),
+            StepItem("验证邮箱", "点击邮件里的链接"),
+            StepItem("完成", "开始使用"),
+        ],
+        active=active,        # 下标小于它的步骤自动打勾
+        clickable=True,       # 整步可点，回调给下标
+        on_change=set_active,
+    )"""
+
+_VERTICAL_CODE = """Step(
+    steps=[StepItem("准备镜像", "约 1.2 GB"), StepItem("构建容器", "约 30 秒")],
+    active=0,
+    direction="vertical",
+    clickable=True,
+    on_change=lambda index: print(index),
+)"""
+
+SPEC = Spec(
+    name="Step",
+    summary="把一件事拆成几步，并指出现在走到第几步。",
+    definition=(
+        "步骤条把有先后顺序的流程摊平：一步一个圆点，圆点之间用线连起来，颜色走过哪段就"
+        "算到哪段。状态只有四种 —— 未开始、进行中、已完成、出错，默认按 active 的位置推导，"
+        "也可以在单步上钉死。横向用于页头，竖向用于侧栏，简洁模式收成一行放进工具栏。"
+    ),
+    anatomy=[
+        (
+            "圆点",
+            (
+                "26px。进行中是淡主色底 + 主色描边，已完成主色实底 + 对勾，"
+                "出错实底红 + 叉，未开始灰描边 + 序号。"
+            ),
+        ),
+        (
+            "连接线",
+            (
+                "2px。走过的段用主色，没走到的是 OUTLINE_VARIANT；"
+                "首尾两端留空占位，圆点才不会偏向一侧。"
+            ),
+        ),
+        (
+            "标题",
+            "当前步与已完成加粗，进行中转主色、出错转红；横向超长省略，不折行。",
+        ),
+        ("描述", "标题下方 12px 次要色，最多两行 —— 再多就把步骤条撑成正文了。"),
+        (
+            "序号与图标",
+            "没给自定义图标时画 1、2、3；已完成与出错改用对勾 / 叉，避免和序号混着看。",
+        ),
+    ],
+    when=[
+        "注册、下单、部署这类有明确先后顺序的多步流程",
+        "需要让用户知道「还剩几步」，而不只是「正在等」",
+        "提交之后展示处理链路：校验 → 排队 → 执行 → 完成",
+    ],
+    avoid=[
+        "只是并列的几个视图：用 Tabs，步骤条会让人以为其中有依赖关系",
+        "回答「我在哪一层」：用面包屑，步骤条表达的是进度不是层级",
+        "只有两步：一个按钮或一句说明更直接，两条连线的仪式感大于信息量",
+    ],
+    examples=[
+        Example(
+            "基础用法",
+            _basic,
+            hint="四步流程停在第 2 步；点任意一步即可跳转，state 跟着回写。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "竖向",
+            _vertical,
+            hint="左侧一条轴轨，圆点与标题首行居中对齐；描述最多两行。",
+            code=_VERTICAL_CODE,
+        ),
+        Example(
+            "简洁模式与出错",
+            _simple_and_error,
+            hint="simple 收成一行「① 标题 › ② 标题」；第二条把第 3 步钉成 error。",
+        ),
+    ],
+    api=[
+        Api(
+            "steps",
+            "list[StepItem | dict]",
+            "[]",
+            '步骤列表；也接受 {"title": ...} 的字典写法',
+        ),
+        Api("active", "int", "0", "当前步下标（0 起）；-1 表示一步都没开始"),
+        Api(
+            "direction",
+            "str",
+            '"horizontal"',
+            "horizontal 横向平铺 / vertical 左侧轴轨",
+        ),
+        Api("process_status", "str", '"process"', "当前步的状态；想报错就传 error"),
+        Api("finish_status", "str", '"finish"', "当前步之前那些步的状态"),
+        Api("align_center", "bool", "True", "横向时标题居中；竖向与简洁模式始终左对齐"),
+        Api("simple", "bool", "False", "简洁模式：一行序号 + 标题，用 › 分隔"),
+        Api(
+            "clickable",
+            "bool",
+            "False",
+            "整步可点；简洁模式下默认就是可点的（仍需接 on_change）",
+        ),
+        Api(
+            "on_change",
+            "Callable[[int], None] | None",
+            "None",
+            "点击回调，参数是被点中的下标",
+        ),
+        Api("dot_size", "int", "26", "圆点直径；改它轴轨仍与圆点对齐"),
+    ],
+    notes=[
+        tip(
+            "点击时组件会先就地改 active 再回调。放进 @ft.component 的树里时控件是冻结的，"
+            "就地刷新会静默失败 —— 请用 on_change 回写状态让父组件重绘，示例都是这么写的。"
+        ),
+        info(
+            "竖向轴轨按圆点拆成上下两段：以上属于「进入这一步」的那段、以下属于「离开」"
+            "的那段。整条同色会让当前步上方的线提前变灰，和横向模式对不上。"
+        ),
+        info(
+            "StepItem.status 钉死的状态优先于 active 推导，适合「流程停在第 3 步、但第 2 步"
+            "其实已经失败」这种真实场景。"
+        ),
+    ],
+    tags=("步骤", "步骤条", "流程", "steps", "wizard"),
+)
+
+
+if __name__ == "__main__":
+    run(SPEC)

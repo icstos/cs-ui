@@ -1,11 +1,40 @@
+"""按钮 (Button) —— 主 / 次 / 文字三档强调，带图标与加载态。
+
+三种变体共用同一套高度（36）与状态色，靠 ``style_type`` + ``plain`` 区分：
+
+* 主按钮：主色实底 + 反白字，一屏只该有一个；
+* 次按钮：``plain=True``，浅底 + 主色描边；
+* 文字按钮：不传 ``style_type``（DEFAULT），没有可见边框。
+
+用法::
+
+    Button("保存", style_type=StyleType.PRIMARY)
+    Button("取消", style_type=StyleType.PRIMARY, plain=True)
+    Button("了解更多")
+"""
+
+from __future__ import annotations
+
+import asyncio
 from dataclasses import field
 
 import flet as ft
-from ui.core.constants import StyleType, FeedbackStyle, ButtonShape
 
+from ui.core.constants import ButtonShape, FeedbackStyle, StyleType
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
+from ui.core.tokens import FONT_SIZE, RADIUS, overlay
 
-BORDER_RADIUS = 6
-BUTTON_HEIGHT = 36
+__all__ = ["Button"]
+
+BORDER_RADIUS = RADIUS["md"]  # 6，与输入框一致
+BUTTON_HEIGHT = 36  # 与输入框同高，一行表单里不会参差
+ICON_SIZE = 18
+
+#: 禁用态：统一用 on-surface 的两档透明度。写死 GREY_300 + 白字时，浅色主题下
+#: 白字压在浅灰上几乎看不见；走角色透明度还能自动适配深色主题。
+DISABLED_BG = overlay(0.12)
+DISABLED_FG = overlay(0.38)
+DISABLED_SIDE = overlay(0.12)
 
 
 def _merge_states(value, defaults: dict[ft.ControlState, str]):
@@ -54,42 +83,40 @@ class Button(ft.Button):
         self.style = self.style or ft.ButtonStyle(
             padding=ft.Padding.all(10), alignment=ft.Alignment.CENTER
         )
-        if self.disabled:
-            self.style.bgcolor = self.style.bgcolor or ft.Colors.GREY_300
         if self.style_type == StyleType.DEFAULT:
+            # 文字按钮：无填充、无描边，只在悬停时浮一层 6% 的面色。
+            # 以前给白色底 + 白色边：浅色页面上像纯文字，深色页面上是一块白砖。
+            # DEFAULT + plain 仍是文字按钮 —— 白色描边在页面里本来就看不见。
             self.style.color = self.style.color or {
-                ft.ControlState.DEFAULT: ft.Colors.BLACK
-            }
-        else:
-            if self.plain:
-                self.style.color = self.style.color or {
-                    ft.ControlState.DEFAULT: self._style.color
-                }
-            else:
-                self.style.color = self.style.color or {
-                    ft.ControlState.DEFAULT: ft.Colors.WHITE
-                }
-        if self.plain:
-            self.style.bgcolor = self.style.bgcolor or {
-                ft.ControlState.DEFAULT: ft.Colors.WHITE
+                ft.ControlState.DEFAULT: ft.Colors.ON_SURFACE,
+                ft.ControlState.DISABLED: DISABLED_FG,
             }
             self.style.overlay_color = self.style.overlay_color or {
-                ft.ControlState.DEFAULT: ft.Colors.WHITE
+                ft.ControlState.DEFAULT: overlay(0.06)
+            }
+        elif self.plain:
+            # 镂空：浅底而非纯白 —— 深色主题下纯白按钮会亮得像一个错误。
+            self.style.bgcolor = self.style.bgcolor or {
+                ft.ControlState.DEFAULT: ft.Colors.SURFACE
+            }
+            # 水波用主色 8%：白底上的白色水波等于没有反馈
+            self.style.overlay_color = self.style.overlay_color or {
+                ft.ControlState.DEFAULT: overlay(0.08, role=self._style.color)
             }
             self.style.shadow_color = self.style.shadow_color or {
                 ft.ControlState.DEFAULT: ft.Colors.WHITE
             }
             self.style.side = self.style.side or {
                 ft.ControlState.DEFAULT: ft.BorderSide(1, self._style.color),
-                ft.ControlState.HOVERED: ft.BorderSide(
-                    1, self._style.color_light, style=ft.BorderStyle.NONE
-                ),
-                ft.ControlState.DISABLED: ft.BorderSide(1, ft.Colors.GREY),
+                # 悬停只加深描边，别把边框整个拿掉 —— 线消失比变色更突兀
+                ft.ControlState.HOVERED: ft.BorderSide(1, self._style.color_accent),
+                ft.ControlState.DISABLED: ft.BorderSide(1, DISABLED_SIDE),
                 ft.ControlState.PRESSED: ft.BorderSide(1, self._style.color_accent),
             }
             self.style.color = self.style.color or {
                 ft.ControlState.DEFAULT: self._style.color,
                 ft.ControlState.HOVERED: self._style.color_accent,
+                ft.ControlState.DISABLED: DISABLED_FG,
                 ft.ControlState.PRESSED: self._style.color,
             }
             self.style.elevation = self.style.elevation or {
@@ -98,29 +125,31 @@ class Button(ft.Button):
                 ft.ControlState.HOVERED: 0,
             }
         else:
+            self.style.color = self.style.color or {
+                ft.ControlState.DEFAULT: ft.Colors.WHITE,
+                ft.ControlState.DISABLED: DISABLED_FG,
+            }
             self.style.bgcolor = _merge_states(
                 self.style.bgcolor,
                 {
                     ft.ControlState.DEFAULT: self._style.color,
                     ft.ControlState.HOVERED: self._style.color_accent,
-                    ft.ControlState.DISABLED: ft.Colors.GREY_300,
-                    ft.ControlState.PRESSED: self._style.color_light,
+                    ft.ControlState.DISABLED: DISABLED_BG,
+                    ft.ControlState.PRESSED: self._style.color_accent,
                 },
             )
             self.style.overlay_color = self.style.overlay_color or {
                 ft.ControlState.DEFAULT: self._style.color,
                 ft.ControlState.HOVERED: self._style.color_accent,
-                ft.ControlState.DISABLED: ft.Colors.GREY_300,
-                ft.ControlState.PRESSED: self._style.color_light,
-                # ft.ControlState.PRESSED: ft.Colors.RED,
+                ft.ControlState.DISABLED: DISABLED_BG,
+                ft.ControlState.PRESSED: self._style.color_accent,
             }
 
             self.style.shadow_color = self.style.shadow_color or {
                 ft.ControlState.DEFAULT: self._style.color,
                 ft.ControlState.HOVERED: self._style.color_accent,
-                ft.ControlState.DISABLED: ft.Colors.GREY_300,
-                ft.ControlState.PRESSED: self._style.color_light,
-                # ft.ControlState.PRESSED: ft.Colors.RED,
+                ft.ControlState.DISABLED: DISABLED_BG,
+                ft.ControlState.PRESSED: self._style.color_accent,
             }
 
             self.style.elevation = self.style.elevation or {
@@ -131,7 +160,7 @@ class Button(ft.Button):
             self.style.side = self.style.side or {
                 ft.ControlState.DEFAULT: ft.BorderSide(1, self._style.color),
                 ft.ControlState.HOVERED: ft.BorderSide(1, self._style.color_light),
-                ft.ControlState.DISABLED: ft.BorderSide(1, ft.Colors.GREY),
+                ft.ControlState.DISABLED: ft.BorderSide(1, DISABLED_SIDE),
                 ft.ControlState.PRESSED: ft.BorderSide(1, self._style.color_accent),
             }
 
@@ -144,121 +173,249 @@ class Button(ft.Button):
                 self.style.shape = ft.StadiumBorder()
 
 
+# ---------------------------------------------------------------------------
+# 示例
+# ---------------------------------------------------------------------------
+def _caption(text: str) -> ft.Control:
+    return ft.Text(text, size=FONT_SIZE["small"], color=ft.Colors.ON_SURFACE_VARIANT)
+
+
 @ft.component
-def App():
+def _variants() -> ft.Control:
+    """三种强调级别 + 图标：主、次、文字排在一起才看得出层级。"""
     return ft.Column(
+        spacing=18,
         controls=[
-            Button(content="test"),
-            Button(content="test", is_primary=True),
-            ft.Text("主按钮"),
             ft.Row(
+                spacing=12,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    Button(content="default_button", style_type=StyleType.DEFAULT),
-                    Button(content="primary_button", style_type=StyleType.PRIMARY),
-                    Button(content="success_button", style_type=StyleType.SUCCESS),
-                    Button(content="info_button", style_type=StyleType.INFO),
-                    Button(content="warning_button", style_type=StyleType.WARNING),
-                    Button(content="error_button", style_type=StyleType.ERROR),
-                ]
+                    Button("保存", style_type=StyleType.PRIMARY),
+                    Button("取消", style_type=StyleType.PRIMARY, plain=True),
+                    Button("了解更多"),
+                ],
             ),
-            ft.Text("次按钮，描边按钮，plain"),
             ft.Row(
+                spacing=12,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
+                    Button("新增", icon=ft.Icons.ADD, style_type=StyleType.PRIMARY),
                     Button(
-                        content="color_button", style_type=StyleType.DEFAULT, plain=True
-                    ),
-                    Button(
-                        content="primary_button",
+                        "导入",
+                        icon=ft.Icons.UPLOAD_FILE,
                         style_type=StyleType.PRIMARY,
                         plain=True,
                     ),
-                    Button(
-                        content="success_button",
-                        style_type=StyleType.SUCCESS,
-                        plain=True,
-                    ),
-                    Button(
-                        content="info_button", style_type=StyleType.INFO, plain=True
-                    ),
-                    Button(
-                        content="warning_button",
-                        style_type=StyleType.WARNING,
-                        plain=True,
-                    ),
-                    Button(
-                        content="error_button", style_type=StyleType.ERROR, plain=True
-                    ),
-                ]
+                ],
             ),
-            ft.Text("rectangle-round-circle"),
-            ft.Row(
-                controls=[
-                    Button(
-                        content="ButtonShape.rect",
-                        style_type=StyleType.DEFAULT,
-                        plain=True,
-                        shape=ButtonShape.RECTANGLE,
-                    ),
-                    Button(
-                        content="ButtonShape.round",
-                        style_type=StyleType.DEFAULT,
-                        plain=True,
-                        shape=ButtonShape.ROUND,
-                    ),
-                    Button(
-                        content="ButtonShape.circle",
-                        style_type=StyleType.DEFAULT,
-                        plain=True,
-                        shape=ButtonShape.CIRCLE,
-                    ),
-                ]
-            ),
-            ft.Text("disabled"),
-            ft.Row(
-                controls=[
-                    Button(
-                        content="color_button",
-                        style_type=StyleType.DEFAULT,
-                        plain=True,
-                        disabled=True,
-                    ),
-                    Button(
-                        content="primary_button",
-                        style_type=StyleType.PRIMARY,
-                        plain=True,
-                        disabled=True,
-                    ),
-                    Button(
-                        content="success_button",
-                        style_type=StyleType.SUCCESS,
-                        plain=True,
-                        disabled=True,
-                    ),
-                    Button(
-                        content="info_button",
-                        style_type=StyleType.INFO,
-                        plain=True,
-                        disabled=True,
-                    ),
-                    Button(
-                        content="warning_button",
-                        style_type=StyleType.WARNING,
-                        plain=True,
-                        disabled=True,
-                    ),
-                    Button(
-                        content="error_button",
-                        style_type=StyleType.ERROR,
-                        plain=True,
-                        disabled=True,
-                    ),
-                ]
-            ),
-            ft.Text("icon_button"),
-            Button(content="icon_button", icon=ft.Icons.ADD),
-        ]
+            _caption("实底只有一个；描边用于并列的次要动作；文字按钮不抢任何注意力。"),
+        ],
     )
 
 
+@ft.component
+def _icons_sizes() -> ft.Control:
+    """尺寸与图标位：高度变了，内边距要跟着收放，否则文字会被压扁。"""
+    return ft.Column(
+        spacing=16,
+        controls=[
+            _caption("28 / 36 / 44 三档，内边距同步调整"),
+            ft.Row(
+                spacing=12,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    Button(
+                        "小",
+                        height=28,
+                        style=ft.ButtonStyle(
+                            padding=ft.Padding.symmetric(horizontal=10, vertical=2)
+                        ),
+                    ),
+                    Button("中", height=36),
+                    Button(
+                        "大",
+                        height=44,
+                        style=ft.ButtonStyle(
+                            padding=ft.Padding.symmetric(horizontal=16, vertical=8)
+                        ),
+                    ),
+                ],
+            ),
+            _caption("图标在左（flet 只提供前导图标）；纯图标按钮记得给 tooltip"),
+            ft.Row(
+                spacing=12,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    Button(
+                        content=ft.Icon(ft.Icons.REFRESH, size=ICON_SIZE),
+                        width=36,
+                        height=36,
+                        tooltip="刷新",
+                        style=ft.ButtonStyle(padding=ft.Padding.all(0)),
+                    ),
+                    Button(
+                        "下一步",
+                        icon=ft.Icons.ARROW_FORWARD,
+                        style_type=StyleType.PRIMARY,
+                    ),
+                ],
+            ),
+        ],
+    )
+
+
+@ft.component
+def _states() -> ft.Control:
+    """禁用与加载：加载中保留主色、摘掉点击；禁用才是真的变灰。"""
+    loading, set_loading = ft.use_state(False)
+
+    async def save(_event) -> None:
+        if loading:
+            return
+        set_loading(True)
+        await asyncio.sleep(1.2)
+        set_loading(False)
+
+    spinner = ft.Row(
+        tight=True,
+        spacing=8,
+        alignment=ft.MainAxisAlignment.CENTER,
+        controls=[
+            ft.ProgressRing(width=14, height=14, stroke_width=2, color=ft.Colors.WHITE),
+            ft.Text("保存中", size=FONT_SIZE["body"], color=ft.Colors.WHITE),
+        ],
+    )
+
+    return ft.Column(
+        spacing=16,
+        controls=[
+            ft.Row(
+                spacing=12,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    Button(
+                        content=spinner if loading else "保存",
+                        style_type=StyleType.PRIMARY,
+                        # 加载中直接摘掉回调：用 disabled 会把主色压成灰色，
+                        # 看起来像「不可用」，而不是「正在处理」。
+                        on_click=None if loading else save,
+                    ),
+                    Button("禁用主按钮", style_type=StyleType.PRIMARY, disabled=True),
+                    Button("禁用文字按钮", disabled=True),
+                ],
+            ),
+            _caption("点「保存」看加载态；右边两个是禁用态，颜色随主题自动变灰。"),
+        ],
+    )
+
+
+_VARIANTS_CODE = """Button("保存", style_type=StyleType.PRIMARY)           # 主：实底
+Button("取消", style_type=StyleType.PRIMARY, plain=True)   # 次：描边
+Button("了解更多")                                         # 文字：无边框
+
+Button("新增", icon=ft.Icons.ADD, style_type=StyleType.PRIMARY)"""
+
+
+SPEC = Spec(
+    name="Button",
+    summary="触发一个动作：主、次、文字三档强调级别，可带图标与加载态。",
+    definition=(
+        "按钮是界面上最小的承诺：点下去就会发生一件事。它本身不承载状态，也不解释"
+        "后果 —— 这件事有多重要，决定了它该用实底、描边还是纯文字。"
+        "同一屏里实底按钮只该有一个，否则「主」就不成立了。"
+    ),
+    anatomy=[
+        (
+            "填充与描边",
+            "主按钮是主色实底 + 反白字；次按钮是浅底 + 主色描边；文字按钮没有可见边框。",
+        ),
+        (
+            "文字与图标",
+            "图标只能放在左侧，flet 只提供前导图标；需要尾部箭头时用 content 自己拼一行。",
+        ),
+        ("高度", "默认 36，与输入框、下拉框同高；28 / 44 两档要同时收放内边距。"),
+        (
+            "状态",
+            (
+                "悬停与按下都往深一档走：反白字压在浅色底上会直接读不出来。"
+                "禁用态用 on-surface 的 12% / 38% 两档透明度。"
+            ),
+        ),
+        (
+            "加载态",
+            "转圈 + 「保存中」，期间不响应点击，但保留主色 —— 它是在处理，不是不可用。",
+        ),
+    ],
+    when=[
+        "提交表单、确认弹窗里的「确定 / 取消」",
+        "工具栏上的单个动作：新增、刷新、导出",
+        "空状态里引导用户完成第一步",
+    ],
+    avoid=[
+        "页面跳转：用链接或列表项，按钮会让人以为要提交什么",
+        "一屏并列五六个同等重要的操作：收进菜单，别让主次失效",
+        "开关型状态：用 Switch / Checkbox，按钮说不清「现在是开还是关」",
+    ],
+    examples=[
+        Example(
+            "三种变体",
+            _variants,
+            hint="实底、描边、文字排在一起：主按钮只有一个，其余自觉退后。",
+            code=_VARIANTS_CODE,
+        ),
+        Example(
+            "图标与尺寸",
+            _icons_sizes,
+            hint="前导图标补语义；三档高度要连内边距一起改，否则文字会被裁。",
+        ),
+        Example(
+            "禁用与加载",
+            _states,
+            hint="点「保存」看加载态：转圈期间摘掉 on_click，按钮仍是主色。",
+        ),
+    ],
+    api=[
+        Api("content", "str | Control | None", "None", "按钮内容：文字或自定义控件"),
+        Api("icon", "IconData | Control | None", "None", "前导图标，显示在文字左侧"),
+        Api("icon_color", "ColorValue | None", "None", "图标颜色，默认跟随文字颜色"),
+        Api(
+            "style_type",
+            "StyleType",
+            "StyleType.DEFAULT",
+            "语义色板：DEFAULT / PRIMARY / SUCCESS …",
+        ),
+        Api("plain", "bool", "False", "次按钮：浅底 + 描边，中心镂空"),
+        Api("is_primary", "bool", "False", "快捷开关，等价于 style_type=PRIMARY"),
+        Api("shape", "ButtonShape", "ButtonShape.ROUND", "圆角 / 直角 / 胶囊三种外形"),
+        Api("height", "int", "36", "按钮高度；与输入框同高，改小要同步收内边距"),
+        Api(
+            "style",
+            "ButtonStyle | None",
+            "None",
+            "整体覆盖样式；只传 padding 时其余默认仍生效",
+        ),
+        Api(
+            "on_click", "Callable | None", "None", "点击回调；加载中可传 None 暂时摘掉"
+        ),
+    ],
+    notes=[
+        tip(
+            "height 是关键字参数。子类重声明继承字段时漏掉 kw_only=True，它会抢到"
+            '第 0 个位置参数，Button("文字") 就把文字塞进高度里了。'
+        ),
+        info(
+            "不传 style_type 得到的是文字按钮（DEFAULT）：没有可见边框，只靠文字"
+            "与留白表达。plain=True 只对有色 style_type 有意义 —— 要描边请写成"
+            "style_type=StyleType.PRIMARY, plain=True。"
+        ),
+        warn(
+            "组件没有 loading 参数。别用 disabled 做加载态 —— 那会把主色压成灰色，"
+            "用户读到的是「不可用」。正确做法是把 content 换成转圈并摘掉 on_click。"
+        ),
+    ],
+    tags=("按钮", "button", "操作", "提交", "主按钮"),
+)
+
+
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

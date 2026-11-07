@@ -48,6 +48,7 @@ from typing import Any
 
 import flet as ft
 
+from ui.core.doc import Api, Example, Spec, info, run, tip
 from ui.core.i18n import t, use_t
 from ui.core.tokens import FONT_SIZE, RADIUS, overlay
 
@@ -711,9 +712,7 @@ class Tree:
                 border_radius=ft.BorderRadius.all(3),
                 bgcolor=ft.Colors.OUTLINE if disabled else ft.Colors.PRIMARY,
                 alignment=ft.Alignment.CENTER,
-                content=ft.Icon(
-                    ft.Icons.CHECK, size=12, color=ft.Colors.ON_PRIMARY
-                ),
+                content=ft.Icon(ft.Icons.CHECK, size=12, color=ft.Colors.ON_PRIMARY),
             )
         elif state is _Check.HALF:
             box = ft.Container(
@@ -730,11 +729,13 @@ class Tree:
                 ),
             )
         else:
+            # 空框必须真的空心：写 Colors.TRANSPARENT 时 Flutter 侧会画出一块
+            # 灰底，深色主题下看着像"半灰的实心块"，和勾选态撞在一起。
             box = ft.Container(
                 width=CHECK_BOX,
                 height=CHECK_BOX,
                 border_radius=ft.BorderRadius.all(3),
-                bgcolor=ft.Colors.TRANSPARENT,
+                bgcolor=None,
                 border=ft.Border.all(
                     1.5,
                     ft.Colors.with_opacity(0.4, ft.Colors.OUTLINE)
@@ -841,53 +842,315 @@ class Tree:
         """构建树控件。"""
         use_t()  # 订阅语言：空态文案要跟着切
         self._prepare()
-        body: ft.Control = (
-            self._body(self._visible) if self._visible else self._empty()
-        )
+        body: ft.Control = self._body(self._visible) if self._visible else self._empty()
         return ft.Container(width=self.width, content=body)
 
 
+# ---------------------------------------------------------------------------
+# 示例
+# ---------------------------------------------------------------------------
+def _project() -> list[TreeNode]:
+    """四层文件树：cs-ui / src / ui / *.py —— 用来演示缩进、展开与禁用行。"""
+    return [
+        TreeNode(
+            "cs-ui",
+            key="root",
+            icon=ft.Icons.FOLDER_SPECIAL,
+            trailing="4 项",
+            children=[
+                TreeNode(
+                    "src",
+                    key="src",
+                    icon=ft.Icons.FOLDER_OPEN,
+                    children=[
+                        TreeNode(
+                            "ui",
+                            key="ui",
+                            icon=ft.Icons.FOLDER,
+                            children=[
+                                TreeNode(
+                                    "tree.py",
+                                    key="tree",
+                                    icon=ft.Icons.DESCRIPTION,
+                                ),
+                                TreeNode(
+                                    "image_gridview.py",
+                                    key="grid",
+                                    icon=ft.Icons.DESCRIPTION,
+                                ),
+                                TreeNode(
+                                    "number_animation.py",
+                                    key="anim",
+                                    icon=ft.Icons.DESCRIPTION,
+                                ),
+                            ],
+                        ),
+                        TreeNode("app.py", key="app", icon=ft.Icons.DESCRIPTION),
+                    ],
+                ),
+                TreeNode(
+                    "docs",
+                    key="docs",
+                    icon=ft.Icons.FOLDER,
+                    children=[
+                        TreeNode("index.md", key="index", icon=ft.Icons.ARTICLE),
+                    ],
+                ),
+                TreeNode("README.md", key="readme", icon=ft.Icons.ARTICLE),
+                TreeNode("vendor", key="vendor", icon=ft.Icons.LOCK, disabled=True),
+            ],
+        ),
+    ]
+
+
 @ft.component
-def App():
-    """Tree 组件运行示例。"""
-    files = Tree(
-        data=[
-            TreeNode(
-                "src",
-                icon=ft.Icons.FOLDER_OPEN,
-                trailing="6 项",
-                children=[
-                    TreeNode("ui", icon=ft.Icons.FOLDER, trailing="4 项", children=[
-                        TreeNode("tree.py", icon=ft.Icons.DESCRIPTION),
-                        TreeNode("input.py", icon=ft.Icons.DESCRIPTION),
-                        TreeNode("layout.py", icon=ft.Icons.DESCRIPTION),
-                        TreeNode("theme.py", icon=ft.Icons.DESCRIPTION),
-                    ]),
-                    TreeNode("app.py", icon=ft.Icons.DESCRIPTION),
-                    TreeNode("main.py", icon=ft.Icons.DESCRIPTION),
+def _basic() -> ft.Control:
+    """默认展开 cs-ui 与 src：ui 那一层的文件藏在里面，等用户点开。"""
+    tree = ft.use_memo(
+        lambda: Tree(
+            data=_project(),
+            expanded={"root", "src"},
+            show_lines=True,
+            height=268,
+        ),
+        [],
+    )
+    return tree.ui()
+
+
+@ft.component
+def _selection(tree: Tree) -> ft.Control:
+    """把勾选结果读出来。
+
+    ``tree`` 是**参数**，组件会因此订阅这棵树 —— 勾选一变这一行自己重绘，
+    不需要再拉一个 use_state 去镜像状态。
+    """
+    keys = tree.get_checked_keys()
+    if not keys:
+        return ft.Text(
+            "未勾选任何节点 · 勾一个父节点看看级联",
+            size=FONT_SIZE["small"],
+            color=ft.Colors.ON_SURFACE_VARIANT,
+        )
+    leaves = [node.label for node in tree.get_checked_nodes(leaf_only=True)]
+    detail = "、".join(leaves[:3]) + ("…" if len(leaves) > 3 else "")
+    text = f"已选 {len(keys)} 个节点" + (f" · {detail}" if detail else "")
+    return ft.Text(
+        text,
+        size=FONT_SIZE["small"],
+        color=ft.Colors.ON_SURFACE_VARIANT,
+        no_wrap=True,
+        overflow=ft.TextOverflow.ELLIPSIS,
+    )
+
+
+@ft.component
+def _checked() -> ft.Control:
+    """勾父节点会级联到整棵子树；只勾一部分时父节点显示成一条短横。"""
+    tree = ft.use_memo(
+        lambda: Tree(
+            data=_project(),
+            show_checkbox=True,
+            show_lines=True,
+            height=240,
+        ),
+        [],
+    )
+    return ft.Column(spacing=6, controls=[tree.ui(), _selection(tree)])
+
+
+@ft.component
+def _filter() -> ft.Control:
+    """过滤按 label 子串匹配，命中路径自动露出，清空后回到原来的展开态。"""
+    tree = ft.use_memo(
+        lambda: Tree(data=_project(), show_lines=True, height=196),
+        [],
+    )
+
+    def find(e: ft.ControlEvent) -> None:
+        tree.filter(str(e.control.value or ""))
+
+    return ft.Column(
+        spacing=8,
+        controls=[
+            ft.Row(
+                spacing=8,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.TextField(
+                        hint_text="按名称过滤，例如 py",
+                        width=210,
+                        height=40,
+                        dense=True,
+                        on_change=find,
+                    ),
+                    ft.Button("全部展开", on_click=lambda _e: tree.expand_all()),
+                    ft.Button("全部收起", on_click=lambda _e: tree.collapse_all()),
                 ],
             ),
-            TreeNode("docs", icon=ft.Icons.FOLDER, children=[
-                TreeNode("index.md", icon=ft.Icons.ARTICLE),
-                TreeNode("guide.md", icon=ft.Icons.ARTICLE),
-            ]),
-            TreeNode("README.md", icon=ft.Icons.ARTICLE),
-            TreeNode("locked", icon=ft.Icons.LOCK, disabled=True),
+            tree.ui(),
         ],
-        show_checkbox=True,
-        show_lines=True,
-        height=320,
     )
-    return ft.Column(
-        controls=[
-            ft.Text("Tree 树形控件", size=20, weight=ft.FontWeight.BOLD),
-            ft.Text("展开折叠 / 复选联动 / 过滤 / 键盘导航", size=13, color=ft.Colors.OUTLINE),
-            ft.Divider(),
-            files.ui(),
-        ],
-        spacing=16,
-    )
+
+
+# ---------------------------------------------------------------------------
+# 示例源码（“查看代码”面板）
+# ---------------------------------------------------------------------------
+_BASIC_CODE = """Tree(
+    data=[
+        TreeNode("src", icon=Icons.FOLDER, children=[
+            TreeNode("main.py"),
+            TreeNode("ui", children=[TreeNode("tree.py")]),
+        ]),
+        {"label": "README.md"},        # 也认 dict：label / title / name
+    ],
+    expanded={"src"},                  # 初始展开；default_expand_all 全开
+    show_lines=True,                   # 深树才需要引导线
+    height=268,                        # 给视口才会内部滚动
+).ui()"""
+
+_CHECK_CODE = """tree = Tree(
+    data=[...],
+    show_checkbox=True,
+    expanded={"src"},
+    on_check_change=lambda keys: print(keys),   # 全量 key，按树中顺序
+)
+Column([tree.ui(), Text(f"已选 {len(tree.get_checked_keys())} 项")])
+
+# 提交表单时通常只要叶子
+tree.get_checked_keys(leaf_only=True)"""
+
+_FILTER_CODE = """tree = Tree(data=[...], show_lines=True, height=196)
+
+tree.filter("py")        # 子串匹配（忽略大小写），命中路径自动露出
+tree.filter(None)        # 清空过滤，回到过滤前的展开态
+tree.expand_all()        # collapse_all() / expand(key) / toggle(key)
+tree.set_current_key("ui")"""
+
+
+# ---------------------------------------------------------------------------
+# 组件说明
+# ---------------------------------------------------------------------------
+SPEC = Spec(
+    name="Tree",
+    summary="把层级数据铺成一列可展开的行：选中、勾选级联、关键字过滤。",
+    definition=(
+        "Tree 显示有父子关系的数据：文件目录、组织架构、分类表。它不递归建控件树，"
+        "而是先把数据拍平成本轮可见的行，再交给按需构建的 ListView —— 展开一个节点只是"
+        "重排可见行，节点上千首帧也不会卡。选中、勾选、展开、过滤是四件独立的事，各有"
+        "自己的状态与回调，调用方按需接管其中一件即可。"
+    ),
+    anatomy=[
+        (
+            "行",
+            "高 32px，整行可点即选中；层级、箭头、复选框、图标、文本、尾注排成一排。",
+        ),
+        (
+            "展开箭头",
+            "只有非叶子才画；叶子留一块同宽空位，同级文字的左边缘才对得齐。",
+        ),
+        (
+            "复选框",
+            "16px 方块配 22px 命中区：空框 / 实心对勾 / 一条短横（半选）三态。",
+        ),
+        (
+            "层级缩进",
+            "每级 18px；show_lines 时在缩进正中补一根 1px 竖线，行与行之间自然接成一条。",
+        ),
+        (
+            "尾注",
+            "trailing 右对齐的次要信息（数量、大小）。节点文字被省略号压缩时它保持完整。",
+        ),
+        ("空态", "没有可见行时居中一行「暂无节点」，高度 72px，容器不会塌成一条线。"),
+    ],
+    when=[
+        "文件目录、组织架构、分类表这类天然分层的数据",
+        "需要在层级上批量勾选，并且希望父节点自动收敛成全选 / 半选",
+        "节点多到必须靠展开折叠控制一屏的信息量",
+    ],
+    avoid=[
+        "只有一层的数据：ListView 或 ListTile 就够，树只是多留了一个空箭头位",
+        (
+            "两三个固定分区、每块都要完整阅读（设置项、说明区）：用 Expander 直接摊开，"
+            "不该让用户点进树里找"
+        ),
+        "需要就地改节点内容（改名、改值）：树只管展示与选择，编辑行得自己拼",
+    ],
+    examples=[
+        Example(
+            "基础用法",
+            _basic,
+            hint="四层文件树，默认展开 cs-ui 与 src；点箭头只展开，点整行选中并顺带展开。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "复选联动",
+            _checked,
+            hint="勾父节点级联到整棵子树；只勾一部分时父节点是短横，下方那行实时读出结果。",
+            code=_CHECK_CODE,
+        ),
+        Example(
+            "过滤与批量展开",
+            _filter,
+            hint="输入 py 只留下命中路径；过滤不改变展开状态，清空后原样回来。",
+            code=_FILTER_CODE,
+        ),
+    ],
+    api=[
+        Api("data", "list[Any]", "[]", "根节点：TreeNode / dict / 标量都可"),
+        Api("show_checkbox", "bool", "False", "行前复选框，默认父子级联"),
+        Api("check_strictly", "bool", "False", "开则勾选各自独立，不再级联"),
+        Api("expand_on_click_node", "bool", "True", "点整行时顺带展开 / 收起"),
+        Api(
+            "check_on_click_node",
+            "bool",
+            "False",
+            "点整行时顺带勾选（需 show_checkbox）",
+        ),
+        Api("show_lines", "bool", "False", "画层级引导线；深树更容易看清归属"),
+        Api(
+            "height",
+            "int | float | None",
+            "None",
+            "视口高度；给了才内部滚动，否则由内容撑开",
+        ),
+        Api(
+            "expanded",
+            "set[str | int]",
+            "set()",
+            "初始展开的 key；default_expand_all 全开",
+        ),
+        Api(
+            "on_check_change",
+            "Callable[[list[str | int]], None] | None",
+            "None",
+            "勾选变化回调，参数是全量 key（按树中顺序）",
+        ),
+        Api(
+            "filter(text)",
+            "(str | None) -> None",
+            "—",
+            "按 label 子串过滤；None 或空串清空",
+        ),
+    ],
+    notes=[
+        info(
+            "半选态不单独存：状态里只有「已勾选」，父节点的半选由子节点反推。所以 "
+            "set_checked_keys() 塞进一组不自洽的 key，渲染前也会被收敛成合法状态，"
+            "不会出现父选中而子未选。"
+        ),
+        tip(
+            "一次点击只做一件事：整行 = 选中（默认顺带展开）、箭头 = 只展开、复选框 = 只勾选，"
+            "三者各自独立。想「点整行只选中」，把 expand_on_click_node 关掉。"
+        ),
+        info(
+            "未勾选的方框用 bgcolor=None 而不是 Colors.TRANSPARENT：后者在 Flutter 侧会画出"
+            "一块灰底，深色主题下空框看着像半灰的实心块，和半选态分不清。"
+        ),
+    ],
+    tags=("树", "tree", "层级", "目录", "组织架构", "勾选"),
+)
 
 
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

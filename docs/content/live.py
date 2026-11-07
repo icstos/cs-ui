@@ -34,9 +34,7 @@ def _pill(label: str, *, active: bool, on_click) -> ft.Control:
         padding=ft.Padding.symmetric(horizontal=11, vertical=5),
         border_radius=8,
         bgcolor=ft.Colors.PRIMARY_CONTAINER if active else kit.RAISED,
-        border=ft.Border.all(
-            1, ft.Colors.TRANSPARENT if active else kit.BORDER
-        ),
+        border=ft.Border.all(1, ft.Colors.TRANSPARENT if active else kit.BORDER),
         on_click=on_click,
         ink=True,
         content=ft.Text(
@@ -54,7 +52,9 @@ def theme_playground() -> ft.Control:
     theme = use_theme()
     tr = use_t()
     name = kit.use_stable(
-        lambda: Input(label=tr("theme.live.input"), value=tr("theme.live.value"), width=240)
+        lambda: Input(
+            label=tr("theme.live.input"), value=tr("theme.live.value"), width=240
+        )
     )
 
     swatches = ft.Row(
@@ -122,7 +122,9 @@ def locale_playground() -> ft.Control:
     i18n = use_i18n()
     tr = use_t()
     name = kit.use_stable(
-        lambda: Input(label=tr("i18n.live.input"), value=tr("i18n.live.value"), width=240)
+        lambda: Input(
+            label=tr("i18n.live.input"), value=tr("i18n.live.value"), width=240
+        )
     )
 
     today = dt.date(2026, 9, 26)

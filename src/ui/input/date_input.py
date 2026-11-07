@@ -1,3 +1,7 @@
+# ruff: noqa: DTZ011
+# 组件契约是「本地、naive 的日期」：日期没有时区，比较与显示都按用户所在时区的
+# 本地日历走。时区换算属于调用方业务，见 SPEC 的 notes。
+
 """日期选择器 (DateInput)。
 
 交互模型对齐 Element Plus / Ant Design 的日期选择器：**一个输入框，点开挂出面板**。
@@ -61,6 +65,7 @@ from dataclasses import dataclass
 
 import flet as ft
 
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.float_layer import use_float_layer
 from ui.core.format import calendar_title, format_date, format_list
 from ui.core.i18n import t, use_t
@@ -76,10 +81,11 @@ from ui.input.calendar_panel import (
     WEEKDAYS,  # noqa: F401  (历史导入路径)
     CalendarPanel,
     DayMark,
+    _get_days_in_month,  # noqa: F401  (兼容导入)
+    _is_leap_year,  # noqa: F401  (兼容导入)
+    _norm_ym,
     place_panel,
 )
-from ui.input.calendar_panel import _get_days_in_month, _norm_ym  # noqa: F401  (兼容导入)
-from ui.input.calendar_panel import _is_leap_year
 from ui.input.input import Label
 
 __all__ = ["DateInput", "DateType"]
@@ -202,7 +208,9 @@ def _parse_year(text: str | None) -> datetime.date | None:
     return None
 
 
-def week_bounds(day: datetime.date, first_weekday: int) -> tuple[datetime.date, int, int]:
+def week_bounds(
+    day: datetime.date, first_weekday: int
+) -> tuple[datetime.date, int, int]:
     """``day`` 所在的那一周：返回 ``(周首日, ISO 年, ISO 周号)``。
 
     周首日跟着界面语言（中文周一、英文周日），但**周号统一按 ISO 算**：取该行的
@@ -370,6 +378,7 @@ class DateInput(CalendarPanel, Label):
         self._hover = None
         self._hover_day = None
         self._text = None
+        self._invalid = False
         self.notify()  # type: ignore[attr-defined]
 
     def toggle_open(self) -> None:
@@ -529,7 +538,9 @@ class DateInput(CalendarPanel, Label):
             if self._sel and self._week_start(self._sel[0]) == row:
                 return DayMark(band=True, selected=day == self._sel[0])
             hovered = self._hover_day
-            return DayMark(band=hovered is not None and self._week_start(hovered) == row)
+            return DayMark(
+                band=hovered is not None and self._week_start(hovered) == row
+            )
         if self.type == "dates":
             return DayMark(selected=day in self._sel)
         if self.type in RANGE:
@@ -544,13 +555,17 @@ class DateInput(CalendarPanel, Label):
             return self._range_mark(point)
         # 单值类型：值可能是"某月 26 号"，比较前先对齐到月，否则下钻到月网格
         # 时当前月不高亮 —— 看起来像"什么都没选"。
-        return DayMark(selected=bool(self._sel) and _snap(self._sel[0], "month") == point)
+        return DayMark(
+            selected=bool(self._sel) and _snap(self._sel[0], "month") == point
+        )
 
     def _cal_year_marks(self, year: int) -> DayMark:
         point = datetime.date(year, 1, 1)
         if self.type == "years":
             return DayMark(selected=point in self._sel)
-        return DayMark(selected=bool(self._sel) and _snap(self._sel[0], "year") == point)
+        return DayMark(
+            selected=bool(self._sel) and _snap(self._sel[0], "year") == point
+        )
 
     def _week_start(self, day: datetime.date) -> datetime.date:
         return week_bounds(day, self._cal_first_day())[0]
@@ -673,7 +688,9 @@ class DateInput(CalendarPanel, Label):
             body = field
 
         width = self._panel_width()
-        left, top, bottom = place_panel(page, self._anchor, self._field_h, width, PANEL_H)
+        left, top, bottom = place_panel(
+            page, self._anchor, self._field_h, width, PANEL_H
+        )
         # 无条件调用（hook 顺序必须稳定）；visible=False 时浮层自动移除。
         # hole 把输入框从遮罩里挖出来：展开后还要能点框内文字落光标。
         use_float_layer(
@@ -751,7 +768,9 @@ class DateInput(CalendarPanel, Label):
 
     def _on_text_submit(self, e: ft.ControlEvent) -> None:
         """回车提交：合法则选中并收起，非法则原样还原并标红。"""
-        parsed = self._parse(self._text if self._text is not None else self.display_text)
+        parsed = self._parse(
+            self._text if self._text is not None else self.display_text
+        )
         self._text = None
         if parsed is not None and self._accepts_point(parsed):
             self._invalid = False
@@ -766,10 +785,15 @@ class DateInput(CalendarPanel, Label):
         self.notify()  # type: ignore[attr-defined]
 
     def _on_text_blur(self, e: ft.ControlEvent) -> None:
-        """失焦即放弃未提交的键入（回到格式化值）。"""
-        if self._text is None:
+        """失焦即放弃未提交的键入（回到格式化值）。
+
+        非法输入回车后 ``_text`` 已经是 ``None``，但红边还在 —— 失焦是这次
+        输入的终点，把 ``_invalid`` 一并清掉，否则红边会一直挂在框上。
+        """
+        if self._text is None and not self._invalid:
             return
         self._text = None
+        self._invalid = False
         self.notify()  # type: ignore[attr-defined]
 
     # ---- 面板 ----
@@ -798,7 +822,9 @@ class DateInput(CalendarPanel, Label):
             )
         controls.append(ft.Container(expand=True))
         if self.show_clear_link:
-            controls.append(self._link_button("clear", t("ui.common.clear"), self.clear))
+            controls.append(
+                self._link_button("clear", t("ui.common.clear"), self.clear)
+            )
         return ft.Container(
             height=FOOTER_H,
             padding=ft.Padding.only(left=2, right=2),
@@ -808,41 +834,240 @@ class DateInput(CalendarPanel, Label):
         )
 
 
-@ft.component
-def App():
-    """DateInput 组件运行示例。"""
-    today = datetime.date.today()
-    items = [
-        DateInput(label="单个日期", value=datetime.date(2026, 9, 26)),
-        DateInput(label="选择周", type="week", value=datetime.date(2026, 9, 26)),
-        DateInput(label="选择月", type="month", value=datetime.date(2026, 9, 1)),
-        DateInput(label="选择年", type="year", value=datetime.date(2026, 1, 1)),
-        DateInput(label="多个日期", type="dates"),
-        DateInput(label="多个月份", type="months"),
-        DateInput(label="多个年份", type="years"),
-        DateInput(
-            label="日期范围",
-            type="daterange",
-            value=(datetime.date(2026, 9, 1), datetime.date(2026, 9, 20)),
-        ),
-        DateInput(label="月份范围", type="monthrange"),
-        DateInput(label="带边界", value=today, min_date=today, max_date=today),
-        DateInput(label="只读", value=datetime.date(2026, 1, 1), disabled=True),
-    ]
-    return ft.Column(
-        controls=[
-            ft.Text("DateInput 日期选择器", size=20, weight=ft.FontWeight.BOLD),
-            ft.Text(
-                "一个框挂出面板：日 / 月 / 年三种粒度，单值 / 多值 / 范围三种语义",
-                size=13,
-                color="#6b7280",
-            ),
-            ft.Divider(),
-            *[c.ui() for c in items],
-        ],
-        spacing=12,
+# ---------------------------------------------------------------------------
+# 独立运行：组件介绍 + 示例 + API
+# ---------------------------------------------------------------------------
+def _caption(text: str) -> ft.Control:
+    return ft.Text(
+        text,
+        size=12.5,
+        color=ft.Colors.ON_SURFACE_VARIANT,
+        style=ft.TextStyle(height=1.6),
     )
 
 
+@ft.component
+def _echo(field: DateInput) -> ft.Control:
+    """把当前值读出来 —— DateInput 是 observable，值一变这里就跟着重绘。"""
+    return _caption(f"当前值：{field.display_text or '（未选择）'}")
+
+
+@ft.component
+def _basic() -> ft.Control:
+    value, set_value = ft.use_state(datetime.date(2026, 9, 26))
+    field = DateInput(label="开始日期", value=value, on_change=set_value)
+    return ft.Column(
+        spacing=10,
+        controls=[
+            field.ui(),
+            _caption(f"当前值：{value.isoformat() if value else '（未选择）'}"),
+            ft.Row(
+                spacing=8,
+                controls=[
+                    ft.Button(
+                        "设为今天",
+                        on_click=lambda _: set_value(datetime.date.today()),
+                    ),
+                    ft.Button("清空", on_click=lambda _: set_value(None)),
+                ],
+            ),
+        ],
+    )
+
+
+@ft.component
+def _granularity() -> ft.Control:
+    fields = [
+        DateInput(label="日期", value=datetime.date(2026, 9, 26)),
+        DateInput(label="整周", type="week", value=datetime.date(2026, 9, 26)),
+        DateInput(label="整月", type="month", value=datetime.date(2026, 9, 1)),
+        DateInput(label="整年", type="year", value=datetime.date(2026, 1, 1)),
+    ]
+    return ft.Column(
+        spacing=12,
+        controls=[
+            *[field.ui() for field in fields],
+            _caption(
+                "type 同时改变粒度与值形状：周的 value 是周内任意一天，"
+                "显示时才换算成 ISO 周号；月落在 1 号，年落在 1 月 1 日。"
+            ),
+        ],
+    )
+
+
+@ft.component
+def _multi_echo(field: DateInput) -> ft.Control:
+    """多选的回显：除了值文本，再报一个已选天数。"""
+    return _caption(
+        f"已选 {len(field.value or [])} 天：{field.display_text or '（未选择）'}"
+        "（多选点一次加一个，面板不收起）"
+    )
+
+
+@ft.component
+def _range_multi() -> ft.Control:
+    span = ft.use_memo(
+        lambda: DateInput(
+            label="统计区间",
+            type="daterange",
+            value=(datetime.date(2026, 9, 1), datetime.date(2026, 9, 20)),
+        ),
+        [],
+    )
+    days = ft.use_memo(
+        lambda: DateInput(
+            label="多选日期",
+            type="dates",
+            value=[datetime.date(2026, 9, 8), datetime.date(2026, 9, 15)],
+        ),
+        [],
+    )
+    return ft.Column(
+        spacing=14,
+        controls=[
+            span.ui(),
+            _echo(span),
+            days.ui(),
+            _multi_echo(days),
+        ],
+    )
+
+
+_BASIC_CODE = """value, set_value = ft.use_state(datetime.date(2026, 9, 26))
+
+field = DateInput(label="开始日期", value=value, on_change=set_value)
+Column([
+    field.ui(),
+    ft.Text(f"当前值：{value}"),
+    ft.Button("设为今天", on_click=lambda _: set_value(datetime.date.today())),
+])"""
+
+SPEC = Spec(
+    name="DateInput",
+    summary="一个输入框挂出月历面板，选日 / 周 / 月 / 年，也支持多选与区间。",
+    definition=(
+        "日期选择器解决的是「日期该被点出来，而不是敲出来」。折叠态只占一行输入框，"
+        "点开才挂出月历；日、周、月、年四种粒度共用同一套格子，多选与区间只是同一套"
+        "格子算出了不同的标记。值始终是标准库的 datetime.date：月份落在 1 号，年份"
+        "落在 1 月 1 日，周的值是周内任意一天。"
+    ),
+    anatomy=[
+        (
+            "输入框",
+            (
+                "40px 高；单值 240、区间 300 —— 范围要放得下"
+                "「2026-09-01 ~ 2026-09-20」这一整串。"
+            ),
+        ),
+        (
+            "面板标题",
+            "点击标题逐层下钻（日 → 月 → 年）；左右箭头按视图翻页：日视图翻月、月视图翻年、年视图翻十年。",
+        ),
+        (
+            "日期网格",
+            "同一套格子按 type 画出选中、区间连条、今天、禁用与非本月；范围固定两列并排，左早右晚。",
+        ),
+        (
+            "页脚",
+            "左侧「今天」只在日粒度出现；右侧「清除」仅在有值且 clearable 时出现。",
+        ),
+        (
+            "值文本",
+            "单值跟随界面语言的日期格式；范围用「~」连接，多选只显示一至两项，超出折成「+N」，避免撑破 240px。",
+        ),
+    ],
+    when=[
+        "表单要一个明确到某天、某周或某月的字段（生日、账期、报表月份）",
+        "需要一次选多个日期，或选一段起止日期（活动周期、统计区间）",
+        "希望用户从日历上点选，避免手敲出 2026-13-01 这类非法日期",
+    ],
+    avoid=[
+        "要精确到时分秒：用 DateTimeInput，日期面板里没有时间列",
+        "只在「本周 / 本月 / 自定义」三个固定档位里选：用 SegmentedButton 比翻日历快",
+        "允许「下周三」这类自然语言输入：先用 Input 解析再 set_value，别把解析塞进日历",
+    ],
+    examples=[
+        Example(
+            "基础用法",
+            _basic,
+            hint="受控写法：面板里选中的值写回 value，下面一行跟着更新；按钮演示从代码改值。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "四种粒度",
+            _granularity,
+            hint="日、周、月、年共用同一个组件，type 改的是粒度、显示方式与 value 形状。",
+        ),
+        Example(
+            "区间与多选",
+            _range_multi,
+            hint="区间是两列并排、点两下补出起止；多选每点一次加一个，面板不收起。",
+        ),
+    ],
+    api=[
+        Api(
+            "value",
+            "date | Sequence[date] | None",
+            "None",
+            "当前值；形状随 type 变化（单值 / 列表 / 二元组）",
+        ),
+        Api(
+            "type",
+            "str",
+            "'date'",
+            "date / week / month / year / dates / months / years / daterange / monthrange",
+        ),
+        Api(
+            "min_date",
+            "date | None",
+            "None",
+            "可选下界（含当天）；默认取 year_range 起始年",
+        ),
+        Api(
+            "max_date",
+            "date | None",
+            "None",
+            "可选上界（含当天）；默认取 year_range 结束年",
+        ),
+        Api(
+            "display_format",
+            "str | None",
+            "None",
+            "单值日期的 strftime 格式；None 跟随界面语言",
+        ),
+        Api("placeholder", "str | None", "None", "未选择时的占位文案；None 取语言包"),
+        Api(
+            "separator",
+            "str | None",
+            "None",
+            "范围两端的连接符；None 取语言包的「 ~ 」",
+        ),
+        Api("clearable", "bool", "True", "是否显示框内 × 与页脚「清除」"),
+        Api("disabled", "bool", "False", "禁用：不展开面板、不响应键入"),
+        Api(
+            "on_change",
+            "Callable[[object], None] | None",
+            "None",
+            "值变化回调，形状与 value 一致；按值去重",
+        ),
+    ],
+    notes=[
+        info(
+            "值只有 datetime.date 一种：月是当月 1 号、年是 1 月 1 日、周是周内任意一天"
+            "并显示成 ISO 周号。比较、格式化和序列化都还是标准库那套。"
+        ),
+        tip(
+            "面板挂在 page.overlay 上。宿主用 page.render_views（Router 管理视图栈）时"
+            "浮层会被视图盖住，组件自动降级为流内展开；也可以用 float_panel=False 强制。"
+        ),
+        warn(
+            "范围与多选不开放键入：~ 还是 -、两个日期还是多个，没有无歧义写法；需要批量"
+            "录入时先解析再 set_value。非法键入的红边只保留到失焦 / 收起，不会一直挂在框上。"
+        ),
+    ],
+    tags=("日期", "日历", "date", "picker", "range", "表单"),
+)
+
+
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

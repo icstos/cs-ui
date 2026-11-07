@@ -46,6 +46,10 @@ from typing import Any
 
 import flet as ft
 
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
+from ui.core.i18n import t
+from ui.core.tokens import FONT_SIZE, SPACE, semantic_text
+
 __all__ = ["Descriptions", "DescriptionsItem"]
 
 # ---------------------------------------------------------------------------
@@ -200,19 +204,27 @@ class Descriptions(ft.Container):
             ),
         )
 
-    def _table(self) -> ft.Control | None:
+    def _table(self) -> ft.Control:
         rows = self._rows()
-        if not rows:
-            return None
-        last = len(rows) - 1
-        cells: list[ft.Control] = []
-        for index, row in enumerate(rows):
-            tail = index == last
-            if self.direction == "vertical":
-                cells.extend(self._vertical_row(row, last_row=tail))
-            else:
-                cells.append(self._horizontal_row(row, last_row=tail))
-        grid = ft.Column(spacing=0, controls=cells)
+        if rows:
+            last = len(rows) - 1
+            cells: list[ft.Control] = []
+            for index, row in enumerate(rows):
+                tail = index == last
+                if self.direction == "vertical":
+                    cells.extend(self._vertical_row(row, last_row=tail))
+                else:
+                    cells.append(self._horizontal_row(row, last_row=tail))
+            grid: ft.Control = ft.Column(spacing=0, controls=cells)
+        else:
+            # 没有字段时留一行占位：整块缩成 0 高，调用方会以为是没渲染出来。
+            grid = ft.Container(
+                padding=ft.Padding.symmetric(
+                    horizontal=self._pad_h, vertical=self._pad_v * 2
+                ),
+                alignment=ft.Alignment.CENTER,
+                content=ft.Text(t("ui.common.empty"), size=self._font, color=MUTED),
+            )
         if not self.bordered:
             return grid
         return ft.Container(
@@ -321,13 +333,16 @@ class Descriptions(ft.Container):
         last_col: bool,
         last_row: bool,
     ) -> ft.Control:
-        """横向的一格：标签固定宽 + 内容占满剩余，整格占 ``span`` 份宽度。"""
+        """横向的一格：标签固定宽 + 内容占满剩余，整格占 ``span`` 份宽度。
+
+        ``label`` 留空（且没有 icon）时不画标签格 —— 否则 92px 的淡色空格白占
+        一段宽度，还多竖一条分隔线，和文档里「只占内容位」的说法正好相反。
+        """
+        has_label = bool(item.label) or item.icon is not None
         if not self.bordered:
-            return ft.Row(
-                spacing=0,
-                expand=span,
-                vertical_alignment=ft.CrossAxisAlignment.START,
-                controls=[
+            cells: list[ft.Control] = []
+            if has_label:
+                cells.append(
                     ft.Container(
                         width=self.label_width,
                         padding=ft.Padding.only(
@@ -335,15 +350,32 @@ class Descriptions(ft.Container):
                         ),
                         alignment=ft.Alignment.TOP_LEFT,
                         content=self._label_content(item),
+                    )
+                )
+            cells.append(
+                ft.Container(
+                    expand=True,
+                    padding=ft.Padding.only(
+                        right=self._pad_h, top=self._pad_v, bottom=self._pad_v
                     ),
-                    ft.Container(
-                        expand=True,
-                        padding=ft.Padding.only(
-                            right=self._pad_h, top=self._pad_v, bottom=self._pad_v
-                        ),
-                        content=self._value_content(item),
-                    ),
-                ],
+                    content=self._value_content(item),
+                )
+            )
+            return ft.Row(
+                spacing=0,
+                expand=span,
+                vertical_alignment=ft.CrossAxisAlignment.START,
+                controls=cells,
+            )
+        if not has_label:
+            return ft.Container(
+                expand=span,
+                padding=ft.Padding.symmetric(
+                    horizontal=self._pad_h, vertical=self._pad_v
+                ),
+                alignment=ft.Alignment.CENTER_LEFT,
+                border=self._edge(right=not last_col, bottom=not last_row),
+                content=self._value_content(item),
             )
         return ft.Row(
             spacing=0,
@@ -431,7 +463,7 @@ class Descriptions(ft.Container):
         try:
             self.content = self._build()
             self.update()
-        except Exception:  # noqa: BLE001 - 尚未挂到页面时不需要刷新
+        except Exception:  # noqa: BLE001, S110 - 尚未挂到页面时不需要刷新
             pass
 
 
@@ -455,3 +487,273 @@ def _label_text(label: str, *, colon: bool) -> str:
 def _size_metrics(size: str) -> tuple[int, int, float]:
     key = _SIZE_ALIASES.get(size, size)
     return SIZES.get(key, SIZES["default"])
+
+
+# ---------------------------------------------------------------------------
+# 示例
+# ---------------------------------------------------------------------------
+def _paid() -> ft.Control:
+    """值可以是任意控件：图标与颜色由调用方定，格子只负责对齐与边框。"""
+    return ft.Row(
+        spacing=6,
+        tight=True,
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            ft.Icon(ft.Icons.CHECK_CIRCLE, size=14, color=semantic_text("success")),
+            ft.Text("已支付", size=FONT_SIZE["body"]),
+        ],
+    )
+
+
+@ft.component
+def _basic() -> ft.Control:
+    """两列键值：7 个字段排成 4 行，地址跨两列吃掉整行。"""
+    return ft.Container(
+        width=680,
+        content=Descriptions(
+            title="订单详情",
+            extra="更新于 10:12",
+            column=2,
+            items=[
+                DescriptionsItem("订单号", "SO-20261107-0142"),
+                DescriptionsItem("状态", _paid()),
+                DescriptionsItem("创建时间", "2026-11-07 10:12:03"),
+                DescriptionsItem("金额", "¥1,280.00"),
+                DescriptionsItem("支付方式", "微信支付 · 尾号 4021"),
+                DescriptionsItem("收货人", "林一舟 · 138****6042"),
+                DescriptionsItem(
+                    "收货地址",
+                    "江苏省苏州市吴中区吴中大道 1188 号 3 号楼 502",
+                    span=2,
+                ),
+            ],
+        ),
+    )
+
+
+@ft.component
+def _narrow() -> ft.Control:
+    """窄容器：左边单列横向（标签在左），右边单列纵向（标签在上）。"""
+    return ft.Row(
+        spacing=SPACE["4"],
+        vertical_alignment=ft.CrossAxisAlignment.START,
+        controls=[
+            ft.Container(
+                width=300,
+                content=Descriptions(
+                    title="会员卡",
+                    column=1,
+                    size="small",
+                    items=[
+                        DescriptionsItem("卡号", "6222 0210 0088 8102"),
+                        DescriptionsItem("等级", "金卡 · 全场 8 折"),
+                        DescriptionsItem("有效期", "2028-06-30"),
+                        DescriptionsItem("积分", "12,480"),
+                    ],
+                ),
+            ),
+            ft.Container(
+                width=300,
+                content=Descriptions(
+                    title="收货信息",
+                    column=1,
+                    size="small",
+                    direction="vertical",
+                    items=[
+                        DescriptionsItem("收货人", "林一舟 138****6042"),
+                        DescriptionsItem(
+                            "地址",
+                            "江苏省苏州市吴中区吴中大道 1188 号 3 号楼 502",
+                        ),
+                    ],
+                ),
+            ),
+        ],
+    )
+
+
+@ft.component
+def _blank() -> ft.Control:
+    """空值用「—」占位；末行 label 留空，内容直接吃掉整行。"""
+    return ft.Container(
+        width=680,
+        content=Descriptions(
+            title="发票信息",
+            column=2,
+            size="small",
+            items=[
+                DescriptionsItem("发票类型", "—"),
+                DescriptionsItem("抬头", "—"),
+                DescriptionsItem("税号", "—"),
+                DescriptionsItem("开户行", "—"),
+                DescriptionsItem(
+                    "",
+                    "发票在付款后 24 小时内开出，可在「订单详情 → 发票」下载；"
+                    "跨月订单需联系客服补开。",
+                    span=2,
+                ),
+            ],
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 示例源码（“查看代码”面板）
+# ---------------------------------------------------------------------------
+_BASIC_CODE = """Descriptions(
+    title="订单详情",
+    extra="更新于 10:12",                    # 字符串直接渲染成右上角说明
+    column=2,
+    items=[
+        DescriptionsItem("订单号", "SO-20261107-0142"),
+        DescriptionsItem("状态", Row([                     # 值可以是任意控件
+            Icon(Icons.CHECK_CIRCLE, size=14), Text("已支付")], spacing=6)),
+        DescriptionsItem("金额", "¥1,280.00"),
+        DescriptionsItem("收货地址", "江苏省苏州市吴中区吴中大道 1188 号", span=2),
+    ],
+)"""
+
+_NARROW_CODE = """# 窄容器：column=1，标签列仍是 92px，逐行对齐
+Descriptions(
+    column=1,
+    size="small",
+    items=[DescriptionsItem("卡号", "6222 0210 0088 8102")],
+)
+
+# 更窄的侧栏：标签挪到内容上方，省掉 92px 的标签列
+Descriptions(column=1, direction="vertical", items=[...])"""
+
+_BLANK_CODE = """# 空值不会自动变占位符：None 渲染成空串，要占位就显式传 "—"
+Descriptions(column=2, items=[
+    DescriptionsItem("税号", "—"),
+    # label 留空 = 不画标签格，内容占满整行
+    DescriptionsItem("", "发票在付款后 24 小时内开出。", span=2),
+])"""
+
+
+# ---------------------------------------------------------------------------
+# 组件说明
+# ---------------------------------------------------------------------------
+SPEC = Spec(
+    name="Descriptions",
+    summary="把一条记录的字段摆成带边框的网格：键值成对、可跨列，像表但没有表头。",
+    definition=(
+        "描述列表回答的是「详情页里十几个字段怎么摆」。它按 column 把字段切成行，"
+        "用固定宽度的标签列保证每一行对得齐，末行不足时最后一项自动吃掉剩余列宽 ——"
+        "边框因此不会缺一块。它只负责排格子：值是字符串还是徽标、链接、按钮，"
+        "都由调用方决定，组件不替内容做任何取舍。"
+    ),
+    anatomy=[
+        (
+            "标题 / 操作区",
+            "title 在左上、extra 在右上（字符串自动转成说明文字）；两者都没有时整块不占位。",
+        ),
+        (
+            "标签格",
+            "淡底的固定宽格（label_width，默认 92px）。跨行对齐全靠它，过长收省略号。",
+        ),
+        (
+            "内容格",
+            "占满剩余宽度；字符串折行显示，传控件时按自身尺寸靠左，不被拉满整格。",
+        ),
+        (
+            "跨列",
+            "span 让一项占多列，长地址与备注用它；超过 column 会被夹到 column。",
+        ),
+        (
+            "边框",
+            "单元格只画右 / 下两条边，外框交给容器 —— 不会出现双线，也不怕差 1px。",
+        ),
+        (
+            "空态",
+            "没有字段时留一行「暂无数据」，整块不会缩成 0 高。",
+        ),
+    ],
+    when=[
+        "详情页的字段区：订单、用户、设备，一眼看完一条记录",
+        "字段长短不一，需要标签逐行对齐（地址、备注要跨列）",
+        "同一张表里既要文字，也要状态徽标或链接",
+    ],
+    avoid=[
+        "字段少且都很短：用 Text 拼一行更省一层网格，也少一圈边框",
+        "数据要排序、筛选、分页或勾选：用 Table，描述列表没有列头与行为",
+        "每行字段数都不同、需要复杂合并：手写 Column / GridView 更直接",
+    ],
+    examples=[
+        Example(
+            "基础用法",
+            _basic,
+            hint="两列共 7 个字段；状态是控件，地址 span=2 吃掉整行。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "窄容器",
+            _narrow,
+            hint="300px 宽的两块：左边单列横向、右边单列纵向，标签都不挤内容。",
+            code=_NARROW_CODE,
+        ),
+        Example(
+            "空值与无标签项",
+            _blank,
+            hint="缺的字段用「—」占位；最后一行 label 留空，说明文字占满整行。",
+            code=_BLANK_CODE,
+        ),
+    ],
+    api=[
+        Api(
+            "items",
+            "list[DescriptionsItem | dict]",
+            "[]",
+            "字段列表；每项是 DescriptionsItem(label, value, span, icon)，也可传字典",
+        ),
+        Api("column", "int", "3", "一行放几个字段；窄容器里降到 1"),
+        Api(
+            "direction",
+            "str",
+            "'horizontal'",
+            "horizontal 标签在左，vertical 标签在上",
+        ),
+        Api("bordered", "bool", "True", "边框与分隔线；嵌进已有卡片时关掉"),
+        Api("size", "str", "'default'", "default / small，只改内边距与字号"),
+        Api("title", "str", "''", "左上角标题；留空不占位"),
+        Api(
+            "extra",
+            "str | Control | None",
+            "None",
+            "右上角操作区；传字符串时自动变成说明文字",
+        ),
+        Api("colon", "bool", "True", "无边框模式是否给标签补冒号"),
+        Api(
+            "label_width",
+            "int",
+            "92",
+            "横向模式的标签列宽；换行时每行靠它对齐",
+        ),
+        Api(
+            "set_items(items)",
+            "Callable",
+            "—",
+            "就地替换字段并刷新（已挂载时生效）",
+        ),
+    ],
+    notes=[
+        tip(
+            "某一项 label 留空时，横向模式不再保留 92px 的标签格，内容直接占满整格 ——"
+            "这条跨列说明放进去不会多出一条分隔线。"
+        ),
+        warn(
+            "label_width 是固定像素：容器窄到 400px 以下还开 column=3，标签与内容会互相"
+            "挤压。减少 column、切 vertical，或调小 label_width，比让组件去猜宽度可控。"
+        ),
+        info(
+            "没有字段时整块给一行「暂无数据」，不会缩成 0 高；但单个字段的空值不会被"
+            "自动替换 —— value=None 渲染成空串，要占位就传「—」，组件分不清"
+            "「还没填」和「本来就没有」。"
+        ),
+    ],
+    tags=("描述列表", "详情", "字段", "descriptions", "键值"),
+)
+
+
+if __name__ == "__main__":
+    run(SPEC)

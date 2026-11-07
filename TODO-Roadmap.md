@@ -13,6 +13,8 @@
 - 效率：简洁直观地使用、清晰明确地表达，符合用户体验的使用
 - 可控
 # 已完成
+- [x] 2026-11-07：每个组件自带一份 `SPEC`，文档站与实现同源。
+- [x] 2026-11-07：文档站改为两级菜单**。
 - [x] 2026-09-21：全量适配 flet 1.0.0（`ft.run` / `page.render_views` / `@ft.component` / hooks）
 - [x] 2026-09-21：所有组件均有可运行 demo（42 个模块审计通过）
 - [x] 2026-09-21：重写 `examples/demo.py`（11 个分类页 + 404 页，声明式路由）
@@ -124,7 +126,7 @@
         旁读 `state.current_page` 的标题还停在旧值（真机踩到）。
       - 抽出纯函数 `page_slice()` / `columns()` / `build_rows()` / `clamp_page()`，
         全部无头可测 → 新增 `scripts/_table_logic.py`（34 条断言）。
-      - **顺带修掉 `Paging` 的下拉缺陷**：候选只有 5/10/15/20/30/40/50，
+      - **顺带修掉 `Pagination` 的下拉缺陷**：候选只有 5/10/15/20/30/40/50，
         而 `Table` 用 `rows_per_page=8` → Flutter 匹配不到 value，下拉框显示空白。
         现在会把当前值补进候选并按数值排序。
       - **踩到的三个真坑（已写进记忆）**：
@@ -159,8 +161,8 @@
 - [ ] 声明式范式收敛：把仍用 `@ft.observable` + `.ui()` 的组件（`Input` / `Checkbox` /
       `Switch` / `SelectBox` / `MultiSelect` …）迁到 `@ft.component` + hooks 风格，
       统一成一套心智模型
-- [ ] 补齐数据展示类控件：Descriptions / Statistic / Empty / Result / Skeleton / Avatar / Badge
-- [ ] 补齐导航与输入类控件：Tree / Dropdown 菜单 / Transfer / Cascader / AutoComplete
+- [ ] 补齐数据展示类控件：Statistic / Empty / Result / Skeleton / Avatar / Badge
+- [ ] 补齐导航与输入类控件：Dropdown 菜单 / Transfer / AutoComplete
 - [ ] `src/ui/core/constants.py` 的 `StyleType` 仍在用不随主题走的 M2 硬色
       （`ft.Colors.BLUE` / `GREEN` / `RED` / `YELLOW_600`），迁到语义色三档
 - [ ] `src/ui/display/media/audio.py` 有未提交的遗留改动，需复核后决定去留

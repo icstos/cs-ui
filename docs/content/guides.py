@@ -22,7 +22,7 @@ from docs.content.live import (
     token_scales,
 )
 
-_TWO_KINDS = '''# ① 静态控件：继承 Flet 原生控件，只改默认值
+_TWO_KINDS = """# ① 静态控件：继承 Flet 原生控件，只改默认值
 from ui import Card
 
 Card(content=Text("Hello"), border_radius=12)
@@ -35,7 +35,7 @@ from ui import Input
 @ft.component
 def Profile() -> ft.Control:
     name = ft.use_ref(lambda: Input(label="Name", width=240)).current
-    return Column(spacing=12, controls=[name.ui()])'''
+    return Column(spacing=12, controls=[name.ui()])"""
 
 _PROVIDERS = '''@ft.component
 def App() -> ft.Control:
@@ -45,7 +45,7 @@ def App() -> ft.Control:
         build=lambda: ThemeProvider(build=router),
     )'''
 
-_ROUTING = '''ROUTES = [
+_ROUTING = """ROUTES = [
     ft.Route(
         component=shell,              # 顶栏 + 侧边栏，切页不重建
         children=[
@@ -59,9 +59,9 @@ _ROUTING = '''ROUTES = [
 def main(page: ft.Page) -> None:
     page.render(
         lambda: ft.Router(ROUTES, not_found=NotFound, manage_views=False)
-    )'''
+    )"""
 
-_STATE = '''@ft.component
+_STATE = """@ft.component
 def Orders() -> ft.Control:
     query, set_query = ft.use_state("")          # 局部状态
     rows = ft.use_memo(lambda: load(query), [query])   # 缓存昂贵计算
@@ -73,9 +73,9 @@ def Orders() -> ft.Control:
             Input(label="Search", on_change=lambda e: set_query(e.control.value)).ui(),
             table,
         ],
-    )'''
+    )"""
 
-_THEME = '''from ui import ThemeProvider, use_theme
+_THEME = """from ui import ThemeProvider, use_theme
 
 
 @ft.component
@@ -90,25 +90,25 @@ def Palette() -> ft.Control:
         "Primary" if theme.is_dark else "Light",
         is_primary=True,
         on_click=lambda _: theme.toggle_mode(),
-    )'''
+    )"""
 
-_SURFACES = '''from ui import theme_state
+_SURFACES = """from ui import theme_state
 
 # 默认：中性表面（浅色近白 / 深色 #121212）
 theme_state().set_surfaces("neutral")
 
 # Flet 1.0 的着色表面：容器带一点种子色偏
-theme_state().set_surfaces("tonal")'''
+theme_state().set_surfaces("tonal")"""
 
-_TOKENS = '''from ui import ELEVATION, RADIUS, SPACE
+_TOKENS = """from ui import ELEVATION, RADIUS, SPACE
 
 Container(
     padding=SPACE["4"],          # 16
     border_radius=RADIUS["md"],  # 12
     shadow=ELEVATION["2"],
-)'''
+)"""
 
-_I18N_REGISTER = '''from ui import register_messages
+_I18N_REGISTER = """from ui import register_messages
 
 register_messages("zh-CN", {
     "app": {"title": "我的应用"},
@@ -120,30 +120,35 @@ register_messages("en-US", {
     "app.title": "My App",                  # 平铺写法等价
     "hello": "Hello, {name}",
     "cities": ["Beijing", "Shanghai", "Guangzhou"],
-})'''
+})"""
 
-_I18N_USE = '''from ui import use_t
+_I18N_USE = """from ui import use_t
 
 
 @ft.component
 def Greeting() -> ft.Control:
     tr = use_t()                    # 唯一的订阅点
-    return Text(tr("hello", name="Shawn"))'''
+    return Text(tr("hello", name="Shawn"))"""
 
-_I18N_FORMAT = '''from ui import calendar_title, format_date, format_number, weekday_names
+_I18N_FORMAT = """from ui import calendar_title, format_date, format_number, weekday_names
 
 format_number(1_287_640)          # 1,287,640   /   1,287,640
 format_date(date(2026, 9, 26))    # 2026-09-26  /   09/26/2026
 format_date(date(2026, 9, 26), long=True)
                                   # 2026年9月26日 / September 26, 2026
 calendar_title(2026, 9)           # 2026年9月  /   September 2026
-weekday_names()                   # ('一', …)   /   ('Mon', …)'''
+weekday_names()                   # ('一', …)   /   ('Mon', …)"""
 
 ARCHITECTURE: Doc = (
     p("arch.intro"),
     h2("arch.layers.title"),
     p("arch.layers.desc"),
-    ul("arch.layers.point1", "arch.layers.point2", "arch.layers.point3", "arch.layers.point4"),
+    ul(
+        "arch.layers.point1",
+        "arch.layers.point2",
+        "arch.layers.point3",
+        "arch.layers.point4",
+    ),
     h2("arch.kinds.title"),
     p("arch.kinds.desc"),
     code(_TWO_KINDS, "components.py"),

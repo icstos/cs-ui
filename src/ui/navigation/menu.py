@@ -58,6 +58,7 @@ from typing import Any
 
 import flet as ft
 
+from ui.core.doc import Example, Spec, run
 from ui.core.i18n import t, use_t
 from ui.core.tokens import (
     DURATION,
@@ -993,5 +994,140 @@ def App():
     )
 
 
+def _tree() -> list:
+    """演示用的菜单树：三种形态（叶子 / 可展开 / 分组）各来一份。"""
+    return [
+        MenuItem("home", "概览", icon=ft.Icons.DASHBOARD_OUTLINED),
+        MenuItem("monitor", "监控", icon=ft.Icons.MONITOR_HEART_OUTLINED),
+        MenuGroup(
+            "运维",
+            [
+                MenuItem(
+                    "host",
+                    "主机",
+                    icon=ft.Icons.DNS_OUTLINED,
+                    children=[
+                        MenuItem("host-list", "主机列表", dot=True),
+                        MenuItem("host-group", "主机分组"),
+                        MenuItem("host-tag", "标签管理", badge="12"),
+                    ],
+                ),
+                MenuItem(
+                    "network",
+                    "网络",
+                    icon=ft.Icons.LAN_OUTLINED,
+                    children=[MenuItem("vpc", "私有网络"), MenuItem("eip", "弹性 IP")],
+                ),
+            ],
+        ),
+        MenuItem("setting", "设置", icon=ft.Icons.SETTINGS_OUTLINED),
+    ]
+
+
+@ft.component
+def _collapsed() -> ft.Control:
+    """折叠成图标条：只剩图标，选中项的**父级**也会亮起来。"""
+    menu = ft.use_memo(
+        lambda: Menu(items=_tree(), collapsed=True, selected_key="host-list"), []
+    )
+    return ft.Container(
+        width=56,
+        padding=6,
+        bgcolor=ft.Colors.SURFACE,
+        border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+        border_radius=10,
+        content=menu.ui(),
+    )
+
+
+@ft.component
+def _horizontal() -> ft.Control:
+    """顶栏水平菜单：只画一层，选中项靠底部 3px 主色线与主色字。"""
+    menu = ft.use_memo(
+        lambda: Menu(
+            items=_tree(), orientation="horizontal", selected_key="host-list"
+        ),
+        [],
+    )
+    return ft.Container(
+        bgcolor=ft.Colors.SURFACE,
+        border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+        border_radius=10,
+        clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+        content=menu.ui(),
+    )
+
+
+_MENU_CODE = '''menu = Menu(
+    items=[
+        MenuItem("home", "概览", icon=ft.Icons.DASHBOARD_OUTLINED),
+        MenuGroup("运维", [
+            MenuItem("host", "主机", icon=ft.Icons.DNS_OUTLINED, children=[
+                MenuItem("host-list", "主机列表", dot=True),
+                MenuItem("host-tag", "标签管理", badge="12"),
+            ]),
+        ]),
+    ],
+    selected_key="host-list",      # 选中项（半受控：点击会自己改）
+    expanded_keys=("host",),       # 默认展开哪几组
+    on_select=lambda item: ...,     # 叶子项被点中
+)'''
+
+SPEC = Spec(
+    name="Menu",
+    summary="侧边多级导航：分组、展开、选中链路、折叠成图标条。",
+    definition=(
+        "菜单是一棵树，不是一叠控件 —— 展开状态、选中链路、手风琴、缩进都要按树"
+        "算。所以 MenuItem 是数据节点（dataclass），渲染时才生成控件；这样同一行"
+        "可以同时出现在展开态与折叠态，不必和「控件只能有一个父节点」较劲。"
+    ),
+    anatomy=[
+        ("行", "32 / 40 / 48 三档（small / default / large），图标 + 文字 + 可选徽标。"),
+        (
+            "选中链路",
+            "选中项 12% 主色底 + 主色字；它的祖先只转主色、不铺底 —— "
+            "一层标「你在哪」，另一层标「你从哪来」。",
+        ),
+        ("展开箭头", "16px 的箭头转 180°，120ms 缓出；旋转是属性动画，能吃补间。"),
+        ("圆点 / 徽标", "圆点标「有新内容」，徽标是计数。两个前导符号不会同时出现。"),
+        ("折叠行", "底部一枚左对齐的折叠按钮，与行同高，上方一条发丝线。"),
+        ("分组标题", "更小更淡的一行字，只做视觉切分，不参与展开与选中逻辑。"),
+    ],
+    when=[
+        "应用的常驻侧边导航（一屏几十行）",
+        "层级固定、需要快速在模块间切换",
+        "需要折叠成图标条让出内容宽度",
+    ],
+    avoid=[
+        "只有 3~5 个入口且不会再长：一排 Tab 更直接",
+        "操作型菜单（右键、下拉动作）：用 PopupMenu，不要用导航菜单",
+    ],
+    examples=[
+        Example("完整示例", App, hint="分组、子菜单、圆点、徽标、禁用项、折叠按钮。"),
+        Example("折叠态", _collapsed, hint="只剩图标；选中项藏在子级里时，父级图标也会亮。"),
+        Example("水平菜单", _horizontal, hint="顶栏形态只画一层，选中靠底部主色线。"),
+    ],
+    target=Menu,
+    notes=[
+        (
+            "warn",
+            "别在组件函数里每次重绘都 new 一个 Menu：新实例意味着展开状态与选中"
+            "状态被打回初始值。用 use_memo / use_ref 把它钉住。",
+        ),
+        (
+            "tip",
+            "选中用 12% 主色底而不是主色实底：一屏几十行，满饱和的色会压过页面正文。"
+            "图标比文字淡一档（outline），否则一列图标与文字同深度会发糊。",
+        ),
+        (
+            "info",
+            "水平菜单只画一层：下拉浮层需要锚点的绝对坐标，而 Flet 只给尺寸、"
+            "不给位置。与其做一个位置会飘的假浮层，不如老实只画一层。",
+        ),
+    ],
+    tags=("菜单", "侧边栏", "导航树", "menu", "sidenav"),
+)
+
+
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

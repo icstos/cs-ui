@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 import flet as ft
 
 from ui.core.config import logger
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.format import format_number
 
 __all__ = [
@@ -279,7 +280,12 @@ class NumberAnimation:
         """构建这串数字。"""
         target = float(self.end)
         if not self.active:
-            self._snap(target)  # 关掉动效：直接给终值，别留一个中间态
+            # 关掉动效：直接给终值，**并且作废还在跑的那一轮**。只 snap 不作废的话，
+            # 循环下一帧就把中间值写回来，屏幕上的数字在关掉动效之后还自己跳。
+            if object.__getattribute__(self, "_animating"):
+                object.__setattr__(self, "_token", self._token + 1)
+                object.__setattr__(self, "_animating", False)
+            self._snap(target)
 
         label = self._label()
         object.__setattr__(self, "_label_shown", label)  # 屏幕上现在是这串字
@@ -306,3 +312,240 @@ class NumberAnimation:
         ):
             self._launch()
         return ctrl
+
+
+# ---------------------------------------------------------------------------
+# 示例
+# ---------------------------------------------------------------------------
+_MUTED: ft.ColorValue = ft.Colors.ON_SURFACE_VARIANT
+
+
+@ft.component
+def _basic() -> ft.Control:
+    """大屏指标：1.2 秒从 0 数到 128,640，点「重播」可以再看一遍。"""
+    anim = ft.use_memo(
+        lambda: NumberAnimation(
+            end=128_640, duration=1200, size=38, weight=ft.FontWeight.W_700
+        ),
+        [],
+    )
+    return ft.Column(
+        spacing=4,
+        controls=[
+            ft.Text("本月成交额", size=12, color=_MUTED),
+            anim.ui(),
+            ft.Row(
+                spacing=10,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Button("重播", on_click=lambda _e: anim.play()),
+                    ft.Text(
+                        "play() 从 start 重新数一遍", size=11, color=ft.Colors.OUTLINE
+                    ),
+                ],
+            ),
+        ],
+    )
+
+
+def _metric(label: str, anim: NumberAnimation) -> ft.Control:
+    return ft.Column(
+        spacing=2,
+        controls=[ft.Text(label, size=12, color=_MUTED), anim.ui()],
+    )
+
+
+@ft.component
+def _decimal() -> ft.Control:
+    """小数与符号：完成率带后缀，环比带负号，两者都只保留一位小数。"""
+    rate = ft.use_memo(
+        lambda: NumberAnimation(
+            end=98.6, precision=1, suffix="%", duration=900, size=30
+        ),
+        [],
+    )
+    delta = ft.use_memo(
+        lambda: NumberAnimation(
+            end=-12.4,
+            precision=1,
+            suffix="%",
+            duration=900,
+            size=30,
+            color=ft.Colors.ERROR,
+        ),
+        [],
+    )
+    return ft.Row(
+        spacing=56, controls=[_metric("质检通过率", rate), _metric("环比", delta)]
+    )
+
+
+@ft.component
+def _retarget() -> ft.Control:
+    """中途换目标：从当前显示值接着滚，不回 0 重播 —— KPI 定时刷新就是这样。"""
+    anim = ft.use_memo(
+        lambda: NumberAnimation(end=1_200, duration=800, prefix="¥", size=32),
+        [],
+    )
+
+    def to(value: int):
+        def handler(_event: ft.ControlEvent) -> None:
+            anim.end = value
+
+        return handler
+
+    return ft.Column(
+        spacing=10,
+        controls=[
+            anim.ui(),
+            ft.Row(
+                spacing=8,
+                controls=[
+                    ft.Button("涨到 ¥1,860", on_click=to(1_860)),
+                    ft.Button("回落到 ¥1,240", on_click=to(1_240)),
+                ],
+            ),
+            ft.Text(
+                "只改 end：从当前值续着走，不回 0 重播。",
+                size=11,
+                color=ft.Colors.OUTLINE,
+            ),
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# 示例源码（“查看代码”面板）
+# ---------------------------------------------------------------------------
+_BASIC_CODE = """NumberAnimation(
+    end=128_640,                        # 目标值
+    duration=1200,                      # 毫秒；0 = 不动画，直接落位
+    size=38, weight=FontWeight.W_700,
+).ui()
+
+# 大屏上要「再数一遍」
+anim.play()                             # 从 start 重播"""
+
+_DECIMAL_CODE = """NumberAnimation(end=98.6, precision=1, suffix="%").ui()
+
+# 金额：负号在前缀之前 → -¥1,234.57
+NumberAnimation(end=-1234.5678, precision=2, prefix="¥")
+
+# 不要千分位：separator=""（None 时跟随当前语言）
+NumberAnimation(end=20261107, separator="")"""
+
+_RETARGET_CODE = """anim = NumberAnimation(end=1_200, duration=800, prefix="¥")
+
+
+def refresh(value: int):
+    anim.end = value        # 从当前显示值续着走，不回 0 重播
+
+
+Column([
+    anim.ui(),
+    Button("刷新", on_click=lambda e: refresh(latest_value)),
+])"""
+
+
+# ---------------------------------------------------------------------------
+# 组件说明
+# ---------------------------------------------------------------------------
+SPEC = Spec(
+    name="NumberAnimation",
+    summary="让一个数字从起点滚到终点：大屏 KPI、占比、在线人数。",
+    definition=(
+        "静态数字只给结论，滚动过程顺带告诉读者「这个量级在什么位置」「它刚刚变了」。"
+        "NumberAnimation 只做这一件事：把起点到终点的一段变化摊进 duration 里，每帧只"
+        "重绘这一个数字。千分位、小数位、前后缀与缓动都在组件内部收口，外面只负责给值。"
+    ),
+    anatomy=[
+        (
+            "数字",
+            (
+                "一个 Text，文本由 format_value 生成：小数位、千分位、前缀后缀都在这一步定；"
+                "size / color / weight 直接透传，不传就跟随正文。"
+            ),
+        ),
+        (
+            "帧循环",
+            "约 30 帧/秒。屏幕上那串字符没变就不发重绘 —— 整数计数前几帧往往一次都不用发。",
+        ),
+        (
+            "缓动",
+            "默认 ease-out：起步就走、收尾轻停。linear / ease-in-out 或自定义 f(进度) 都收。",
+        ),
+        ("读屏", "semantics_label 固定为终值，中途那些数字不会被念出来。"),
+        (
+            "重播",
+            "play() 从 start 重来；改 end 则从当前值续上 —— 定时刷新的 KPI 不该回 0 重播。",
+        ),
+    ],
+    when=[
+        "大屏 KPI：一屏只有几个关键数，滚动给「变化」一个视觉落点",
+        "数据刚刷新，需要让用户注意到这个值变了",
+        "占比、完成率这类 0–100 的数：滚动比直接跳字更顺眼",
+    ],
+    avoid=[
+        "表格、列表里的数字：一屏几十个一起滚只是噪声，还拖慢首帧",
+        "需要精确读数的场合（对账金额）：滚动中途读不出准确值，直接用 Text",
+        "每秒刷新多次的实时值：数字永远在动反而看不清趋势，用折线图",
+    ],
+    examples=[
+        Example(
+            "基础用法",
+            _basic,
+            hint="38px、1.2 秒数到 128,640；「重播」调 play() 从 0 再来一遍。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "小数与符号",
+            _decimal,
+            hint="98.6% 与 -12.4%：precision 管小数位，suffix 管百分号，负号永远在最前。",
+            code=_DECIMAL_CODE,
+        ),
+        Example(
+            "中途改目标",
+            _retarget,
+            hint="点两个按钮只改 end：数字从当前值续着滚过去，不会回 0 重播。",
+            code=_RETARGET_CODE,
+        ),
+    ],
+    api=[
+        Api("end", "float", "0.0", "目标值；运行中改它会从当前显示值续着滚"),
+        Api("start", "float", "0.0", "起始值，也是 play() 重播的起点"),
+        Api("duration", "int", "1000", "时长（毫秒）；0 表示不动画，直接落位"),
+        Api("precision", "int", "0", "保留几位小数"),
+        Api(
+            "separator", "str | None", "None", "千分位符号；None 跟随语言，'' 关闭分组"
+        ),
+        Api("prefix", "str", "''", "前缀，如「¥」；负号在前缀之前"),
+        Api("suffix", "str", "''", "后缀，如「%」「 人」"),
+        Api(
+            "easing",
+            "str | Callable[[float], float]",
+            "'ease-out'",
+            "缓动曲线；认不出的名字退回 ease-out",
+        ),
+        Api("active", "bool", "True", "关掉则直接显示终值，并作废正在跑的那一轮"),
+        Api("play()", "() -> None", "—", "从 start 重播一遍"),
+    ],
+    notes=[
+        info(
+            "中途改 end 不是从 start 重来，而是从当前显示值续上，并重新计时一整段 duration。"
+            "KPI 每几秒刷一次，回 0 重播会让人以为数据在乱跳。"
+        ),
+        tip(
+            "把 active 关掉时会顺带作废正在跑的那一轮。只 snap 不作废的话，帧循环下一帧又把"
+            "中间值写回来 —— 关掉动效之后数字还在自己跳。"
+        ),
+        warn(
+            "每帧都是一次 notify 加一次往返。别把几十个 NumberAnimation 塞进同一个滚动列表："
+            "30 帧的代价会叠成一屏几十路重绘。"
+        ),
+    ],
+    tags=("数字动画", "滚动数字", "count up", "KPI", "大屏"),
+)
+
+
+if __name__ == "__main__":
+    run(SPEC)

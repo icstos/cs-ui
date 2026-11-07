@@ -70,9 +70,7 @@ def _card(slug: str) -> ft.Control:
                             kit.icon_tile(meta.icon, tone=role),
                             ft.Container(expand=True),
                             ft.Container(
-                                padding=ft.Padding.symmetric(
-                                    horizontal=7, vertical=1
-                                ),
+                                padding=ft.Padding.symmetric(horizontal=7, vertical=1),
                                 border_radius=999,
                                 bgcolor=kit.RAISED,
                                 content=ft.Text(

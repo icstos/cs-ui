@@ -5,7 +5,9 @@
 - 折叠态是一个带边框的输入框，已选项以 Chip 排列在框内，右端一个下拉箭头；
 - 点击框体在下方展开选项面板：每行「复选框 + 文本」，选中行高亮为淡蓝底；
 - 点选项即时切换（面板保持展开），点 Chip 上的 × 单独移除，点「全选」整组切换；
-- 再次点击框体，或点面板右下角「完成」收起。
+- 再次点击框体，或点面板右下角「完成」收起；
+- ``searchable`` 时展开后框体右侧出现一个窄搜索框，按文本忽略大小写过滤选项；
+- ``max_selected`` 给上限：到顶后未选项变灰不可点，「全选」也一并锁住。
 
 与 :class:`~ui.input.checkbox.CheckboxGroup` 的区别：
 ``CheckboxGroup`` 是纯表单控件，无边框、无汇总展示、选项常驻可见；
@@ -42,9 +44,11 @@ from dataclasses import dataclass, field
 
 import flet as ft
 
+from ui.core.doc import Api, Example, Spec, info, run, tip
 from ui.core.float_layer import overlay_usable, use_float_layer
 from ui.core.format import format_list
 from ui.core.i18n import t, use_t
+from ui.core.tokens import FONT_SIZE
 from ui.input.input import Label
 
 __all__ = ["MultiSelect"]
@@ -58,6 +62,8 @@ PANEL_GAP = 4  # 面板与输入框之间的间距
 FIELD_PAD_H = 10
 FIELD_PAD_V = 8
 FOOTER_HEIGHT = 36
+SEARCH_W = 104  # 框内搜索框宽度（展开且 searchable 时占位）
+SEARCH_H = 26  # 框内搜索框高度（比 Chip 略高，撑高 2px 可以接受）
 TEXT_SIZE = 13
 CHIP_TEXT_SIZE = 12
 DEFAULT_FIELD_HEIGHT = 40  # 尺寸上报前的兜底值
@@ -67,6 +73,8 @@ SCREEN_MARGIN = 8  # 面板与窗口边缘的最小间距
 SELECTED_BG = ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY)
 #: 悬停行背景：淡灰
 HOVER_BG = ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE)
+#: 到上限后被锁住的行：文字与图标一起压到 38% 的灰（与整组禁用同一档）
+LOCKED_FG = ft.Colors.with_opacity(0.38, ft.Colors.ON_SURFACE)
 
 
 def _truthy(value: object) -> bool:
@@ -94,6 +102,8 @@ class MultiSelect(Label):
         float_panel: 面板是否走页面浮层。``None``（默认）表示自动：
             浮层可用时悬挂，否则退化为流内展开。``True`` / ``False`` 强制指定。
         on_change: 选择变化回调，接收最新的已选列表副本。
+        searchable: 展开后框体右侧是否带搜索框，按选项文本忽略大小写过滤，默认 False。
+        max_selected: 最多可选几项。``None``（默认）不限；到上限后未选项置灰不可点。
     """
 
     value: list[str] = field(default_factory=list)
@@ -107,11 +117,15 @@ class MultiSelect(Label):
     disabled: bool = False
     float_panel: bool | None = None
     on_change: Callable[[list[str]], None] | None = None
+    searchable: bool = False
+    max_selected: int | None = None
 
     def __post_init__(self) -> None:
         # 运行期状态：当前鼠标悬停的行 key。下划线开头 => 不参与序列化，
         # 变更后靠 notify() 触发重绘。
         self._hover: str | None = None
+        # 框内搜索词（仅 searchable 且展开时有值）。
+        self._query: str = ""
         # 输入框左上角的页面坐标（点击时从事件里换算得到），浮层据此定位。
         self._anchor: tuple[float, float] | None = None
         # 输入框的实际高度（由 on_size_change 上报），Chip 换行时会变高。
@@ -122,10 +136,13 @@ class MultiSelect(Label):
     # ------------------------------------------------------------------
 
     def select(self, option: str, selected: bool = True) -> None:
-        """选中 / 取消选中单个选项。"""
+        """选中 / 取消选中单个选项。已达上限时新选项不再进入。"""
         if selected:
-            if option not in self.value:
-                self.value = [*self.value, option]
+            if option in self.value:
+                return
+            if self._at_limit:
+                return
+            self.value = [*self.value, option]
         else:
             if option not in self.value:
                 return
@@ -137,7 +154,13 @@ class MultiSelect(Label):
         self.select(option, option not in self.value)
 
     def select_all(self, selected: bool = True) -> None:
-        """全选 / 全不选。"""
+        """全选 / 全不选。设了上限且装不下全部选项时，「全选」不生效。"""
+        if (
+            selected
+            and self.max_selected is not None
+            and self.max_selected < len(self.options)
+        ):
+            return
         target = list(self.options) if selected else []
         if list(self.value) == target:
             return
@@ -152,6 +175,8 @@ class MultiSelect(Label):
         """展开面板。"""
         if self.disabled or self.is_open:
             return
+        # 每次打开都从干净状态开始：上次的搜索词留着，看到的就不是完整选项了。
+        self._query = ""
         self.is_open = True
         self.notify()  # type: ignore[attr-defined]
 
@@ -194,6 +219,34 @@ class MultiSelect(Label):
     def _fg(self) -> ft.ColorValue:
         """主文字色：禁用时整体压灰。"""
         return ft.Colors.OUTLINE if self.disabled else ft.Colors.ON_SURFACE
+
+    @property
+    def _visible_options(self) -> list[str]:
+        """面板里真正要画的选项：套上搜索词后的结果，无搜索词时就是全部。"""
+        keyword = self._query.strip().casefold()
+        if not keyword:
+            return list(self.options)
+        return [option for option in self.options if keyword in option.casefold()]
+
+    @property
+    def _at_limit(self) -> bool:
+        """是否已经选到上限。没设上限时永远为 False。"""
+        return self.max_selected is not None and len(self.value) >= self.max_selected
+
+    def _row_locked(self, option: str) -> bool:
+        """这一行现在是否点不动：到上限后，未选项一律锁住（已选的仍可取消）。"""
+        return self._at_limit and option not in self.value
+
+    def _all_locked(self, options: list[str]) -> bool:
+        """「全选」这一行是否该锁住：剩下的名额装不下这批未选项。
+
+        判据是「未选数 > 剩余名额」而不是「上限 < 选项数」—— 已经选了 2 个、
+        上限 3 个时，眼前只剩 1 个未选项，全选仍然是能完成的动作。
+        """
+        if self.max_selected is None:
+            return False
+        extra = sum(1 for option in options if option not in self.value)
+        return extra > self.max_selected - len(self.value)
 
     # ------------------------------------------------------------------
     # 内部
@@ -266,7 +319,7 @@ class MultiSelect(Label):
         if self.options:
             total += max(
                 ROW_HEIGHT,
-                min(float(self.panel_height), len(self.options) * ROW_HEIGHT),
+                min(float(self.panel_height), len(self._visible_options) * ROW_HEIGHT),
             )
         else:
             total += ROW_HEIGHT
@@ -274,9 +327,7 @@ class MultiSelect(Label):
             total += 1 + FOOTER_HEIGHT
         return total
 
-    def _panel_origin(
-        self, page: ft.Page
-    ) -> tuple[float, float | None, float | None]:
+    def _panel_origin(self, page: ft.Page) -> tuple[float, float | None, float | None]:
         """面板定位：返回 ``(left, top, bottom)``，``top`` / ``bottom`` 二选一。
 
         默认从输入框下沿往下弹；下方放不下就向上翻转，改用 ``bottom`` 锚定
@@ -288,9 +339,14 @@ class MultiSelect(Label):
         page_h = float(getattr(page, "height", 0) or 0)
 
         top = ay + self._field_h + PANEL_GAP
-        if page_h and top + height > page_h - SCREEN_MARGIN:
-            if ay - height - PANEL_GAP >= SCREEN_MARGIN:
-                return ax, None, page_h - ay + PANEL_GAP
+        # 下方放不下、上方又确实能容纳时向上翻；两边都放不下就保持向下 ——
+        # 溢出到窗口外，好过把输入框本身盖住。
+        if (
+            page_h
+            and top + height > page_h - SCREEN_MARGIN
+            and ay - height - PANEL_GAP >= SCREEN_MARGIN
+        ):
+            return ax, None, page_h - ay + PANEL_GAP
         return ax, top, None
 
     def _with_label(self, body: ft.Control) -> ft.Control:
@@ -328,7 +384,7 @@ class MultiSelect(Label):
             self.notify()  # type: ignore[attr-defined]
 
     def _build_field(self) -> ft.Control:
-        """折叠态输入框：已选 Chip + 下拉箭头。
+        """折叠态输入框：已选 Chip + 下拉箭头（可搜索时箭头前多一个输入框）。
 
         点击监听走 ``GestureDetector.on_tap`` —— ``Container.on_click`` 的事件
         不带坐标，而浮层需要知道输入框在页面上的位置；``GestureDetector`` 的
@@ -337,7 +393,43 @@ class MultiSelect(Label):
         Chip 的 ``×`` 同样用 ``GestureDetector``：``Container.on_click`` 在内层
         时会被外层 ``GestureDetector`` 抢走（真机实测，点 ``×`` 变成开合面板）；
         同类型的 tap 识别器才会按"内层优先"决出胜者。
+
+        搜索框必须画在这里、**不能**放进浮层面板：浮层每次更新都是"移除节点再
+        追加一棵新树"（见 :func:`ui.core.float_layer.use_float_layer`），放进
+        去的输入框每键入一个字就会被重建一次，焦点立刻丢失，一个字都打不完整。
         """
+        searching = self.searchable and self.is_open and not self.disabled
+        # 展开且可搜索时，搜索框就是这一行唯一的输入控件：占位文本让位给它
+        # （搜索框自带「搜索」提示，再摆一个「请选择」是两行废话）。
+        tokens = [] if (searching and not self.value) else self._build_tokens()
+
+        controls: list[ft.Control] = []
+        if tokens:
+            controls.append(
+                ft.Row(
+                    expand=True,
+                    # 搜索时 Chip 改成单行横滚：腾出位置给右边的输入框，
+                    # 换行还会把框体撑高、把浮层面板顶下去。
+                    wrap=not searching,
+                    scroll=ft.ScrollMode.AUTO if searching else None,
+                    spacing=6,
+                    run_spacing=6,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=tokens,
+                )
+            )
+        if searching:
+            # 没有 Chip 时让搜索框吃掉整行 —— 320px 的框体里只放一个 104px 的
+            # 输入框，用户点在旁边的空白上只会把面板关掉。
+            controls.append(self._build_search_inline(expand=not tokens))
+        controls.append(
+            ft.Icon(
+                ft.Icons.ARROW_DROP_UP if self.is_open else ft.Icons.ARROW_DROP_DOWN,
+                size=20,
+                color=ft.Colors.OUTLINE,
+            )
+        )
+
         return ft.GestureDetector(
             on_tap=self._on_field_click,
             content=ft.Container(
@@ -358,23 +450,7 @@ class MultiSelect(Label):
                 content=ft.Row(
                     spacing=8,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    controls=[
-                        ft.Row(
-                            expand=True,
-                            wrap=True,
-                            spacing=6,
-                            run_spacing=6,
-                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                            controls=self._build_tokens(),
-                        ),
-                        ft.Icon(
-                            ft.Icons.ARROW_DROP_UP
-                            if self.is_open
-                            else ft.Icons.ARROW_DROP_DOWN,
-                            size=20,
-                            color=ft.Colors.OUTLINE,
-                        ),
-                    ],
+                    controls=controls,
                 ),
             ),
         )
@@ -438,27 +514,57 @@ class MultiSelect(Label):
 
     # ---- 展开面板 ----
 
+    def _build_search_inline(self, *, expand: bool = False) -> ft.Control:
+        """输入框右侧的搜索框：只在展开且 ``searchable`` 时出现。
+
+        位置刻意放在**折叠态的框体里**而不是浮层面板里 —— 面板每次更新都会整棵
+        重建（见 :meth:`_build_field` 的说明），输入框放进去会一个字都打不完。
+        过滤只作用在选项文本上，不碰已选：搜索是「帮我看清这一屏」，不是「改值」。
+        """
+        return ft.TextField(
+            value=self._query,
+            width=None if expand else SEARCH_W,
+            expand=expand,
+            height=SEARCH_H,
+            dense=True,
+            filled=False,
+            text_size=CHIP_TEXT_SIZE,
+            color=self._fg,
+            content_padding=ft.Padding.symmetric(horizontal=4, vertical=0),
+            border=ft.NoInputBorder(),
+            hint_text=t("ui.common.search"),
+            hint_style=ft.TextStyle(size=CHIP_TEXT_SIZE, color=ft.Colors.OUTLINE),
+            on_change=self._on_query_change,
+        )
+
+    def _on_query_change(self, e: ft.ControlEvent) -> None:
+        """搜索词变化：只重绘面板，已选与对外 value 都不动。"""
+        self._query = e.control.value or ""
+        self.notify()  # type: ignore[attr-defined]
+
     def _build_panel(self) -> ft.Control:
         """展开面板：全选行 + 可滚动选项列表 + 页脚。"""
         blocks: list[ft.Control] = []
+        options = self._visible_options
 
         if self.show_select_all:
             blocks.append(self._build_select_all_row())
             blocks.append(ft.Divider(height=1))
 
-        if self.options:
+        if options:
             blocks.append(
                 ft.Column(
-                    controls=[self._build_option_row(o) for o in self.options],
+                    controls=[self._build_option_row(o) for o in options],
                     spacing=0,
                     height=max(
                         ROW_HEIGHT,
-                        min(float(self.panel_height), len(self.options) * ROW_HEIGHT),
+                        min(float(self.panel_height), len(options) * ROW_HEIGHT),
                     ),
                     scroll=ft.ScrollMode.AUTO,
                 )
             )
         else:
+            # 一个选项都没有，和"搜了但没有命中"是同一件事：这一屏给不出东西。
             blocks.append(
                 ft.Container(
                     height=ROW_HEIGHT,
@@ -492,24 +598,48 @@ class MultiSelect(Label):
         )
 
     def _build_select_all_row(self) -> ft.Control:
-        """「全选」行，支持「全选 / 半选 / 未选」三态。"""
-        checked = self.all_selected
+        """「全选」行，支持「全选 / 半选 / 未选」三态。
+
+        三态只看**当前可见**的选项：搜索时点「全选」，用户的意思显然是"眼前
+        这批"，偷偷把被过滤掉的也选上就说不清了。上限装不下全部可见项时整行
+        锁住 —— 点下去只能选一半，比点不动更让人困惑。
+        """
+        options = self._visible_options
+        picked = [option for option in options if option in self.value]
+        checked = bool(options) and len(picked) == len(options)
         if checked:
             icon = ft.Icons.CHECK_BOX
-        elif self.partially_selected:
+        elif picked:
             icon = ft.Icons.INDETERMINATE_CHECK_BOX
         else:
             icon = ft.Icons.CHECK_BOX_OUTLINE_BLANK
+        over_limit = self._all_locked(options)
         return self._build_row(
             key="__all__",
             label=t("ui.common.select_all"),
             icon=icon,
             highlighted=checked,
-            on_click=lambda _e: self.select_all(not self.all_selected),
+            on_click=lambda _e: self._toggle_visible(options),
+            option_disabled=over_limit,
         )
 
+    def _toggle_visible(self, options: list[str]) -> None:
+        """整批切换可见选项（「全选」行用），一次广播而不是逐个 emit。"""
+        if not options:
+            return
+        if all(option in self.value for option in options):
+            target = [v for v in self.value if v not in options]
+        else:
+            if self._all_locked(options):
+                return
+            target = [*self.value, *[o for o in options if o not in self.value]]
+        if target == list(self.value):
+            return
+        self.value = target
+        self._emit()
+
     def _build_option_row(self, option: str) -> ft.Control:
-        """单个选项行。"""
+        """单个选项行。到上限后未选项变灰：还能看见，但点不动。"""
         selected = option in self.value
         return self._build_row(
             key=option,
@@ -517,6 +647,7 @@ class MultiSelect(Label):
             icon=ft.Icons.CHECK_BOX if selected else ft.Icons.CHECK_BOX_OUTLINE_BLANK,
             highlighted=selected,
             on_click=lambda _e, opt=option: self.toggle(opt),
+            option_disabled=self._row_locked(option),
         )
 
     def _build_row(
@@ -527,11 +658,13 @@ class MultiSelect(Label):
         icon: ft.IconData,
         highlighted: bool,
         on_click: Callable[[ft.ControlEvent], None],
+        option_disabled: bool = False,
     ) -> ft.Control:
         """选项行的公共骨架：整行可点，图标即复选框。"""
+        blocked = self.disabled or option_disabled
         if highlighted:
             bgcolor: ft.ColorValue | None = SELECTED_BG
-        elif self._hover == key:
+        elif not blocked and self._hover == key:
             bgcolor = HOVER_BG
         else:
             bgcolor = None
@@ -542,9 +675,9 @@ class MultiSelect(Label):
             padding=ft.Padding.symmetric(horizontal=8),
             border_radius=ft.BorderRadius.all(ROW_RADIUS),
             bgcolor=bgcolor,
-            on_click=None if self.disabled else on_click,
+            on_click=None if blocked else on_click,
             on_hover=None
-            if self.disabled
+            if blocked
             else (lambda e, k=key: self._hover_row(k, _truthy(e.data))),
             content=ft.Row(
                 spacing=8,
@@ -553,12 +686,16 @@ class MultiSelect(Label):
                     ft.Icon(
                         icon,
                         size=18,
-                        color=ft.Colors.PRIMARY if highlighted else ft.Colors.OUTLINE,
+                        color=LOCKED_FG
+                        if option_disabled
+                        else ft.Colors.PRIMARY
+                        if highlighted
+                        else ft.Colors.OUTLINE,
                     ),
                     ft.Text(
                         label,
                         size=TEXT_SIZE,
-                        color=self._fg,
+                        color=LOCKED_FG if option_disabled else self._fg,
                         expand=True,
                         no_wrap=True,
                         overflow=ft.TextOverflow.ELLIPSIS,
@@ -594,55 +731,213 @@ class MultiSelect(Label):
         )
 
 
-@ft.component
-def App():
-    """MultiSelect 组件运行示例。"""
-    page = ft.context.page
-    tags = MultiSelect(
-        label="技术栈",
-        options=[
-            "Python", "Flet", "FastAPI", "SQLite",
-            "Docker", "Redis", "Nginx", "PostgreSQL",
-        ],
-        value=["Python", "Flet"],
-        is_required=True,
-    )
-    channels = MultiSelect(
-        label="通知渠道",
-        options=["站内信", "邮件", "短信", "企业微信", "钉钉"],
-        value=["站内信", "邮件"],
-        is_vertical=True,
-        show_select_all=False,
-        panel_height=160,
-    )
-    frozen = MultiSelect(
-        label="只读",
-        options=["A", "B", "C"],
-        value=["A"],
-        disabled=True,
-    )
+# ---------------------------------------------------------------------------
+# 示例
+# ---------------------------------------------------------------------------
+def _caption(text: str) -> ft.Control:
+    return ft.Text(text, size=FONT_SIZE["small"], color=ft.Colors.ON_SURFACE_VARIANT)
 
-    return ft.Column(
-        controls=[
-            ft.Text("MultiSelect 多选下拉框", size=20, weight=ft.FontWeight.BOLD),
-            ft.Text("点击输入框展开选项面板，已选项以 Chip 汇总", size=13, color="#6b7280"),
-            ft.Divider(),
-            tags.ui(),
-            ft.Divider(),
-            channels.ui(),
-            ft.Divider(),
-            frozen.ui(),
-            ft.Divider(),
-            ft.Button(
-                content="打印当前值",
-                on_click=lambda _: print(
-                    f"技术栈: {tags.value} / 通知: {channels.value}"
-                ),
-            ),
-        ],
-        spacing=16,
+
+@ft.component
+def _echo(select: MultiSelect, limit: int | None = None) -> ft.Control:
+    """把 value 读出来：Chip 只说明「选了哪些」，这行说明「程序拿到什么」。"""
+    picked = "、".join(select.value) if select.value else "未选择"
+    if limit is None:
+        tail = ""
+    elif len(select.value) >= limit:
+        tail = " · 已达上限，其余选项不可点"
+    else:
+        tail = f" · 还可选 {limit - len(select.value)} 项"
+    return _caption(f"已选 {len(select.value)} 项：{picked}{tail}")
+
+
+_TECH = [
+    "Python",
+    "Flet",
+    "FastAPI",
+    "SQLite",
+    "Docker",
+    "Redis",
+    "Nginx",
+    "PostgreSQL",
+]
+
+_CITIES = [
+    "北京",
+    "上海",
+    "广州",
+    "深圳",
+    "杭州",
+    "南京",
+    "成都",
+    "武汉",
+    "西安",
+    "苏州",
+    "厦门",
+    "青岛",
+]
+
+_ROLES = ["查看", "编辑", "发布", "审核", "导出", "删除", "授权", "归档"]
+
+
+@ft.component
+def _basic() -> ft.Control:
+    """两个已选项：框里是 Chip，× 直接删；点框体开面板继续挑。"""
+    select = ft.use_memo(
+        lambda: MultiSelect(
+            label="技术栈",
+            options=_TECH,
+            value=["Python", "Flet"],
+            is_required=True,
+        ),
+        [],
     )
+    return ft.Column(spacing=10, controls=[select.ui(), _echo(select)])
+
+
+@ft.component
+def _search() -> ft.Control:
+    """12 个城市，展开后框内直接键入：选项列表跟着收窄，已选不受影响。"""
+    select = ft.use_memo(
+        lambda: MultiSelect(
+            label="常驻城市",
+            options=_CITIES,
+            searchable=True,
+            panel_height=190,
+        ),
+        [],
+    )
+    return ft.Column(spacing=10, controls=[select.ui(), _echo(select)])
+
+
+@ft.component
+def _limit() -> ft.Control:
+    """上限 3 个：选满后未选项转灰、点不动；「全选」也跟着锁住。"""
+    select = ft.use_memo(
+        lambda: MultiSelect(
+            label="权限",
+            options=_ROLES,
+            value=["查看", "编辑"],
+            max_selected=3,
+        ),
+        [],
+    )
+    return ft.Column(spacing=10, controls=[select.ui(), _echo(select, limit=3)])
+
+
+_BASIC_CODE = """select = MultiSelect(
+    label="技术栈",
+    options=["Python", "Flet", "FastAPI", "SQLite"],
+    value=["Python"],                       # 已选项以 Chip 显示在框内
+)
+Column([select.ui(), Text(f"已选 {select.value}")])
+
+# 每次勾选都会回写 value，并把副本交给回调
+select = MultiSelect(
+    options=["Python", "Flet"],
+    on_change=lambda picked: print(picked),  # (list[str]) -> None
+)"""
+
+_SEARCH_CODE = """select = MultiSelect(
+    options=["北京", "上海", "杭州", "深圳"],
+    searchable=True,        # 展开后框内出现搜索框，按选项文本忽略大小写过滤
+    panel_height=190,       # 选项区最高 190，超出内部滚动
+)"""
+
+_LIMIT_CODE = """select = MultiSelect(
+    options=["查看", "编辑", "发布", "审核"],
+    value=["查看", "编辑"],
+    max_selected=3,         # 到 3 项后，未选项变灰不可点
+    on_change=save,         # (list[str]) -> None
+)"""
+
+
+SPEC = Spec(
+    name="MultiSelect",
+    summary="折叠式多选框：已选项以 Chip 汇总，面板里逐项勾选。",
+    definition=(
+        "多选框回答的是一组「要哪几个」。它把已选项收成框内的 Chip，让表单在"
+        "收起状态下也只有几行高，点开才铺出完整的选项列表 —— 选项多到十几二十个时，"
+        "常驻的复选框组会把整张表单撑开好几屏。框里的 Chip 同时充当汇总：不看面板也"
+        "知道选了什么，单个 × 就能摘掉，不必为了取消一项再把面板翻出来。"
+    ),
+    anatomy=[
+        (
+            "框体",
+            "40px 高的边框输入框，内放 Chip、右端一个下拉箭头；展开时描边转主色。",
+        ),
+        ("Chip", "已选项，灰底小标签 + ×；× 单独移除该项，点别处仍是开合面板。"),
+        ("搜索框", "searchable 且展开时出现在框体右侧，只过滤选项列表，不动已选。"),
+        ("全选行", "三态（全选 / 半选 / 未选），作用范围是当前可见的选项。"),
+        ("选项行", "整行可点，左侧复选框即状态；选中行铺 12% 主色底。"),
+        ("页脚", "「已选 N / M」+「完成」。计数是给「还差几个」一个明确答案。"),
+    ],
+    when=[
+        "选项十来个以上，全铺在表单里会占掉半屏",
+        "提交前需要复核已选项（标签、筛选项、通知渠道）",
+        "允许「先随便选几个，再回头删」，而不是一次定死",
+    ],
+    avoid=[
+        "选项三五个且都很重要：用 CheckboxGroup，全部摊开比多一次点击快",
+        "需要左右对照着挑（成员、可见列）：用 Transfer，两栏常驻才能看清「已选 vs 未选」",
+        "选项互斥只能选一个：用 SelectBox，多选会让人以为能同时成立",
+    ],
+    examples=[
+        Example(
+            "基础多选",
+            _basic,
+            hint="框内两个 Chip，点 × 立即移除；点框体展开面板继续勾选，下方实时回显 value。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "可搜索",
+            _search,
+            hint="点开面板后直接在框内键入：选项列表跟着收窄，已选的 Chip 不受影响。",
+            code=_SEARCH_CODE,
+        ),
+        Example(
+            "数量上限",
+            _limit,
+            hint="选到 3 项后未选项转灰；先把一项取消，其余才重新可点。",
+            code=_LIMIT_CODE,
+        ),
+    ],
+    api=[
+        Api("value", "list[str]", "[]", "已选项；改变后 Chip 与面板勾选同步"),
+        Api("options", "list[str]", "[]", "全部可选项，文本即提交值"),
+        Api(
+            "searchable", "bool", "False", "展开后框内可键入，按文本忽略大小写过滤选项"
+        ),
+        Api("max_selected", "int | None", "None", "最多可选几项；到顶后未选项置灰"),
+        Api("panel_height", "int | float", "260", "选项区最大高度，超出后内部滚动"),
+        Api("width", "int | float", "320", "输入框与面板宽度"),
+        Api("show_select_all", "bool", "True", "面板顶部是否给「全选」行"),
+        Api("show_footer", "bool", "True", "是否显示「已选 N / M + 完成」页脚"),
+        Api("disabled", "bool", "False", "禁用：框体压灰，不展开面板"),
+        Api(
+            "on_change",
+            "Callable[[list[str]], None] | None",
+            "None",
+            "选择变化回调，拿到的是新列表副本",
+        ),
+    ],
+    notes=[
+        info(
+            "面板挂 page.overlay 悬浮，不占布局高度；宿主走 page.render_views 时"
+            "浮层会被视图盖住，组件自动降级为流内展开（此时下方内容会下移）。"
+        ),
+        info(
+            "搜索与「全选」都只认可见项：全选不会偷偷带上被过滤掉的选项，"
+            "否则清空搜索后会冒出一批没点过的选中项。"
+        ),
+        tip(
+            "到上限后把未选项置灰，而不是「点了没反应」：多选最怕的是用户以为点上了，"
+            "提交时才发现少一项。max_selected 就是为此提供的参数。"
+        ),
+    ],
+    tags=("多选", "标签", "下拉", "multiselect", "搜索", "上限"),
+)
 
 
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

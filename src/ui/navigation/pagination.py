@@ -24,6 +24,7 @@ from dataclasses import dataclass
 
 import flet as ft
 
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.format import format_number
 from ui.core.i18n import t, use_t
 from ui.core.styles import outline_input
@@ -444,17 +445,170 @@ def Pagination(state: PaginationState):
     )
 
 
+# ---------------------------------------------------------------------------
+# 独立运行：组件介绍 + 示例 + API
+# ---------------------------------------------------------------------------
 @ft.component
-def App():
-    pagination_state = PaginationState(
-        sum_data_nums=123,
-        on_change_page=lambda page: print(f"当前页码: {page}"),
-        on_change_per_page_nums=lambda per_page_nums: print(
-            f"每页条数: {per_page_nums}"
-        ),
+def _echo(state: PaginationState) -> ft.Control:
+    """把状态读出来 —— 说明这个分页器是**受控**的：页码只是状态，数据归调用方。"""
+    unit = state.data_unit or t("ui.pagination.unit")
+    return ft.Text(
+        f"第 {state.current_page} 页 · 每页 {state.data_per_page_nums} 条 "
+        f"· 共 {format_number(state.sum_data_nums)} {unit}",
+        size=FONT_SIZE["body"],
+        color=ft.Colors.ON_SURFACE_VARIANT,
     )
-    return Pagination(pagination_state)
+
+
+@ft.component
+def _basic() -> ft.Control:
+    state = ft.use_memo(lambda: PaginationState(sum_data_nums=1_286), [])
+    return ft.Column(spacing=14, controls=[Pagination(state), _echo(state)])
+
+
+@ft.component
+def _few_pages() -> ft.Control:
+    """45 条 = 5 页：页码全展开，没有省略号。"""
+    state = ft.use_memo(lambda: PaginationState(sum_data_nums=45), [])
+    return ft.Column(spacing=14, controls=[Pagination(state), _echo(state)])
+
+
+@ft.component
+def _deep() -> ft.Control:
+    """240 页、停在第 120 页：两侧都折叠成省略号，当前页始终居中。"""
+    state = ft.use_memo(
+        lambda: PaginationState(
+            sum_data_nums=12_000, data_per_page_nums=50, current_page=120
+        ),
+        [],
+    )
+    return ft.Column(spacing=14, controls=[Pagination(state), _echo(state)])
+
+
+@ft.component
+def _custom_unit() -> ft.Control:
+    """业务量词：日志说「条」，人说说「人」，都可以显式指定。"""
+    state = ft.use_memo(
+        lambda: PaginationState(sum_data_nums=268, data_per_page_nums=20, data_unit="条"),
+        [],
+    )
+    return ft.Column(spacing=14, controls=[Pagination(state), _echo(state)])
+
+
+_BASIC_CODE = '''state = PaginationState(sum_data_nums=1_286)
+
+Column([
+    Pagination(state),          # 只负责"第几页"，数据自己取
+    Text(f"第 {state.current_page} 页"),
+])
+
+# 需要接管分页时挂回调（服务端分页就是这样）：
+state = PaginationState(
+    sum_data_nums=1_286,
+    on_change_page=load_page,           # (page: int) -> None
+    on_change_per_page_nums=load_size,  # (size: int) -> None
+)'''
+
+_UNIT_CODE = '''PaginationState(sum_data_nums=268, data_per_page_nums=20, data_unit="条")'''
+
+
+SPEC = Spec(
+    name="Pagination",
+    summary="把长列表切成可控的页：左边总数、中间页码、右边跳页与每页条数。",
+    definition=(
+        "分页器解决的是「一屏放不下」。它不做翻页本身 —— 只把「现在第几页、"
+        "一共有多少、每页几条」这三个数说清楚，并在用户改动其中任何一个时回调，"
+        "数据由调用方去取。所以它同时适配内存里的大列表和只有总数的服务端分页。"
+    ),
+    anatomy=[
+        (
+            "总数",
+            "最左边「共 1,286 项」：给出规模感，也是「还剩多少」的唯一线索。",
+        ),
+        (
+            "页码条",
+            "首/末页 + 前后页 + 页码 + 省略号。它是唯一吃弹性的部分：宽了靠右，"
+            "窄了被压到自己横向滚动，而总数与右侧两组永远是完整的。",
+        ),
+        ("当前页", "主色实底 + 反白字。一排里只有它是实心的，扫一眼就知道在哪。"),
+        ("跳页", "「前往 [__] 页」，回车生效；非法输入直接忽略，输入框随重绘清空。"),
+        (
+            "每页条数",
+            "「每页 [10] 项」。一改动就回到第 1 页 —— 每页条数变了还停在第 7 页，"
+            "用户找不到刚才那条数据。",
+        ),
+    ],
+    when=[
+        "数据超过一屏，且用户需要知道「一共多少」",
+        "需要在页与页之间来回对照（翻回去找刚看过的那条）",
+        "服务端分页：后端只给总数，数据按页取",
+    ],
+    avoid=[
+        "十几行数据：一屏能看完，分页只多了一次点击",
+        "时间流、聊天记录：追加式加载（无限滚动）更贴合阅读习惯",
+        "只需要「加载更多」：用按钮或滚动触发，别摆一排页码",
+    ],
+    examples=[
+        Example(
+            "基础用法",
+            _basic,
+            hint="1,286 条、每页 10 条。改动页码或条数都会回写到 PaginationState。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "页数不多",
+            _few_pages,
+            hint="5 页以内全部展开，不出现省略号 —— 能一次看全就别折叠。",
+        ),
+        Example(
+            "上百页",
+            _deep,
+            hint="240 页、停在第 120 页：两侧各收成省略号，当前页始终居中。",
+        ),
+        Example(
+            "自定义量词",
+            _custom_unit,
+            hint="data_unit 换掉「项」；留空则跟随界面语言（项 / 項 / items）。",
+            code=_UNIT_CODE,
+        ),
+    ],
+    api=[
+        Api("state", "PaginationState", "", "Pagination 的唯一参数：受控状态"),
+        Api("sum_data_nums", "int", "0", "总条数。决定总页数，也显示在左边"),
+        Api("data_per_page_nums", "int", "10", "每页条数；改动后自动回到第 1 页"),
+        Api("current_page", "int", "1", "当前页码（1 起）。越界时渲染会夹紧"),
+        Api("data_unit", "str", "''", "单位量词（条 / 人 / 行）；留空跟随语言"),
+        Api(
+            "on_change_page",
+            "Callable[[int], None] | None",
+            "None",
+            "页码变化回调，服务端分页在这里取数据",
+        ),
+        Api(
+            "on_change_per_page_nums",
+            "Callable[[int], None] | None",
+            "None",
+            "每页条数变化回调",
+        ),
+        Api("sum_page_nums", "int", "—", "只读属性：总页数 = ⌈总条数 / 每页条数⌉"),
+    ],
+    notes=[
+        tip(
+            "悬停与点击都写回 state，而不是直接改控件。@ft.component 渲染出来的控件是"
+            "冻结的，回调和进去赋值会抛 Frozen controls cannot be updated。"
+        ),
+        info(
+            "总页数为 0 时整排翻页控件不出现，只留「共 0 项」与每页条数 —— 对着"
+            "「共 0 项」摆一排禁用按钮，只是噪声。"
+        ),
+        warn(
+            "每页条数的候选里必须包含当前值，否则 Flutter 侧匹配不到 value，下拉框会"
+            "显示空白且点不开。组件已自动补齐，自定义候选时别漏。"
+        ),
+    ],
+    tags=("分页", "翻页", "pager", "page size"),
+)
 
 
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

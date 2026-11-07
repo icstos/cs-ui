@@ -48,14 +48,23 @@ Element Plus ``ElCollapse``、MUI ``Accordion``、Vuetify ``v-expansion-panels``
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import field
-from typing import Any, Callable
+from typing import Any
 
 import flet as ft
 
-from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, semantic_text
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
+from ui.core.tokens import (
+    DURATION,
+    FONT_SIZE,
+    FONT_WEIGHT,
+    RADIUS,
+    SPACE,
+    semantic_text,
+)
 
-__all__ = ["Expander", "DENSITIES", "VARIANTS"]
+__all__ = ["DENSITIES", "VARIANTS", "Expander"]
 
 # ---------------------------------------------------------------------------
 # 常量
@@ -105,8 +114,10 @@ _VARIANT_STYLE: dict[str, dict[str, Any]] = {
     "plain": {"bg": ft.Colors.TRANSPARENT, "border": None},
 }
 
-#: 展开 / 收起的时长与曲线（Material 自己也在用，200ms 左右最跟手）。
-_ANIM = ft.AnimationStyle(duration=220, curve=ft.AnimationCurve.EASE_OUT_CUBIC)
+#: 展开 / 收起的时长与曲线（取 DURATION 的 normal 档：再慢就跟不上点击节奏）。
+_ANIM = ft.AnimationStyle(
+    duration=DURATION["normal"], curve=ft.AnimationCurve.EASE_OUT_CUBIC
+)
 
 MUTED_FG = ft.Colors.with_opacity(0.38, ft.Colors.ON_SURFACE)
 DIVIDER_COLOR = ft.Colors.OUTLINE_VARIANT
@@ -391,6 +402,9 @@ class Expander(ft.Container):
             # 标题行底色保持透明：卡片底色统一，靠分隔线分层
             bgcolor=ft.Colors.TRANSPARENT,
             collapsed_bgcolor=ft.Colors.TRANSPARENT,
+            # 收起时不销毁内容：ExpansionTile 默认每次展开都重建子树，
+            # 输入框里填过的值会跟着消失 —— 折叠面板不该有这种副作用。
+            maintain_state=True,
             text_color=ft.Colors.ON_SURFACE,
             collapsed_text_color=ft.Colors.ON_SURFACE,
             icon_color=ft.Colors.OUTLINE,
@@ -444,129 +458,282 @@ class Expander(ft.Container):
 
 
 # ---------------------------------------------------------------------------
-# 运行示例（也是本组件的视觉验收页）
+# 示例（也是本组件的视觉验收页）
 # ---------------------------------------------------------------------------
+_MUTED = ft.Colors.ON_SURFACE_VARIANT
 
 
-def _body_text() -> list[ft.Control]:
+def _lines(head: str, note: str) -> list[ft.Control]:
+    """内容区的示意文本：一行正文 + 一行次要说明。"""
     return [
-        ft.Text("内容区任意控件都可以放：表单、表格、代码块……", size=13),
-        ft.Text(
-            "展开状态由 Flutter 持有，切换不会丢输入内容。",
-            size=12,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-        ),
+        ft.Text(head, size=FONT_SIZE["body"]),
+        ft.Text(note, size=FONT_SIZE["small"], color=_MUTED),
     ]
 
 
 @ft.component
-def App() -> ft.Control:
-    """Expander 运行示例：各种外观 / 密度 / 状态。"""
-    return ft.Container(
-        padding=24,
-        bgcolor=ft.Colors.SURFACE_CONTAINER_LOWEST,
-        expand=True,
-        content=ft.Column(
-            scroll=ft.ScrollMode.AUTO,
-            spacing=24,
-            horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
-            controls=[
-                ft.Column(
-                    spacing=4,
-                    controls=[
-                        ft.Text(
-                            "Expander 折叠卡片", size=20, weight=ft.FontWeight.BOLD
-                        ),
-                        ft.Text(
-                            "整条标题可点、尾部箭头翻转、展开态靠 1px 分隔线分层。",
-                            size=13,
-                            color=ft.Colors.ON_SURFACE_VARIANT,
-                        ),
-                    ],
+def _basic() -> ft.Control:
+    """单个面板：默认展开，收起再展开内容还在。"""
+    opened, set_opened = ft.use_state(True)
+    return ft.Column(
+        spacing=12,
+        controls=[
+            Expander(
+                title="高级设置",
+                subtitle="仅在需要时调整，改动立即生效",
+                leading=ft.Icons.TUNE,
+                expanded=True,
+                on_change=set_opened,
+                controls=_lines(
+                    "请求超时 30 秒，失败自动重试 2 次。",
+                    "展开态由 Flutter 持有，收起再展开不会重建内容。",
                 ),
-                ft.Text(
-                    "card（默认）· 标题 / 副标题 / 前置图标",
-                    size=15,
-                    weight=ft.FontWeight.W_600,
-                ),
-                Expander(
-                    title="高级设置",
-                    subtitle="仅在需要时调整，改动会立即生效",
-                    leading=ft.Icons.TUNE,
-                    controls=_body_text(),
-                ),
-                Expander(
-                    title="通知",
-                    subtitle="邮件、短信与站内信",
-                    leading=ft.Icons.NOTIFICATIONS_NONE,
-                    accent="info",
-                    expanded=True,
-                    on_change=lambda v: print(f"[Expander] 通知 -> {v}"),
-                    controls=_body_text(),
-                ),
-                Expander(
-                    title="危险操作",
-                    subtitle="删除后无法恢复",
-                    leading=ft.Icons.WARNING_AMBER_ROUNDED,
-                    accent="danger",
-                    controls=_body_text(),
-                ),
-                ft.Text(
-                    "filled（浅色块，无描边）· 嵌套分组用",
-                    size=15,
-                    weight=ft.FontWeight.W_600,
-                ),
-                Expander(
-                    variant="filled",
-                    title="筛选条件",
-                    subtitle="已选 3 项",
-                    leading=ft.Icons.FILTER_ALT,
-                    expanded=True,
-                    controls=_body_text(),
-                ),
-                ft.Text(
-                    "plain（无边框）· 列表里成组的折叠行",
-                    size=15,
-                    weight=ft.FontWeight.W_600,
-                ),
-                Expander(
-                    variant="plain",
-                    title="日志详情",
-                    leading=ft.Icons.ARTICLE_OUTLINED,
-                    controls=_body_text(),
-                ),
-                Expander(
-                    variant="plain",
-                    title="运行环境",
-                    controls=_body_text(),
-                ),
-                ft.Text(
-                    "compact 密度 + 箭头在左 + 尾部附加控件",
-                    size=15,
-                    weight=ft.FontWeight.W_600,
-                ),
-                Expander(
-                    density="compact",
-                    chevron_leading=True,
-                    title="src/ui/layout",
-                    subtitle="3 个折叠项",
-                    trailing=ft.Text("12", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
-                    controls=_body_text(),
-                ),
-                ft.Text(
-                    "禁用态（expandable=False）", size=15, weight=ft.FontWeight.W_600
-                ),
-                Expander(
-                    title="团队协作",
-                    subtitle="当前套餐不支持",
-                    leading=ft.Icons.GROUPS_OUTLINED,
-                    expandable=False,
-                    controls=_body_text(),
-                ),
-            ],
-        ),
+            ),
+            ft.Text(
+                f"on_change：{'展开' if opened else '收起'}",
+                size=FONT_SIZE["small"],
+                color=_MUTED,
+            ),
+        ],
     )
 
 
+_PANELS = (
+    ("基础信息", "名称、描述与负责人", ft.Icons.BADGE_OUTLINED, "primary"),
+    ("通知", "邮件、短信与站内信", ft.Icons.NOTIFICATIONS_NONE, "info"),
+    ("危险操作", "删除后无法恢复", ft.Icons.WARNING_AMBER_ROUNDED, "danger"),
+)
+
+
+@ft.component
+def _accordion() -> ft.Control:
+    """三个面板同时只开一个。"""
+    opened, set_opened = ft.use_state(0)
+
+    def toggle(index: int, is_open: bool) -> None:
+        set_opened(index if is_open else -1)
+
+    panels = [
+        Expander(
+            # 展开态由 Flutter 侧持有，改 key 才会按新的 expanded 重新挂载 ——
+            # 联动开合只能这么做到，代价是切换时不播展开动画。
+            key=f"acc-{index}-{opened}",
+            title=title,
+            subtitle=subtitle,
+            leading=icon,
+            accent=accent,
+            expanded=index == opened,
+            on_change=lambda value, index=index: toggle(index, value),
+            controls=_lines(
+                f"{title}的内容放在这里。",
+                "展开另一个面板时，这一个会自动收起。",
+            ),
+        )
+        for index, (title, subtitle, icon, accent) in enumerate(_PANELS)
+    ]
+    current = _PANELS[opened][0] if opened >= 0 else "无"
+    return ft.Column(
+        spacing=12,
+        controls=[
+            *panels,
+            ft.Text(f"当前展开：{current}", size=FONT_SIZE["small"], color=_MUTED),
+        ],
+    )
+
+
+@ft.component
+def _variants() -> ft.Control:
+    """三种外观、两档密度与禁用态并排看。"""
+    return ft.Column(
+        spacing=10,
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+        controls=[
+            Expander(
+                title="card",
+                subtitle="1px 描边 + 表面底色，页面里的独立卡片",
+                controls=_lines("默认外观。", "展开后靠一条 1px 分隔线分层。"),
+            ),
+            Expander(
+                variant="filled",
+                title="filled",
+                subtitle="无描边的浅色块，用在嵌套分组里",
+                leading=ft.Icons.FILTER_ALT,
+                accent="success",
+                expanded=True,
+                controls=_lines("已选 3 项筛选条件。", "再画一层框会和外层卡片打架。"),
+            ),
+            Expander(
+                variant="plain",
+                density="compact",
+                chevron_leading=True,
+                title="plain · compact",
+                subtitle="箭头在左、标题 36 高，列表里的折叠行",
+                leading=ft.Icons.FOLDER_OPEN_OUTLINED,
+                trailing=ft.Text("12", size=FONT_SIZE["small"], color=_MUTED),
+                controls=_lines(
+                    "src/ui/layout 下的 12 个文件。", "尾部控件排在箭头左侧。"
+                ),
+            ),
+            Expander(
+                title="团队协作",
+                subtitle="当前套餐不支持",
+                leading=ft.Icons.GROUPS_OUTLINED,
+                expandable=False,
+            ),
+        ],
+    )
+
+
+_BASIC_CODE = """Expander(
+    title="高级设置",
+    subtitle="仅在需要时调整",
+    leading=ft.Icons.TUNE,
+    expanded=False,              # 只是初始值，之后由 Flutter 持有
+    on_change=lambda open_: print("展开" if open_ else "收起"),
+    controls=[ft.Text("超时 30 秒"), ft.Text("重试 2 次")],
+)"""
+
+_ACCORDION_CODE = """opened, set_opened = ft.use_state(0)      # -1 = 全部收起
+
+def panel(i, title):
+    return Expander(
+        key=f"p{i}-{opened}",              # 改 key 才会按新的 expanded 重新挂载
+        title=title,
+        expanded=opened == i,
+        on_change=lambda is_open: set_opened(i if is_open else -1),
+        controls=[...],
+    )
+
+Column([panel(0, "通知"), panel(1, "危险操作")])"""
+
+SPEC = Spec(
+    name="Expander",
+    summary="一条标题行收住一整块内容，点开才占地方。",
+    definition=(
+        "折叠面板把「偶尔要用、但不能没有」的内容收在标题后面，页面上只留一行。"
+        "Expander 在标题行上解决了三件容易做歪的事：整条都可点、箭头永远独占最右一格、"
+        "内容区的左边缘与标题文字对齐。外观分 card / filled / plain 三档，对应页面里的"
+        "独立卡片、嵌套分组和列表里的折叠行。"
+    ),
+    anatomy=[
+        (
+            "标题行",
+            (
+                "整条都是点击区，36 / 44 / 52 三档高度；悬停与点击的水波纹交给"
+                " Material ink，不经过 Python。"
+            ),
+        ),
+        (
+            "前置图标",
+            "传图标时自动落进 accent 色的 10% 淡底圆角方块；传其它控件则原样使用、不染色。",
+        ),
+        (
+            "副标题",
+            "标题下方一行 12px 次要色，交代「里面是什么」。标题与副标题都不折行，超长省略。",
+        ),
+        (
+            "尾部与箭头",
+            "trailing 排在标题右侧，旋转箭头独占最右一格 —— 尾部控件再宽也挤不掉它。",
+        ),
+        (
+            "内容区",
+            "展开后顶部一条通宽 1px 分隔线，再按标题文字的缩进排内容；关掉 divider 就只剩内边距分层。",
+        ),
+    ],
+    when=[
+        "设置页把十几个选项分成「基础 / 通知 / 危险操作」几组",
+        "高级筛选、大段说明这类低频但必须能查到的内容",
+        "长表单按段收纳，让用户一次只面对一屏",
+    ],
+    avoid=[
+        "几块内容要互相对照：用 Tabs 平铺，别让用户反复点开又收起",
+        "内容只有一两行：直接摆出来，多一次点击并没有换回空间",
+        (
+            "需要程序统一控制开合（全部展开 / 联动收起）：展开态在 Flutter 侧，"
+            "成组控制得靠重建控件，会丢掉动画与已输入的值"
+        ),
+    ],
+    examples=[
+        Example(
+            "基础用法",
+            _basic,
+            hint="一个默认展开的面板，on_change 把新的开合状态回写到 state。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "手风琴",
+            _accordion,
+            hint="三个面板同时只开一个：点开哪个就只留哪个，再点当前项则全部收起。",
+            code=_ACCORDION_CODE,
+        ),
+        Example(
+            "外观、密度与禁用",
+            _variants,
+            hint="card / filled / plain 三种外观，compact 密度与箭头在左，最后一条是 expandable=False。",
+        ),
+    ],
+    api=[
+        Api("title", "ft.StrOrControl", "''", "标题文本；传控件则原样放进标题行"),
+        Api(
+            "subtitle",
+            "ft.StrOrControl | None",
+            "None",
+            "标题下方一行说明，留空即单行标题",
+        ),
+        Api("controls", "list[ft.Control]", "[]", "展开后显示的内容"),
+        Api(
+            "leading",
+            "ft.IconDataOrControl | None",
+            "None",
+            "前置图标（自动染色）或任意控件",
+        ),
+        Api("expanded", "bool", "False", "初始是否展开；之后由 Flutter 持有"),
+        Api(
+            "expandable", "bool", "True", "置 False 为禁用态：无箭头、文字置灰、点不动"
+        ),
+        Api(
+            "variant",
+            "str",
+            '"card"',
+            "外观：card 描边卡片 / filled 浅色块 / plain 无框行",
+        ),
+        Api(
+            "density",
+            "str",
+            '"default"',
+            "标题行高度：compact 36 / default 44 / comfortable 52",
+        ),
+        Api(
+            "accent",
+            "str",
+            '"primary"',
+            "前置图标染色：primary / success / warning / danger / info / neutral",
+        ),
+        Api(
+            "on_change",
+            "Callable[[bool], None] | None",
+            "None",
+            "开合回调，参数是新状态",
+        ),
+    ],
+    notes=[
+        tip(
+            "展开态由 Flutter 的 ExpansionTile 持有，组件不做 control.update()，切换开合"
+            "不会重渲染 Python 侧；展开时长收到 DURATION 的 normal 档（200ms）。内部开了"
+            " maintain_state，收起再展开不会重建内容 —— 输入框里填过的值不会丢。"
+        ),
+        info(
+            "expanded 只是挂载时的初值。要让「同时只开一个」这类联动生效，得把目标状态"
+            "编进 key 让面板重新挂载（手风琴示例），代价是切换时没有展开动画。"
+        ),
+        warn(
+            "expandable=False 时不渲染 controls：它表达的是「这块现在不可用」，不是"
+            "「内容藏起来」。真要藏内容，用 expanded=False 的普通面板。"
+        ),
+    ],
+    tags=("折叠", "折叠面板", "手风琴", "collapse", "accordion"),
+)
+
+
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

@@ -14,6 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import flet as ft
+from ui.core.doc import Example, Spec, run
 
 __all__ = ["BreadCrumb", "Crumb"]
 
@@ -173,5 +174,65 @@ def App():
     )
 
 
+@ft.component
+def _sep() -> ft.Control:
+    """换一个分隔符：箭头比默认的尖括号更"重"，适合层级少的场景。"""
+    return BreadCrumb(
+        items=["订单管理", "2026 年", "9 月", "今日订单"],
+        separator=ft.Icons.ARROW_RIGHT,
+    )
+
+
+@ft.component
+def _icons() -> ft.Control:
+    """带图标的面包屑：层级词太短（首页 / 组件）时，图标补足识别度。"""
+    return BreadCrumb(
+        items=[
+            Crumb("首页", "/", icon=ft.Icons.HOME_OUTLINED),
+            Crumb("组件", "/components", icon=ft.Icons.WIDGETS_OUTLINED),
+            Crumb("导航", "/components/navigation", icon=ft.Icons.EXPLORE_OUTLINED),
+            "面包屑",
+        ]
+    )
+
+
+SPEC = Spec(
+    name="BreadCrumb",
+    summary="显示「我在哪一层」，并把上面每一层都留成可点的入口。",
+    definition=(
+        "层级路径的说明书。它的价值不在「显示」，而在「回退」：用户从三层深处"
+        "想横向跳到某一层时，面包屑是唯一不用后退的出口。"
+    ),
+    anatomy=[
+        ("层级项", "文本 + 可选图标。传 (文本, 路由) 或 Crumb 即可点击。"),
+        ("分隔符", "默认 CHEVRON_RIGHT，可换成箭头、斜杠或任意图标。"),
+        ("当前项", "最后一项：加粗、正文色、不可点 —— 它在说「你就在这」。"),
+    ],
+    when=[
+        "层级 ≥ 3（首页 / 模块 / 列表 / 详情）",
+        "同一层的兄弟页面之间需要横向跳转",
+        "详情页需要一键回到列表",
+    ],
+    avoid=[
+        "只有两级：一个返回箭头就够，多一行是噪声",
+        "窄屏移动端：横向放不下时优先用 AppBar 的返回",
+    ],
+    examples=[
+        Example("基础用法", App, hint="文本、可点项、图标三种写法混排；末项自动禁用。"),
+        Example("自定义分隔符", _sep, hint="箭头、斜杠都行 —— separator 收任意图标。"),
+        Example("带图标", _icons, hint="层级词很短时（首页 / 组件），图标补足识别度。"),
+    ],
+    target=BreadCrumb,
+    notes=[
+        (
+            "info",
+            "点击优先走 on_item_click；没有回调时才按 Crumb.route 自动 page.navigate。"
+            "两者都没有的项不响应点击，也不显示悬停态。",
+        ),
+    ],
+    tags=("面包屑", "路径", "层级", "breadcrumb"),
+)
+
+
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

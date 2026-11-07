@@ -37,10 +37,11 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 import flet as ft
 
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.tokens import FONT_SIZE, RADIUS, overlay
 from ui.input.input import Label
 
@@ -79,7 +80,7 @@ _EDITING = re.compile(r"^[+-]?(?:\d+(?:\.\d*)?|\.\d*)?$")
 _NOISE = re.compile(r"[^0-9.+-]")
 
 
-def _dec(value: int | float | Decimal | str | None) -> Decimal | None:
+def _dec(value: float | Decimal | str | None) -> Decimal | None:
     """把任意输入收敛成 ``Decimal``；无法解析时返回 ``None``。
 
     浮点走 ``Decimal(str(x))`` 而不是 ``Decimal(float)`` —— 后者会把二进制误差
@@ -195,9 +196,11 @@ class NumberInput(Label):
         else:
             parsed = _dec(text)
             # 解析不出来（只敲了个负号之类）就退回上一个值，不把展示位清空
-            self._apply(self._normalize(parsed) if parsed is not None else _dec(self.value))
+            self._apply(
+                self._normalize(parsed) if parsed is not None else _dec(self.value)
+            )
 
-    def set_value(self, value: int | float | Decimal | str | None) -> None:
+    def set_value(self, value: float | Decimal | str | None) -> None:
         """从外部设值：规整（范围 / 精度）后落值。
 
         与直接写 ``value`` 的区别是这个入口接受字符串、会做规整，而且**值没变时
@@ -328,7 +331,12 @@ class NumberInput(Label):
     def _on_text_blur(self, e: ft.ControlEvent) -> None:
         """失焦：提交并规整（这也是"点了按钮再回来"的收口点）。"""
         self._focused = False
+        editing = self._text is not None
         self.commit()
+        if not editing:
+            # commit 在"没有正在输入的原文"时直接返回，不会 notify；
+            # 少了这一次重绘，聚焦态的主色描边会一直留在已经失焦的框上。
+            self.notify()  # type: ignore[attr-defined]
 
     def _on_text_focus(self, e: ft.ControlEvent) -> None:
         self._focused = True
@@ -461,9 +469,7 @@ class NumberInput(Label):
         return ft.Text(
             text,
             size=max(FONT_SIZE["caption"], spec["text"] - 1),
-            color=ft.Colors.ON_SURFACE_VARIANT
-            if not self.disabled
-            else DISABLED_FG,
+            color=ft.Colors.ON_SURFACE_VARIANT if not self.disabled else DISABLED_FG,
         )
 
     def _button(
@@ -533,84 +539,244 @@ class NumberInput(Label):
         )
 
 
-@ft.component
-def App() -> ft.Control:
-    """NumberInput 运行示例：布局 / 精度 / 范围 / 状态各一屏。"""
-    qty = NumberInput(label="数量", value=12, min=1, max=99)
-    rate = NumberInput(
-        label="税率",
-        value=0.13,
-        step=0.01,
-        precision=2,
-        suffix="%",
-        controls_position="right",
-    )
-    price = NumberInput(
-        label="单价",
-        value=199.9,
-        step=0.1,
-        precision=2,
-        prefix="¥",
-        min=0,
-        width=180,
-    )
-    duration = NumberInput(
-        label="时长",
-        value=1.5,
-        step=0.5,
-        step_strictly=True,
-        suffix="时",
-        controls_position="right",
-        width=140,
-    )
-    frozen = NumberInput(label="只读", value=8, read_only=True, width=140)
-    off = NumberInput(label="禁用", value=25, disabled=True, width=140)
+# ---------------------------------------------------------------------------
+# 示例
+# ---------------------------------------------------------------------------
+def _caption(text: str) -> ft.Control:
+    return ft.Text(text, size=FONT_SIZE["small"], color=ft.Colors.ON_SURFACE_VARIANT)
 
+
+@ft.component
+def _stepper() -> ft.Control:
+    """步进与单位：按钮到界自动变灰，单位只做展示。"""
+    qty = ft.use_memo(
+        lambda: NumberInput(
+            label="数量", value=12, min=1, max=99, suffix="件", width=180
+        ),
+        [],
+    )
+    duration = ft.use_memo(
+        lambda: NumberInput(
+            label="时长",
+            value=1.5,
+            step=0.5,
+            step_strictly=True,
+            suffix="时",
+            controls_position="right",
+            width=160,
+        ),
+        [],
+    )
     return ft.Column(
         spacing=14,
         controls=[
-            ft.Text("NumberInput 数字输入框", size=20, weight=ft.FontWeight.BOLD),
-            ft.Text(
-                "左右按钮 / 右侧堆叠 / 精度与后缀 / 步长与范围 / 键入即校验",
-                size=13,
-                color="#6b7280",
-            ),
-            ft.Divider(),
             qty.ui(),
-            rate.ui(),
-            price.ui(),
             duration.ui(),
-            frozen.ui(),
-            off.ui(),
-            ft.Text("尺寸", size=13, color="#6b7280"),
-            ft.Row(
-                spacing=12,
-                controls=[
-                    NumberInput(value=1, size="sm", width=110).ui(),
-                    NumberInput(value=1, size="md", width=130).ui(),
-                    NumberInput(value=1, size="lg", width=150).ui(),
-                ],
-            ),
-            ft.Text("无按钮 / 空值", size=13, color="#6b7280"),
-            ft.Row(
-                spacing=12,
-                controls=[
-                    NumberInput(
-                        value=3.5, controls_position="none", width=120
-                    ).ui(),
-                    NumberInput(value=None, hint_text="未填写", width=140).ui(),
-                ],
-            ),
-            ft.Divider(),
-            ft.Button(
-                content="打印当前值",
-                on_click=lambda _: print(
-                    f"{qty.value} / {rate.value} / {price.value} / {duration.value}"
-                ),
+            _caption(
+                f"数量 {qty.value} 件 · 时长 {duration.display_text} 时"
+                "（只落在 0.5 的网格上）"
             ),
         ],
     )
 
 
+@ft.component
+def _precision() -> ft.Control:
+    """精度与范围夹紧：键入时不打断，失焦 / 回车才收口。"""
+    price = ft.use_memo(
+        lambda: NumberInput(
+            label="单价",
+            value=199.9,
+            step=0.1,
+            precision=2,
+            prefix="¥",
+            min=0,
+            width=200,
+        ),
+        [],
+    )
+    percent = ft.use_memo(
+        lambda: NumberInput(
+            label="完成度",
+            value=42,
+            min=0,
+            max=100,
+            step=1,
+            suffix="%",
+            width=180,
+        ),
+        [],
+    )
+    return ft.Column(
+        spacing=14,
+        controls=[
+            price.ui(),
+            percent.ui(),
+            _caption(
+                f"{price.display_text} 元 · {percent.value}% —— 在「完成度」里输入 1000，"
+                "失焦或回车后会被夹到 100"
+            ),
+        ],
+    )
+
+
+@ft.component
+def _readonly() -> ft.Control:
+    """只读与禁用：一个只是不许键入，另一个连按钮都不响应。"""
+    frozen = ft.use_memo(
+        lambda: NumberInput(label="只读", value=8, read_only=True, width=160), []
+    )
+    off = ft.use_memo(
+        lambda: NumberInput(label="禁用", value=25, disabled=True, width=160), []
+    )
+    return ft.Column(
+        spacing=14,
+        controls=[
+            frozen.ui(),
+            off.ui(),
+            _caption(
+                f"只读 {frozen.value}（可点加减、不能键入） · 禁用 {off.value}（全不可用）"
+            ),
+        ],
+    )
+
+
+_STEPPER_CODE = """qty = NumberInput(label="数量", value=12, min=1, max=99, suffix="件")
+duration = NumberInput(
+    label="时长", value=1.5, step=0.5, step_strictly=True,
+    suffix="时", controls_position="right",
+)
+Column([qty.ui(), duration.ui()])"""
+
+_PRECISION_CODE = """price = NumberInput(
+    label="单价", value=199.9, step=0.1, precision=2, prefix="¥", min=0,
+)
+percent = NumberInput(label="完成度", value=42, min=0, max=100, suffix="%")
+
+# 键入 1000 不会被中途改写；失焦或回车时夹到 100
+Column([price.ui(), percent.ui()])"""
+
+
+SPEC = Spec(
+    name="NumberInput",
+    summary="数字输入：步进按钮、固定精度、单位，以及失焦时的范围夹紧。",
+    definition=(
+        "数字输入和文本框的差别不在键盘，而在「值」要守规矩：不能为空得莫名其妙、"
+        "不能停在 1000 而界面上限是 99、金额不能带出一串浮点尾巴。所以它把键入、"
+        "步进、读数拆成三条路径：键入只拦结构错，失焦与回车才按精度和范围收口；"
+        "步进以 ``step`` 为粒度，到界的一侧按钮直接变灰；显示始终走格式化值。"
+    ),
+    anatomy=[
+        (
+            "外框",
+            "36px 高、8px 圆角、1px 描边；聚焦转主色、悬停加深、禁用整体降透明度。",
+        ),
+        (
+            "步进按钮",
+            "both 是左右各一个加减，right 是右侧上下堆叠（窄容器与表格用），none 只留输入。",
+        ),
+        (
+            "数值区",
+            "只放行数字 / 一个负号 / 一个小数点；结构不合法时退回上一个可接受文本。",
+        ),
+        (
+            "前后缀",
+            "货币符号与单位常驻框内，只做展示、不进入值，也不会被用户误删。",
+        ),
+        (
+            "边界",
+            "值到 min / max 后该方向按钮变灰；不靠「点了没反应」暗示已经到头。",
+        ),
+    ],
+    when=[
+        "数量、金额、税率、时长这类必须可计算、可比较的字段",
+        "需要「点一下加一」的连续微调，而不只是键入",
+        "业务有明确上下限（库存 1-99、折扣 0-100），越界要被收口",
+    ],
+    avoid=[
+        "手机号、邮编、订单号：它们长得像数字但语义是文本，用 Input（别丢前导 0）",
+        "需要输入自由表达式（1+2、10%）的字段：数字框只认一个数",
+        "从固定档位里挑（S/M/L）：用 SegmentedButton 或 Radio，步进按钮会让人一直点",
+    ],
+    examples=[
+        Example(
+            "步进与单位",
+            _stepper,
+            hint="数量到 99 后加号变灰；时长按 0.5 步进，单位「时」不参与编辑。",
+            code=_STEPPER_CODE,
+        ),
+        Example(
+            "精度与范围",
+            _precision,
+            hint="单价固定两位小数；在完成度里输入 1000，失焦后被夹到 100。",
+            code=_PRECISION_CODE,
+        ),
+        Example(
+            "只读与禁用",
+            _readonly,
+            hint="只读仍可点按钮改值；禁用连按钮一起失效，用来表示「当前不可编辑」。",
+        ),
+    ],
+    api=[
+        Api(
+            "value",
+            "int | float | Decimal | str | None",
+            "0",
+            "当前值；None 表示空，显示 hint_text",
+        ),
+        Api("min", "int | float | Decimal | None", "None", "下界（含），失焦时夹紧"),
+        Api(
+            "max", "int | float | Decimal | None", "None", "上界（含），到界后加号变灰"
+        ),
+        Api(
+            "step", "int | float | Decimal", "1", "加减粒度，也决定 precision 的默认值"
+        ),
+        Api(
+            "precision",
+            "int | None",
+            "None",
+            "固定小数位；None 时跟随 step（0.01 → 2 位）",
+        ),
+        Api(
+            "suffix",
+            "str | None",
+            "None",
+            "框内单位或百分号；prefix 是左侧的同款（货币符号）",
+        ),
+        Api(
+            "controls_position",
+            "str",
+            "'both'",
+            "both 左右平铺 / right 右侧堆叠 / none 不显示按钮",
+        ),
+        Api("read_only", "bool", "False", "只能点按钮、不能键入"),
+        Api("disabled", "bool", "False", "整体禁用：按钮与输入都不响应"),
+        Api(
+            "on_change",
+            "Callable[[int | float | None], None] | None",
+            "None",
+            "值变化回调；按值去重，同一个值不会重复回调",
+        ),
+    ],
+    notes=[
+        tip(
+            "键入过程中组件不夹紧、不补零、不改小数点 —— 否则光标会跳。范围与精度"
+            "统一在失焦 / 回车时收口；同时补了失焦后的重绘，聚焦描边不会留在"
+            "已经离开的框上。"
+        ),
+        info(
+            "运算全程走 Decimal，0.1 + 0.2 不会变成 0.30000000000000004。"
+            "step_strictly=True 时取值吸附到以 min（未设则 0）为起点的步长网格，"
+            "适合「半小时一格」这类时间档位。"
+        ),
+        warn(
+            "外部改值请用 set_value：它会做同样的规整，且值没变时不触发重绘。"
+            "直接写 value 会绕过范围与精度，下一次步进才被纠正。"
+        ),
+    ],
+    tags=("数字", "数字输入", "number", "步进", "stepper", "表单"),
+)
+
+
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

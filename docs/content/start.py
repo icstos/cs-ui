@@ -10,7 +10,7 @@ _INSTALL_SRC = """git clone https://github.com/icstos/cs-ui.git
 cd cs-ui
 pip install -e ."""
 
-_FIRST_APP = '''import flet as ft
+_FIRST_APP = """import flet as ft
 from ui import Button, Card, Column, Container, Text, ThemeProvider
 
 
@@ -41,7 +41,7 @@ def main(page: ft.Page) -> None:
     page.render(lambda: ThemeProvider(build=Counter))
 
 
-ft.run(main)'''
+ft.run(main)"""
 
 _RUN = """# 桌面窗口
 flet run main.py
@@ -57,14 +57,14 @@ _TREE = """my_app/
 ├─ i18n/            # zh_CN.json / zh_TW.json / en_US.json
 └─ assets/          # 字体与图片"""
 
-_STATE = '''from ui.core.i18n import set_locale
+_STATE = """from ui.core.i18n import set_locale
 
 # 切换语言不需要重启，也不需要重建路由
 set_locale("zh-TW")
 
 # 组件内部用 use_t() 取文案，它就自动订阅了语言变化
 # tr = use_t()
-# tr("nav.home.title")'''
+# tr("nav.home.title")"""
 
 QUICKSTART: Doc = (
     p("start.intro"),

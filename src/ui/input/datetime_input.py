@@ -1,3 +1,6 @@
+# ruff: noqa: DTZ001, DTZ005, DTZ011
+# 组件契约是「本地、naive 的日期时间」：不替调用方做时区换算，见 SPEC 的 notes。
+
 """日期时间选择器 (DateTimeInput)。
 
 一个输入框挂出**一整块面板**：左边是月历（与 :class:`~ui.input.date_input.DateInput`
@@ -49,6 +52,7 @@ from dataclasses import dataclass
 
 import flet as ft
 
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.float_layer import use_float_layer
 from ui.core.format import format_datetime
 from ui.core.i18n import t, use_t
@@ -159,7 +163,11 @@ def _parse_time_parts(text: str | None) -> dict[str, int] | None:
     if len(parts) > 3 or any(not p.isdigit() for p in parts):
         return None
     out = {k: int(p) for k, p in zip(TIME_KINDS, parts)}
-    if out.get("hour", 0) > 23 or out.get("minute", 0) > 59 or out.get("second", 0) > 59:
+    if (
+        out.get("hour", 0) > 23
+        or out.get("minute", 0) > 59
+        or out.get("second", 0) > 59
+    ):
         return None
     return out
 
@@ -280,6 +288,7 @@ class DateTimeInput(CalendarPanel, Label):
         self.is_open = False
         self._hover = None
         self._text = None
+        self._invalid = False
         self.notify()  # type: ignore[attr-defined]
 
     def toggle_open(self) -> None:
@@ -316,7 +325,8 @@ class DateTimeInput(CalendarPanel, Label):
         """只改时间部分（``None`` 表示该字段不动）。"""
         base = self.value or datetime.datetime.now()
         changes = {
-            k: v for k, v in (("hour", hour), ("minute", minute), ("second", second))
+            k: v
+            for k, v in (("hour", hour), ("minute", minute), ("second", second))
             if v is not None
         }
         if changes:
@@ -609,7 +619,9 @@ class DateTimeInput(CalendarPanel, Label):
             ft.Container(expand=True),
         ]
         if self.show_clear_link:
-            controls.append(self._link_button("clear", t("ui.common.clear"), self.clear))
+            controls.append(
+                self._link_button("clear", t("ui.common.clear"), self.clear)
+            )
         controls.append(self._link_button("done", t("ui.datetime.done"), self.close))
         return ft.Container(
             height=FOOTER_H,
@@ -649,7 +661,9 @@ class DateTimeInput(CalendarPanel, Label):
             ft.Icon(
                 ft.Icons.EDIT_CALENDAR,
                 size=18,
-                color=ft.Colors.OUTLINE if self.disabled else ft.Colors.ON_SURFACE_VARIANT,
+                color=ft.Colors.OUTLINE
+                if self.disabled
+                else ft.Colors.ON_SURFACE_VARIANT,
             ),
         )
         panel = self._build_panel()
@@ -745,10 +759,15 @@ class DateTimeInput(CalendarPanel, Label):
         self.notify()  # type: ignore[attr-defined]
 
     def _on_text_blur(self, e: ft.ControlEvent) -> None:
-        """失焦即放弃未提交的键入（回到格式化值）。"""
-        if self._text is None:
+        """失焦即放弃未提交的键入（回到格式化值）。
+
+        非法输入回车后 ``_text`` 已经是 ``None``，但红边还在 —— 失焦是这次
+        输入的终点，把 ``_invalid`` 一并清掉。
+        """
+        if self._text is None and not self._invalid:
             return
         self._text = None
+        self._invalid = False
         self.notify()  # type: ignore[attr-defined]
 
     def _parse(self, text: str | None) -> datetime.datetime | None:
@@ -761,71 +780,221 @@ class DateTimeInput(CalendarPanel, Label):
         return parsed if self._accepts(parsed) else None
 
 
+# ---------------------------------------------------------------------------
+# 独立运行：组件介绍 + 示例 + API
+# ---------------------------------------------------------------------------
+def _caption(text: str) -> ft.Control:
+    return ft.Text(
+        text,
+        size=12.5,
+        color=ft.Colors.ON_SURFACE_VARIANT,
+        style=ft.TextStyle(height=1.6),
+    )
+
+
 @ft.component
-def App():
-    """DateTimeInput 组件运行示例。"""
-    start = DateTimeInput(
-        label="开始时间",
-        is_required=True,
-        value=datetime.datetime(2026, 9, 26, 9, 30),
-        on_change=lambda v: print(f"[DateTimeInput] 选中 {v}"),
+def _echo(field: DateTimeInput) -> ft.Control:
+    """把当前值读出来 —— DateTimeInput 是 observable，值一变这里就重绘。"""
+    return _caption(f"当前值：{field.display_text or '（未选择）'}")
+
+
+@ft.component
+def _basic() -> ft.Control:
+    field = ft.use_memo(
+        lambda: DateTimeInput(
+            label="会议时间",
+            value=datetime.datetime(2026, 9, 26, 9, 30),
+            minute_step=5,
+        ),
+        [],
     )
-    end = DateTimeInput(
-        label="结束时间",
-        value=datetime.datetime(2026, 12, 31, 23, 59),
-        minute_step=5,
-        is_vertical=True,
+
+    def jump_ten(_event) -> None:
+        # select(..., close=False) 只改值、不动面板；不触发任何原生弹层
+        base = field.value or datetime.datetime.now()
+        field.select(base.replace(hour=10, minute=0), close=False)
+
+    return ft.Column(
+        spacing=10,
+        controls=[
+            field.ui(),
+            _echo(field),
+            ft.Row(
+                spacing=8,
+                controls=[
+                    ft.Button("设为 10:00", on_click=jump_ten),
+                    ft.Button("清空", on_click=lambda _: field.clear()),
+                ],
+            ),
+        ],
     )
-    precise = DateTimeInput(
-        label="含秒",
-        with_seconds=True,
-        second_step=5,
-        minute_step=15,
+
+
+@ft.component
+def _seconds() -> ft.Control:
+    field = ft.use_memo(
+        lambda: DateTimeInput(
+            label="含秒",
+            value=datetime.datetime(2026, 9, 26, 9, 30, 0),
+            with_seconds=True,
+            minute_step=15,
+            second_step=10,
+        ),
+        [],
     )
-    bounded = DateTimeInput(
-        label="会议窗口",
-        value=datetime.datetime(2026, 9, 10, 14, 0),
-        min_datetime=datetime.datetime(2026, 9, 5, 8, 0),
-        max_datetime=datetime.datetime(2026, 9, 20, 18, 0),
+    return ft.Column(spacing=10, controls=[field.ui(), _echo(field)])
+
+
+@ft.component
+def _window() -> ft.Control:
+    field = ft.use_memo(
+        lambda: DateTimeInput(
+            label="会议窗口",
+            value=datetime.datetime(2026, 9, 10, 14, 0),
+            min_datetime=datetime.datetime(2026, 9, 5, 8, 0),
+            max_datetime=datetime.datetime(2026, 9, 20, 18, 0),
+        ),
+        [],
     )
     frozen = DateTimeInput(
-        label="只读",
+        label="已结束",
         value=datetime.datetime(2026, 1, 1, 0, 0),
         disabled=True,
         clearable=False,
     )
-
     return ft.Column(
+        spacing=12,
         controls=[
-            ft.Text("DateTimeInput 日期时间选择器", size=20, weight=ft.FontWeight.BOLD),
-            ft.Text(
-                "点框体挂出「月历 + 时/分/秒轮盘」（悬浮、不推下方内容）；"
-                "点日期不收起，可接着调时间，滚轮或 ▲▼ 步进，点「完成」收起",
-                size=13,
-                color="#6b7280",
-            ),
-            ft.Divider(),
-            start.ui(),
-            ft.Divider(),
-            end.ui(),
-            ft.Divider(),
-            precise.ui(),
-            ft.Divider(),
-            bounded.ui(),
-            ft.Divider(),
+            field.ui(),
+            _echo(field),
             frozen.ui(),
-            ft.Divider(),
-            ft.Button(
-                content="打印当前值",
-                on_click=lambda _: print(
-                    f"{start.value} / {end.value} / {precise.value} / "
-                    f"{bounded.value} / {frozen.value}"
-                ),
+            _caption(
+                "9 月 5 日 08:00 到 9 月 20 日 18:00 之外整格禁用；选到上限当天会保留原时间并被钳到 18:00。"
             ),
         ],
-        spacing=14,
     )
 
 
+_BASIC_CODE = """dt = DateTimeInput(
+    label="会议时间",
+    value=datetime.datetime(2026, 9, 26, 9, 30),
+    minute_step=5,
+)
+Column([dt.ui(), ft.Text(f"当前值：{dt.display_text}")])"""
+
+SPEC = Spec(
+    name="DateTimeInput",
+    summary="日期与时间放在同一块面板：左边月历、右边时分轮盘，改完点「完成」。",
+    definition=(
+        "日期时间选择器把「哪一天」和「几点」合成一个字段：左边是与 DateInput 同一张"
+        "月历，右边是时 / 分 / 秒三列环形轮盘。点日期不收起面板，日期、时间与轮盘都"
+        "即改即生效，改到一半关掉也不会丢操作。它比「日期框 + 时间框」少一次对齐，也"
+        "不会出现日期已经越界、时间还停在旧值的情况。"
+    ),
+    anatomy=[
+        (
+            "输入框",
+            "240 × 40，与 DateInput 同高；有值时尾部出现 ×，右侧是编辑日历图标。",
+        ),
+        (
+            "月历列",
+            "与 DateInput 逐像素一致；点某天只替换日期部分，时间保留，面板继续展开。",
+        ),
+        (
+            "时间轮盘",
+            "时 / 分两列，with_seconds=True 时补上秒列。选中行居中填色，上下各留 3 行做纵深，越远越淡。",
+        ),
+        (
+            "环形步进",
+            "23 时的下一格是 00，55 分的下一格是 00 分；▲▼、滚轮、点任意可见值都能走。",
+        ),
+        (
+            "页脚",
+            "「今天」只换日期、「此刻」换完整的现在；右侧「清除」「完成」，「完成」只是收起。",
+        ),
+    ],
+    when=[
+        "需要同时确定日期和时刻：会议、发布、预约、定时任务",
+        "时间按固定粒度走：15 分钟一档、5 秒一档，避免出现 09:37 这种没法执行的时刻",
+        "可选时刻有窗口限制：只能选未来 7 天、只能落在工作时间内",
+    ],
+    avoid=[
+        "只需要日期：DateInput 更矮更直接，多出的时间列只会让用户多确认一步",
+        "只需要时间：用两个 SelectBox 或专用 TimePicker，日期部分纯占地方",
+        "要按时区换算或跨时区排期：这里只处理本地 naive datetime，时区交给业务层",
+    ],
+    examples=[
+        Example(
+            "基础用法",
+            _basic,
+            hint="点日期只换日期、点轮盘只换时间，面板不收起；下面一行实时回显 display_text。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "秒与步长",
+            _seconds,
+            hint="with_seconds=True 才出现秒列；分钟按 15、秒按 10 步进，当前值不在网格里也会补进去高亮。",
+        ),
+        Example(
+            "可选窗口",
+            _window,
+            hint="min_datetime / max_datetime 之外的日期整格禁用；越界的时刻会被钳到窗口边界。",
+        ),
+    ],
+    api=[
+        Api(
+            "value",
+            "datetime | None",
+            "None",
+            "当前值；None 表示取当前时间，按 with_seconds 截到分或秒",
+        ),
+        Api(
+            "min_datetime",
+            "datetime | None",
+            "None",
+            "可选下界（含）；None 取 year_range 起始年",
+        ),
+        Api(
+            "max_datetime",
+            "datetime | None",
+            "None",
+            "可选上界（含）；None 取 year_range 结束年",
+        ),
+        Api("with_seconds", "bool", "False", "是否显示秒列；关闭时秒恒为 0"),
+        Api("hour_step", "int", "1", "小时列步长"),
+        Api("minute_step", "int", "1", "分钟列步长（常用 5 / 10 / 15 / 30）"),
+        Api("second_step", "int", "10", "秒列步长，仅 with_seconds=True 时生效"),
+        Api(
+            "display_format",
+            "str | None",
+            "None",
+            "框内文本的 strftime 格式；None 跟随界面语言，并按 with_seconds 决定是否带秒",
+        ),
+        Api("clearable", "bool", "True", "是否显示框内 × 与页脚「清除」"),
+        Api(
+            "on_change",
+            "Callable[[datetime | None], None] | None",
+            "None",
+            "值变化回调；按值去重，同一个时刻只回调一次",
+        ),
+    ],
+    notes=[
+        info(
+            "with_seconds=False（默认）时秒被强制归零：框里显示 09:30，值就是 09:30:00，"
+            "不会出现「看着 09:30、值是 09:30:47」的隐性偏差。"
+        ),
+        tip(
+            "非法键入的红边在失焦 / 收起时清除，值仍停在上一个合法时刻 —— 红边只说明"
+            "「这次输入没通过」，不该常驻；日期与时间两个输入框都按这条规则收口。"
+        ),
+        warn(
+            "value=None 表示「取当前时间」而不是空值：clear() 之后保持空只对当前实例有效，"
+            "受控场景不要再用 None 回灌构造器。另外 value 是本地 naive datetime，不带时区。"
+        ),
+    ],
+    tags=("日期时间", "日期", "时间", "datetime", "picker", "表单"),
+)
+
+
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

@@ -356,9 +356,7 @@ def code_block(
                                 icon_color=(
                                     ft.Colors.GREEN_ACCENT_200
                                     if copied
-                                    else ft.Colors.with_opacity(
-                                        0.55, ft.Colors.WHITE
-                                    )
+                                    else ft.Colors.with_opacity(0.55, ft.Colors.WHITE)
                                 ),
                                 tooltip=tr("site.copied")
                                 if copied
@@ -417,9 +415,7 @@ def code_tabs(
                             label,
                             size=11.5,
                             color=(
-                                ft.Colors.ON_SURFACE
-                                if position == index
-                                else MUTED
+                                ft.Colors.ON_SURFACE if position == index else MUTED
                             ),
                             weight=(
                                 ft.FontWeight.W_600
@@ -502,7 +498,9 @@ def callout(kind: CalloutKind, body_text: str, title: str | None = None) -> ft.C
 # ---------------------------------------------------------------------------
 
 
-def _toggle_icon(icon: ft.IconData, label: str, *, active: bool, on_click: Any) -> ft.Control:
+def _toggle_icon(
+    icon: ft.IconData, label: str, *, active: bool, on_click: Any
+) -> ft.Control:
     return ft.Container(
         padding=ft.Padding.symmetric(horizontal=9, vertical=4),
         border_radius=7,

@@ -167,7 +167,9 @@ def demo(
     return Demo(factory, title_key, hint_key, code, padded, stretch, tall)
 
 
-def split(left: tuple[Block, ...], right: Factory, *, ratio: tuple[int, int] = (5, 7)) -> Split:
+def split(
+    left: tuple[Block, ...], right: Factory, *, ratio: tuple[int, int] = (5, 7)
+) -> Split:
     return Split(left, right, ratio)
 
 

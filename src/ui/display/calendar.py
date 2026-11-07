@@ -49,7 +49,14 @@ from typing import Any
 
 import flet as ft
 
-from ui.core.format import calendar_title, first_weekday, month_cell, weekday_names
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
+from ui.core.format import (
+    calendar_title,
+    first_weekday,
+    format_date,
+    month_cell,
+    weekday_names,
+)
 from ui.core.i18n import t, use_t
 from ui.core.theme import use_theme
 from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, hairline, overlay
@@ -177,9 +184,7 @@ class Calendar:
     on_panel_change: Callable[[_dt.date, str], None] | None = None
 
     # ---- 运行期状态（下划线开头：不参与构造，靠 notify() 重绘）--------------
-    _view: tuple[int, int] = field(
-        default=(1970, 1), init=False, repr=False
-    )
+    _view: tuple[int, int] = field(default=(1970, 1), init=False, repr=False)
     _selected: _dt.date | None = field(default=None, init=False, repr=False)
     _hover: _dt.date | None = field(default=None, init=False, repr=False)
     _hover_key: str | None = field(default=None, init=False, repr=False)
@@ -336,14 +341,18 @@ class Calendar:
     # 页头
     # ==================================================================
     def _header(self) -> ft.Control:
-        step_key = "ui.calendar.prev_year" if self.mode == "year" else "ui.calendar.prev_month"
+        step_key = (
+            "ui.calendar.prev_year" if self.mode == "year" else "ui.calendar.prev_month"
+        )
         forward_key = (
             "ui.calendar.next_year" if self.mode == "year" else "ui.calendar.next_month"
         )
         controls: list[ft.Control] = [
             self._title(),
             _nav_button(ft.Icons.CHEVRON_LEFT, t(step_key), lambda _e: self.shift(-1)),
-            _nav_button(ft.Icons.CHEVRON_RIGHT, t(forward_key), lambda _e: self.shift(1)),
+            _nav_button(
+                ft.Icons.CHEVRON_RIGHT, t(forward_key), lambda _e: self.shift(1)
+            ),
         ]
         if self.show_today:
             controls.append(
@@ -497,7 +506,13 @@ class Calendar:
             width=DOT,
             height=DOT,
             bgcolor=bg,
-            border=None if picked or not today else ft.Border.all(1, ft.Colors.PRIMARY),
+            # 「今天」的描边只画在可选的日子上：被 valid_range / disabled_date
+            # 排除的今天再描一圈主色，读起来像「可以点」。
+            border=(
+                ft.Border.all(1, ft.Colors.PRIMARY)
+                if today and enabled and not picked
+                else None
+            ),
             border_radius=RADIUS["full"],
             alignment=ft.Alignment.CENTER,
             content=ft.Text(
@@ -505,7 +520,7 @@ class Calendar:
                 size=FONT_SIZE["body"],
                 color=color,
                 weight=FONT_WEIGHT["semibold"]
-                if picked or today
+                if picked or (today and enabled)
                 else FONT_WEIGHT["regular"],
             ),
         )
@@ -562,17 +577,19 @@ class Calendar:
         pill = ft.Container(
             # 宽度跟着文字走（不是定宽）：``11月`` 与 ``Nov`` 差一倍，
             # 钉死宽度在英文界面里会变成一个空荡荡的长胶囊。
-            padding=ft.Padding.symmetric(horizontal=SPACE["4"], vertical=SPACE["1"] - 1),
-            bgcolor=ft.Colors.PRIMARY if picked else (overlay(0.08) if hovered else None),
+            padding=ft.Padding.symmetric(
+                horizontal=SPACE["4"], vertical=SPACE["1"] - 1
+            ),
+            bgcolor=ft.Colors.PRIMARY
+            if picked
+            else (overlay(0.08) if hovered else None),
             border_radius=RADIUS["full"],
             alignment=ft.Alignment.CENTER,
             content=ft.Text(
                 month_cell(month),
                 size=FONT_SIZE["body"],
                 color=color,
-                weight=FONT_WEIGHT["semibold"]
-                if picked
-                else FONT_WEIGHT["regular"],
+                weight=FONT_WEIGHT["semibold"] if picked else FONT_WEIGHT["regular"],
             ),
         )
         return ft.Container(
@@ -642,7 +659,7 @@ def _nav_button(icon: str, tooltip: str, on_click: Any) -> ft.Control:
 
 
 def _text_button(label: str, on_click: Any) -> ft.Control:
-    """"今天"这类纯文字按钮：比 ``Button`` 轻，不抢箭头与标题的层级。"""
+    """「今天」这类纯文字按钮：比 ``Button`` 轻，不抢箭头与标题的层级。"""
     return ft.Container(
         padding=ft.Padding.symmetric(horizontal=SPACE["2"], vertical=SPACE["1"]),
         border_radius=RADIUS["md"],
@@ -673,41 +690,250 @@ def _segment(label: str, *, active: bool, on_click: Any) -> ft.Control:
 
 
 # ---------------------------------------------------------------------------
-# 演示
+# 示例
 # ---------------------------------------------------------------------------
-@ft.component
-def App():
-    """Calendar 运行示例。"""
-    def dot(day: _dt.date) -> ft.Control | None:
-        """每 5 天来一个小色点，示意"这天有事"。"""
-        if day.day % 5:
-            return None
-        return ft.Container(
-            width=5,
-            height=5,
-            border_radius=RADIUS["full"],
-            bgcolor=ft.Colors.PRIMARY,
-        )
+_MUTED = ft.Colors.ON_SURFACE_VARIANT
 
-    plain = Calendar(value=_dt.date(2026, 11, 5))
-    marked = Calendar(value=_dt.date(2026, 11, 5), cell_height=64, cell_content=dot)
-    year = Calendar(value=_dt.date(2026, 11, 5), mode="year")
-    return ft.Column(
-        spacing=32,
-        controls=[
-            ft.Text("Calendar", size=18, weight=ft.FontWeight.W_600),
-            ft.Container(width=720, content=plain.ui()),
-            ft.Text(
-                "cell_content · 每天一个小圆点",
-                size=FONT_SIZE["small"],
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
-            ft.Container(width=720, content=marked.ui()),
-            ft.Text(
-                "mode='year'",
-                size=FONT_SIZE["small"],
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
-            ft.Container(width=720, content=year.ui()),
-        ],
+#: 示例用的事件：整周里排几次评审 / 发布 / 值班。日期固定，不随渲染变。
+_EVENTS: dict[_dt.date, str] = {
+    _dt.date(2026, 11, 3): "评审",
+    _dt.date(2026, 11, 5): "发布",
+    _dt.date(2026, 11, 10): "值班",
+    _dt.date(2026, 11, 12): "评审",
+    _dt.date(2026, 11, 17): "发布",
+    _dt.date(2026, 11, 19): "复盘",
+    _dt.date(2026, 11, 24): "值班",
+    _dt.date(2026, 11, 26): "评审",
+}
+
+
+def _caption(text: str) -> ft.Text:
+    return ft.Text(text, size=FONT_SIZE["caption"], color=_MUTED)
+
+
+def _badge(label: str) -> ft.Control:
+    """日期格里的那枚小标签：一格放得下，两三个字就读完。"""
+    return ft.Container(
+        padding=ft.Padding.symmetric(horizontal=4, vertical=0),
+        border_radius=RADIUS["sm"],
+        bgcolor=ft.Colors.PRIMARY_CONTAINER,
+        content=ft.Text(
+            label,
+            size=FONT_SIZE["caption"],
+            color=ft.Colors.ON_PRIMARY_CONTAINER,
+            no_wrap=True,
+        ),
     )
+
+
+@ft.component
+def _basic() -> ft.Control:
+    """整月一屏；点任意一天，下面那行跟着变。"""
+    picked, set_picked = ft.use_state(_dt.date(2026, 11, 5))
+    cal = ft.use_memo(
+        lambda: Calendar(
+            value=_dt.date(2026, 11, 5),
+            width=620,
+            on_select=set_picked,
+        ),
+        [],
+    )
+    return ft.Container(
+        width=620,
+        content=ft.Column(
+            spacing=SPACE["2"],
+            controls=[cal.ui(), _caption(f"选中：{format_date(picked)}")],
+        ),
+    )
+
+
+@ft.component
+def _marked() -> ft.Control:
+    """每格下方挂一个小标签；格子高度跟着调大，否则内容会被裁掉。"""
+    cal = ft.use_memo(
+        lambda: Calendar(
+            value=_dt.date(2026, 11, 5),
+            width=620,
+            cell_height=76,
+            cell_content=lambda day: _badge(_EVENTS[day]) if day in _EVENTS else None,
+        ),
+        [],
+    )
+    return ft.Container(width=620, content=cal.ui())
+
+
+@ft.component
+def _range() -> ft.Control:
+    """区间 + 逐日禁用两层限制同时生效：区间外的日期与周末都灰掉。"""
+    picked, set_picked = ft.use_state(_dt.date(2026, 11, 12))
+    cal = ft.use_memo(
+        lambda: Calendar(
+            value=_dt.date(2026, 11, 12),
+            width=620,
+            valid_range=(_dt.date(2026, 11, 9), _dt.date(2026, 12, 4)),
+            disabled_date=lambda day: day.weekday() >= 5,
+            footer=_caption("可选 11-09 至 12-04 的工作日；灰掉的格子不可点"),
+            on_select=set_picked,
+        ),
+        [],
+    )
+    return ft.Container(
+        width=620,
+        content=ft.Column(
+            spacing=SPACE["2"],
+            controls=[cal.ui(), _caption(f"选中：{format_date(picked)}")],
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 示例源码（“查看代码”面板）
+# ---------------------------------------------------------------------------
+_BASIC_CODE = """cal = Calendar(
+    value=date(2026, 11, 5),          # 只是初始值，之后读 cal.selected
+    width=620,                        # 不给宽度就吃满父容器
+    on_select=lambda day: print("选中", day),
+)
+
+Column([cal.ui()])"""
+
+_MARKED_CODE = """# 每格下方挂一个控件：cell_height 要一起调大，42px 装不下
+Calendar(
+    value=date(2026, 11, 5),
+    cell_height=76,
+    cell_content=lambda day: badge(day) if day in events else None,
+)
+
+# 点格子只是"选中"；要标记内容就交出 cell_content，不必自己拼 42 个格子"""
+
+_RANGE_CODE = """Calendar(
+    value=date(2026, 11, 12),
+    valid_range=(date(2026, 11, 9), date(2026, 12, 4)),   # 区间外灰掉
+    disabled_date=lambda day: day.weekday() >= 5,         # 再叠一层：周末不可选
+    footer=Text("可选 11-09 至 12-04 的工作日"),
+)"""
+
+
+# ---------------------------------------------------------------------------
+# 组件说明
+# ---------------------------------------------------------------------------
+SPEC = Spec(
+    name="Calendar",
+    summary="整月的日期网格：选中一天、在格子里挂事件，点标题缩到年视图。",
+    definition=(
+        "Calendar 回答的是「这段时间里有什么」，而不是「选哪一天」。整月 42 格一次铺开，"
+        "每格除了日期数字还能挂一个任意控件 —— 日程条数、值班人、版本号都放得下；"
+        "点标题放大到年视图，点某个月再回到月。选中日期只是它的副产物，所以它把格子"
+        "做大、把选中态收小，让「看」比「挑」更省力。"
+    ),
+    anatomy=[
+        (
+            "页头",
+            "标题就是当前粒度（2026年11月），点它放大到年；两侧箭头翻月 / 翻年；右侧「月 / 年」分段。",
+        ),
+        (
+            "星期表头",
+            "按语言的首日旋转（中文周一起、英文周日起），下面一条发丝线把它和日期分开。",
+        ),
+        (
+            "日期胶囊",
+            "30px 圆：选中是主色实底反白，今天是主色描边，悬停是淡底。选中不铺满整格 —— 格子宽到 88px 时整块填色会糊成一块色斑。",
+        ),
+        (
+            "附加内容",
+            "cell_content 渲染在数字下方，像 AntD 的 dateCellRender；要放东西必须同时调大 cell_height。",
+        ),
+        (
+            "今天按钮",
+            "回到本月并选中今天；今天被禁用时只跳不选 —— 跳到一个选不中的日期没有意义。",
+        ),
+    ],
+    when=[
+        "排期、值班、发布日历：一个月的事要摆在一屏里",
+        "需要在日期上挂内容（条数、负责人、版本号），而不是只有数字",
+        "选日期是副产物，主任务是「看这一段时间」",
+    ],
+    avoid=[
+        "只是往表单里填一个日期：用 DateInput —— 下拉面板点完即收，不占版面",
+        "要选一段区间：两个日期输入框就够，铺 42 格只为点两下代价太大",
+        "窄屏 360px：每格只剩 45px，日期读得出来，附加内容放不下",
+    ],
+    examples=[
+        Example(
+            "基础用法",
+            _basic,
+            hint="整月 6 行；选中是实心胶囊、悬停是淡底，点任意一天下面那行跟着变。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "事件标记",
+            _marked,
+            hint="cell_content 在数字下方挂标签，cell_height 提到 76 才装得下。",
+            code=_MARKED_CODE,
+        ),
+        Example(
+            "可选范围",
+            _range,
+            hint="valid_range 与 disabled_date 取交集：区间外与周末都灰掉，点了没反应。",
+            code=_RANGE_CODE,
+        ),
+    ],
+    api=[
+        Api(
+            "value", "date | None", "None", "初始选中日；之后读 selected 或调 select()"
+        ),
+        Api("mode", "str", "'month'", "month 月网格 / year 年网格"),
+        Api(
+            "first_day_of_week",
+            "int | None",
+            "None",
+            "0 = 周一 … 6 = 周日；留空跟随界面语言",
+        ),
+        Api(
+            "valid_range",
+            "tuple[date, date] | None",
+            "None",
+            "可选区间；区间外的格子灰掉且不可点",
+        ),
+        Api(
+            "disabled_date",
+            "Callable[[date], bool] | None",
+            "None",
+            "逐日禁用，返回 True 表示不可选；与 valid_range 取交集",
+        ),
+        Api("cell_height", "float", "42", "日期格高度；放附加内容时调大"),
+        Api(
+            "cell_content",
+            "Callable[[date], Control | None] | None",
+            "None",
+            "每格的附加内容，渲染在日期数字下方",
+        ),
+        Api("show_today", "bool", "True", "是否显示页头的「今天」按钮"),
+        Api(
+            "on_select",
+            "Callable[[date], None] | None",
+            "None",
+            "选中某天时回调；重复点同一天不触发",
+        ),
+        Api("select(day)", "(date) -> None", "—", "用代码选中某天，视图跟着挪到那个月"),
+    ],
+    notes=[
+        tip(
+            "「今天」的主色描边只画在可选的日子上。被 valid_range / disabled_date 排除的今天"
+            "再描一圈主色，读起来像「可以点」—— 禁用态只能有一种表达。"
+        ),
+        info(
+            "月视图固定 6 行 42 格。有的月份 4 行就够（2 月 1 日恰逢周首），但行数随月份变会"
+            "让整块面板上下跳；跨月的格子照常显示灰字，点它直接翻到那个月。"
+        ),
+        warn(
+            "cell_content 会撑高格子：默认 42px 只装得下 30px 的日期胶囊。挂内容时把 "
+            "cell_height 一起调到 64 以上，否则第二行会被裁掉一半。"
+        ),
+    ],
+    tags=("日历", "calendar", "月视图", "日期", "排期"),
+)
+
+
+if __name__ == "__main__":
+    run(SPEC)

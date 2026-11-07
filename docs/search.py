@@ -166,9 +166,15 @@ def SearchPalette(*, on_close: Callable[[], None]) -> ft.Control:
                         spacing=10,
                         controls=[
                             kit.kbd("Enter"),
-                            ft.Text(tr("site.search.enter"), size=10.5, color=kit.MUTED),
+                            ft.Text(
+                                tr("site.search.enter"), size=10.5, color=kit.MUTED
+                            ),
                             ft.Container(expand=True),
-                            ft.Text(tr("site.search.count", n=len(found)), size=10.5, color=kit.MUTED),
+                            ft.Text(
+                                tr("site.search.count", n=len(found)),
+                                size=10.5,
+                                color=kit.MUTED,
+                            ),
                         ],
                     ),
                 ),

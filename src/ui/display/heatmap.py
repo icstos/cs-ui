@@ -42,17 +42,19 @@
 from __future__ import annotations
 
 import datetime as _dt
+import math
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 import flet as ft
 
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.format import first_weekday as locale_first_weekday
 from ui.core.format import format_date, format_number, month_name, weekday_names
 from ui.core.i18n import t, use_t
 from ui.core.theme import theme_state, use_theme
-from ui.core.tokens import FONT_SIZE, overlay
+from ui.core.tokens import FONT_SIZE, SPACE, overlay
 
 __all__ = ["COLOR_THEMES", "Heatmap", "HeatmapItem"]
 
@@ -235,7 +237,9 @@ class Heatmap:
     on_cell_click: Callable[[HeatmapItem], None] | None = None
 
     # ---- 运行期状态（下划线开头：不序列化，靠 notify() 重绘）-------------
-    _days: dict[_dt.date, HeatmapItem] = field(default_factory=dict, init=False, repr=False)
+    _days: dict[_dt.date, HeatmapItem] = field(
+        default_factory=dict, init=False, repr=False
+    )
     _first: int = field(default=0, init=False, repr=False)
     _cell: int = field(default=12, init=False, repr=False)
     _gap_x: int = field(default=4, init=False, repr=False)
@@ -405,7 +409,9 @@ class Heatmap:
             first, last = last, first
         self._span = (first, last)
         # 起点回退到本周第一天、终点推到本周最后一天，保证每列都是整 7 格
-        self._origin = first - _dt.timedelta(days=(first.weekday() - self._first) % SEVEN)
+        self._origin = first - _dt.timedelta(
+            days=(first.weekday() - self._first) % SEVEN
+        )
         tail = last + _dt.timedelta(days=(self._first + 6 - last.weekday()) % SEVEN)
         self._cols = max(1, (tail - self._origin).days // SEVEN + 1)
         self._grid_w = self._cols * self._cell + (self._cols - 1) * self._gap_x
@@ -497,7 +503,9 @@ class Heatmap:
         # 首列常常是"残月"（只有几天在视野里），且紧挨着下一个整月的标签。
         # 两者挤在一起时留下整月 —— 用户要看的是"这几个月"，残月标签没有信息量。
         if len(raw) >= 2 and raw[0][2]:
-            gap = raw[0][0] * pitch + _text_width(raw[0][1], self._label_size) + LABEL_GAP
+            gap = (
+                raw[0][0] * pitch + _text_width(raw[0][1], self._label_size) + LABEL_GAP
+            )
             if raw[1][0] * pitch < gap:
                 raw.pop(0)
 
@@ -585,10 +593,19 @@ class Heatmap:
         self._hover = None
         self.notify()  # type: ignore[attr-defined]
 
-    def _on_tap(self, _e: Any) -> None:
-        if self.on_cell_click is None or self._hover is None:
+    def _on_tap(self, e: Any) -> None:
+        """点击格子。
+
+        用事件里的 ``local_position`` 反算，而不是读 :attr:`_hover` —— 触屏
+        没有悬停，只靠 hover 记下的坐标，第一次点会落空。
+        """
+        if self.on_cell_click is None:
             return
-        col, row = self._hover
+        pos = getattr(e, "local_position", None)
+        hit = self._hit(pos.x or 0, pos.y or 0) if pos is not None else self._hover
+        if hit is None:
+            return
+        col, row = hit
         item = self._days.get(self._day_at(col, row))
         if item is not None:
             self.on_cell_click(item)
@@ -611,7 +628,9 @@ class Heatmap:
 
         text = self._tooltip_text(item, day)
         size = FONT_SIZE["caption"]
-        width = min(TIP_MAX_W, max(TIP_MIN_W, int(_text_width(text, size)) + TIP_PAD_H * 2))
+        width = min(
+            TIP_MAX_W, max(TIP_MIN_W, int(_text_width(text, size)) + TIP_PAD_H * 2)
+        )
 
         center_x = col * (self._cell + self._gap_x) + self._cell / 2
         left = min(max(0, int(center_x - width / 2)), max(0, self._grid_w - width))
@@ -760,40 +779,243 @@ class Heatmap:
 
 
 # ---------------------------------------------------------------------------
-# 演示
+# 示例
 # ---------------------------------------------------------------------------
-def _demo_series() -> list[HeatmapItem]:
-    """造一年"像真的"数据：工作日有值、周末稀疏、偶尔有高峰。"""
-    import random
+_MUTED = ft.Colors.ON_SURFACE_VARIANT
 
-    rng = random.Random(20261104)
-    start = _dt.date(2025, 11, 4)
+#: 一年份的起点：周一，364 天正好 52 整周，不会出现半截首列。
+_YEAR_START = _dt.date(2025, 11, 3)
+#: 半年份的起点（也是周一），用来演示尺寸档位。
+_HALF_START = _dt.date(2026, 5, 4)
+
+
+def _daily(start: _dt.date, days: int, *, scale: float = 1.0) -> list[HeatmapItem]:
+    """造一段"像真的"数据：两段不同周期的起伏叠加，周末回落。
+
+    用公式而不是 ``random``：每次渲染完全一样，文档截图与示例不会前后打架。
+    """
     out: list[HeatmapItem] = []
-    for offset in range(365):
+    for offset in range(days):
         day = start + _dt.timedelta(days=offset)
-        roll = rng.random()
-        if (day.weekday() >= 5 and roll < 0.55) or roll < 0.12:
-            out.append(HeatmapItem(day, 0))
-        else:
-            peak = rng.randint(8, 22) if roll > 0.9 else 0
-            out.append(HeatmapItem(day, rng.randint(0, 12) + peak))
+        wave = 7.2 + 5.0 * math.sin(offset / 8.5) + 3.4 * math.sin(offset / 2.7 + 0.8)
+        if day.weekday() >= 5:
+            wave -= 4.2
+        out.append(HeatmapItem(day, int(max(0, round(wave * scale)))))
     return out
 
 
-@ft.component
-def App():
-    """Heatmap 组件运行示例。"""
-    data = _demo_series()
-    big = Heatmap(data=data, color_theme="green")
-    small = Heatmap(data=data, color_theme="blue", size="small", show_legend=False)
-    return ft.Column(
-        spacing=28,
-        controls=[
-            ft.Text("Heatmap", size=18, weight=ft.FontWeight.W_600),
-            big.ui(),
-            ft.Text(
-                "small · blue", size=FONT_SIZE["small"], color=ft.Colors.ON_SURFACE_VARIANT
-            ),
-            small.ui(),
-        ],
+def _caption(text: str) -> ft.Text:
+    return ft.Text(text, size=FONT_SIZE["caption"], color=_MUTED)
+
+
+def _summary(data: list[HeatmapItem]) -> str:
+    """底部那行统计：有记录的天数、总量、峰值。"""
+    values = [int(item.value or 0) for item in data]
+    active = [value for value in values if value]
+    return (
+        f"{len(active)} 天有记录 · 共 {format_number(sum(values))} 次 · "
+        f"峰值 {max(values) if values else 0}"
     )
+
+
+@ft.component
+def _year() -> ft.Control:
+    """一年 52 列、small 档；底部左边是自己算的统计，右边是色阶图例。"""
+
+    def build() -> Heatmap:
+        data = _daily(_YEAR_START, 364)
+        return Heatmap(data=data, size="small", footer=_caption(_summary(data)))
+
+    return ft.use_memo(build, []).ui()
+
+
+@ft.component
+def _large() -> ft.Control:
+    """半年、large 档：格子 16px，悬停气泡要等指针停在格子上才出现。"""
+    hm = ft.use_memo(
+        lambda: Heatmap(
+            data=_daily(_HALF_START, 182),
+            size="large",
+            show_legend=False,
+        ),
+        [],
+    )
+    return hm.ui()
+
+
+@ft.component
+def _shared_scale() -> ft.Control:
+    """两张图共用 value_range：颜色深浅可以直接横向比，不用换算。"""
+    busy = Heatmap(
+        data=_daily(_HALF_START, 182, scale=1.7),
+        size="small",
+        value_range=(0, 24),
+        show_legend=False,
+        footer=_caption("A 组 · 每天 0–24 次提交"),
+    )
+    quiet = Heatmap(
+        data=_daily(_HALF_START, 182, scale=0.45),
+        size="small",
+        value_range=(0, 24),
+        footer=_caption("B 组 · 同一把尺子"),
+    )
+    return ft.Column(spacing=SPACE["4"], controls=[busy.ui(), quiet.ui()])
+
+
+# ---------------------------------------------------------------------------
+# 示例源码（“查看代码”面板）
+# ---------------------------------------------------------------------------
+_YEAR_CODE = """heatmap = Heatmap(
+    data=[HeatmapItem(date(2026, 9, 26), 12),      # dict / (date, value) 也认
+          {"date": date(2026, 9, 27), "value": 3},
+          (date(2026, 9, 28), 0)],
+    size="small",
+    footer=Text("320 天有记录 · 共 2,304 次"),     # 左下角放自己的统计
+)
+
+Column([heatmap.ui()])"""
+
+_LARGE_CODE = """Heatmap(
+    data=rows,
+    size="large",          # 10 / 12 / 16 三档边长
+    show_legend=False,
+    tooltip_formatter=lambda item: f"{item.date} · {item.value} 次",
+)"""
+
+_SCALE_CODE = """# 同一把尺子：两张图颜色可以直接比
+Heatmap(data=group_a, value_range=(0, 24), size="small")
+Heatmap(data=group_b, value_range=(0, 24), size="small")
+
+# 不给 value_range 时下限取最小正值、上限取最大值 —— 一张图自己看够用，
+# 两张摆放一起就会各拉各的，深浅失去可比性。"""
+
+
+# ---------------------------------------------------------------------------
+# 组件说明
+# ---------------------------------------------------------------------------
+SPEC = Spec(
+    name="Heatmap",
+    summary="把一年铺成 7 行方格，用颜色深浅表示每天的量，像贡献墙。",
+    definition=(
+        "热力图是一张「日历形状」的分布图：每一列一周，上边是周一、下边是周日，"
+        "格子深浅表示当天的数。它擅长回答「哪段时间密、哪段时间断了」，不擅长回答"
+        "「周三到底是多少」—— 精确值要靠悬停气泡。所以它的取舍是格子尽量小、"
+        "数量尽量多，让一年的疏密在一屏里扫完。"
+    ),
+    anatomy=[
+        (
+            "格子",
+            "边长 10 / 12 / 16 三档（small / medium / large），数值落在 4 级色阶上，圆角 2–4。",
+        ),
+        (
+            "空白格",
+            "没有数据的那天用「前景色 + 8% 透明度」当底板，明暗自适应；start / end 之外的格子完全不画。",
+        ),
+        (
+            "月份标签",
+            "每个月第一列上方一个；两个标签挤在一起时让位，首列的残月标签直接丢掉。",
+        ),
+        (
+            "星期标签",
+            "左侧一列与格子逐行对齐；纵向步距不足 20px 时只画 3 个（隔行），挤在一起的标签谁都读不清。",
+        ),
+        (
+            "悬停气泡",
+            "日期 + 数值。第一行上方没空间就向下弹，其余向上生长 —— 不会盖住下一行。",
+        ),
+        ("图例", "底部「少 → 多」，左边留给 footer 放统计，两边分居。"),
+    ],
+    when=[
+        "年度活跃度：提交、发布、登录、打卡，看疏密比看数字快",
+        "需要暴露「哪一段时间断了」：空白与浅色本身就是信息",
+        "数据天然是「每天一个数」，粒度为天",
+    ],
+    avoid=[
+        "要精确比较某几天的值：格子不给数字，只能逐个悬停；用柱状图或折线图",
+        "时段 / 小时分布：热力图的 7 行固定是星期，换粒度得自己拼格子",
+        "只有十几天数据：一排格子读不出趋势，用 Sparkline 或直接列数字",
+    ],
+    examples=[
+        Example(
+            "一年",
+            _year,
+            hint="52 整周、small 档；底部左边是统计、右边是图例，悬停任意格子看当天数值。",
+            code=_YEAR_CODE,
+        ),
+        Example(
+            "放大格子",
+            _large,
+            hint="半年、large 档：格子 16px，星期标签能画全 7 个。",
+            code=_LARGE_CODE,
+        ),
+        Example(
+            "共用一把尺子",
+            _shared_scale,
+            hint="两组数据固定 value_range=(0, 24)，颜色深浅可以直接横向比。",
+            code=_SCALE_CODE,
+        ),
+    ],
+    api=[
+        Api(
+            "data",
+            "Iterable[HeatmapItem | dict | tuple]",
+            "()",
+            "数据项；dict 认 date / day / timestamp 与 value",
+        ),
+        Api("start", "date | None", "None", "起始日；留空取数据最早的一天"),
+        Api(
+            "end",
+            "date | None",
+            "None",
+            "结束日；显式给值可以画出数据没覆盖到的空白段",
+        ),
+        Api("color_theme", "str", "'green'", "green / blue / orange / purple / red"),
+        Api(
+            "value_range",
+            "tuple[float, float] | None",
+            "None",
+            "固定色阶区间；多张图共用时传同一组值",
+        ),
+        Api("size", "str", "'medium'", "small / medium / large 三档格子边长"),
+        Api(
+            "tooltip_formatter",
+            "Callable[[HeatmapItem], str] | None",
+            "None",
+            "自定义气泡文案，入参是当天的数据项",
+        ),
+        Api("footer", "Control | None", "None", "网格下方左侧的自定义区域，通常放统计"),
+        Api(
+            "on_cell_click",
+            "Callable[[HeatmapItem], None] | None",
+            "None",
+            "点击有数据的格子时回调",
+        ),
+        Api(
+            "stats()",
+            "() -> dict[str, float]",
+            "—",
+            "只读统计：days / filled / peak / mean / total",
+        ),
+    ],
+    notes=[
+        tip(
+            "悬停只重画一个气泡：网格与标签按「数据指纹 + 几何参数」缓存，指针在同一格里"
+            "移动时连重绘都不发生。点击则用事件坐标反算格子、不读悬停位置 —— 触屏没有"
+            "悬停，靠 hover 记下的坐标第一次点会落空。"
+        ),
+        warn(
+            "data 请传 list / tuple。每帧都会把入参重新解析一遍，传生成器时第二次渲染就"
+            "空了 —— 屏幕上表现为「图闪一下然后没了」。"
+        ),
+        info(
+            "宽度由「列数 × 步距」定死，不参与父容器的弹性分配 —— 被拉伸格子就变形。"
+            "窄了就降 size，或在外层套一个横向滚动容器；组件自己不滚，因为月份标签、"
+            "星期标签、网格是三行对齐的。"
+        ),
+    ],
+    tags=("热力图", "heatmap", "贡献图", "活跃度", "日历"),
+)
+
+
+if __name__ == "__main__":
+    run(SPEC)

@@ -37,7 +37,10 @@ def _heading(block: Heading, text: str) -> ft.Control:
 def _code_tabs(block: CodeTabs) -> ft.Control:
     language = block.items[0].language if block.items else "python"
     return kit.code_tabs(
-        tuple((item.filename or item.language.upper(), item.source) for item in block.items),
+        tuple(
+            (item.filename or item.language.upper(), item.source)
+            for item in block.items
+        ),
         language=language,
     )
 

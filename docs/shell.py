@@ -12,6 +12,7 @@ import flet as ft
 
 from docs import kit
 from docs import search as search_api
+from docs.content import DOCS
 from docs.render import outline
 from docs.search import SearchPalette
 from docs.site import (
@@ -21,13 +22,16 @@ from docs.site import (
     LOGO_FILE,
     NAV_GROUPS,
     PACKAGE_VERSION,
+    PAGES,
     PYTHON_VERSION,
     PageMeta,
     page_after,
     page_before,
     page_for_route,
 )
-from ui import LanguageSwitcher, use_t
+from ui import LanguageSwitcher, Menu, MenuGroup, MenuItem, use_t
+from ui.core import catalog
+from ui.core import doc as doc_kit
 from ui.core.theme import use_theme
 
 TOPBAR_HEIGHT = 60
@@ -255,72 +259,109 @@ def top_bar(*, on_search) -> ft.Control:
 # ---------------------------------------------------------------------------
 
 
-def _is_active(location: str, route: str) -> bool:
-    if route == "/":
-        return location in ("", "/")
-    return location.rstrip("/") == route.rstrip("/")
+def _menu_key(meta: PageMeta) -> str:
+    """菜单里的键。
+
+    分类页与"分类父项"必须分开：父项只负责展开，选中态要落在可点的那一行
+    （``Menu.norm_selected`` 会把指向父项的键判为无效）。
+    """
+    return f"cat_{meta.key}" if meta.kind == "category" else meta.key
 
 
-@ft.component
-def _side_item(meta: PageMeta, *, active: bool) -> ft.Control:
-    tr = use_t()
-    page = ft.context.page
-    foreground = ft.Colors.ON_PRIMARY_CONTAINER if active else _MUTED
-    return ft.Container(
-        height=31,
-        padding=ft.Padding.symmetric(horizontal=9),
-        border_radius=8,
-        bgcolor=ft.Colors.PRIMARY_CONTAINER if active else None,
-        on_click=lambda _e: page.navigate(meta.route),
-        ink=True,
-        content=ft.Row(
-            spacing=9,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            controls=[
-                ft.Icon(meta.icon, size=16, color=foreground),
-                ft.Text(
-                    tr(meta.title_key),
-                    size=12.5,
-                    color=foreground,
-                    weight=ft.FontWeight.W_600 if active else ft.FontWeight.W_400,
-                    max_lines=1,
-                    overflow=ft.TextOverflow.ELLIPSIS,
-                ),
-            ],
-        ),
-    )
+def _menu_state(location: str) -> tuple[str, tuple[str, ...]]:
+    """当前路由 → ``(选中键, 展开键)``。"""
+    meta = page_for_route(location)
+    if meta is None or meta.kind != "component" and meta.kind != "category":
+        return (_menu_key(meta) if meta else "", ())
+    if meta.kind == "category":
+        return (f"cat_{meta.key}", (f"grp_{meta.key}",))
+    return (meta.key, (f"grp_{meta.parent}",))
+
+
+def _menu_items(tr) -> list:
+    """把 :mod:`docs.site` 的数据摊成两级菜单。
+
+    组件这一组是**两级**的：一级是分类（可展开、配图标），二级是具体组件
+    （只有文字，靠缩进表达层级）。分类下第一项固定是「总览」，这样
+    ``/components/form`` 这种分类页在菜单里也有落点，不会出现"当前页没高亮"。
+    """
+    items: list = []
+    for group in NAV_GROUPS:
+        if group.key != "components":
+            items.append(
+                MenuGroup(
+                    tr(group.label_key),
+                    [
+                        MenuItem(
+                            page.key,
+                            page.title(tr),
+                            icon=page.icon,
+                            data=page.route,
+                        )
+                        for page in group.items
+                    ],
+                )
+            )
+            continue
+
+        entries: list = [
+            MenuItem(
+                "components",
+                tr("nav.components.title"),
+                icon=ft.Icons.VIEW_QUILT_OUTLINED,
+                data="/components",
+            )
+        ]
+        for category in catalog.GROUPS:
+            entries.append(
+                MenuItem(
+                    f"grp_{category.key}",
+                    tr(f"nav.{category.key}.title"),
+                    icon=category.icon,
+                    children=[
+                        MenuItem(
+                            f"cat_{category.key}",
+                            tr("site.overview"),
+                            data=f"/components/{category.key}",
+                        ),
+                        *[
+                            MenuItem(item.key, item.name, data=catalog.route(item.key))
+                            for item in category.visible
+                        ],
+                    ],
+                )
+            )
+        items.append(MenuGroup(tr(group.label_key), entries))
+    return items
 
 
 @ft.component
 def sidebar() -> ft.Control:
+    """两级菜单：分类可展开，组件是叶子。
+
+    菜单实例按 ``(路由, 语言)`` 缓存：换页时重建，选中态与展开态就永远是
+    "当前这一页"的正确状态 —— 不用把 ``Menu`` 的可变字段跟路由对着同步
+    （那种写法一旦漏一次，就会出现"高亮在上一页"）。
+    """
     tr = use_t()
     location = ft.use_route_location()
+    page = ft.context.page
+    selected, expanded = _menu_state(location)
 
-    groups: list[ft.Control] = [
-        ft.Column(
-            spacing=1,
-            controls=[
-                ft.Container(
-                    padding=ft.Padding.only(left=9, top=16, bottom=5),
-                    content=ft.Text(
-                        tr(group.label_key).upper(),
-                        size=10,
-                        color=_MUTED,
-                        weight=ft.FontWeight.W_700,
-                        style=ft.TextStyle(letter_spacing=1.1),
-                    ),
-                ),
-                *[
-                    _side_item(item, active=_is_active(location, item.route))
-                    for item in group.items
-                ],
-            ],
-        )
-        for group in NAV_GROUPS
-    ]
+    menu = ft.use_memo(
+        lambda: Menu(
+            items=_menu_items(tr),
+            selected_key=selected,
+            expanded_keys=expanded,
+            size="small",
+            width=SIDEBAR_WIDTH - 24,
+            on_select=lambda item: page.navigate(item.data),
+        ),
+        [location, tr.locale],
+    )
 
     footer = ft.Container(
-        margin=ft.Margin.only(top=20),
+        margin=ft.Margin.only(top=14),
         padding=ft.Padding.symmetric(horizontal=11, vertical=10),
         border_radius=10,
         bgcolor=kit.RAISED,
@@ -342,16 +383,23 @@ def sidebar() -> ft.Control:
         ),
     )
 
+    # 菜单比侧栏高时要滚动；末尾垫一块空白，最后一行不至于贴着页脚。
+    menu_scroll = ft.Column(
+        expand=True,
+        spacing=0,
+        scroll=ft.ScrollMode.AUTO,
+        controls=[menu.ui(), ft.Container(height=8)],
+    )
+
     return ft.Container(
         width=SIDEBAR_WIDTH,
         bgcolor=ft.Colors.SURFACE,
         border=ft.Border(right=ft.BorderSide(1, _BORDER)),
-        padding=ft.Padding.only(left=12, right=12, top=4, bottom=12),
+        padding=ft.Padding.only(left=12, right=12, top=6, bottom=12),
         content=ft.Column(
             expand=True,
             spacing=0,
-            scroll=ft.ScrollMode.AUTO,
-            controls=[*groups, footer],
+            controls=[menu_scroll, footer],
         ),
     )
 
@@ -362,10 +410,26 @@ def sidebar() -> ft.Control:
 
 
 @ft.component
-def outline_rail(headings: Sequence[tuple[str, str]]) -> ft.Control:
-    """``headings`` 是 ``(锚点, 文案键)``；翻译在这里做，语言切换自动跟随。"""
+def outline_rail(page_key: str) -> ft.Control:
+    """本页目录。
+
+    普通页从内容块的标题生成（文案是语言包键，这里翻译）；组件页从
+    :func:`ui.core.doc.outline` 取（文案本来就是中文的人读文本）。
+    两条来源在这里合流，外面只传一个页面 key。
+    """
     tr = use_t()
     page = ft.context.page
+    meta = PAGES[page_key]
+
+    if meta.is_component:
+        spec = catalog.load(page_key)
+        headings = list(doc_kit.outline(spec))
+        edit_url = f"{GITHUB_URL}/blob/main/{spec.source}"
+    else:
+        headings = [
+            (head.anchor, tr(head.key)) for head in outline(DOCS.get(page_key, ()))
+        ]
+        edit_url = f"{GITHUB_URL}/blob/main/{DOCS_ROOT.name}"
 
     def jump(anchor: str):
         async def handler(_: ft.Event[ft.Container]) -> None:
@@ -398,20 +462,18 @@ def outline_rail(headings: Sequence[tuple[str, str]]) -> ft.Control:
                         on_click=jump(anchor),
                         ink=True,
                         content=ft.Text(
-                            tr(key),
+                            label,
                             size=12,
                             color=_MUTED,
                             max_lines=2,
                             overflow=ft.TextOverflow.ELLIPSIS,
                         ),
                     )
-                    for anchor, key in headings
+                    for anchor, label in headings
                 ],
                 ft.Container(
                     margin=ft.Margin.only(top=14, left=9),
-                    on_click=lambda _e: page.launch_url(
-                        f"{GITHUB_URL}/blob/main/{DOCS_ROOT.name}"
-                    ),
+                    on_click=lambda _e: page.launch_url(edit_url),
                     content=ft.Text(tr("site.edit_page"), size=11.5, color=_MUTED),
                 ),
             ],
@@ -425,27 +487,61 @@ def outline_rail(headings: Sequence[tuple[str, str]]) -> ft.Control:
 
 
 @ft.component
-def page_header(meta: PageMeta, *, badges: Sequence[ft.Control] = ()) -> ft.Control:
+def page_header(
+    meta: PageMeta,
+    *,
+    badges: Sequence[ft.Control] = (),
+    trail: Sequence[tuple[str, str]] = (),
+    desc: str | None = None,
+) -> ft.Control:
+    """页头：面包屑 + 标题 + 摘要 + 徽标。
+
+    Args:
+        meta: 页面元数据。
+        badges: 标题下方的徽标（数量、版本、标签）。
+        trail: 面包屑中间层 ``[(文案, 路由), ...]`` —— 组件页用它插一级分类。
+        desc: 覆盖摘要。组件页的摘要来自实现文件里的 ``SPEC.summary``，
+            不是语言包（组件说明先只写中文）。
+    """
     tr = use_t()
     page = ft.context.page
     crumb_key, crumb_route = _CRUMB[meta.group]
+    title = meta.title(tr)
+    subtitle = desc if desc is not None else meta.desc(tr)
+
+    crumbs: list[ft.Control] = [
+        ft.Container(
+            on_click=lambda _e: page.navigate(crumb_route),
+            content=ft.Text(tr(crumb_key), size=11.5, color=_MUTED),
+        )
+    ]
+    for label, route in trail:
+        crumbs.append(ft.Icon(ft.Icons.CHEVRON_RIGHT, size=12, color=_MUTED))
+        crumbs.append(
+            ft.Container(
+                on_click=(lambda _e, _r=route: page.navigate(_r)) if route else None,
+                content=ft.Text(
+                    label,
+                    size=11.5,
+                    color=_MUTED if route else ft.Colors.ON_SURFACE,
+                ),
+            )
+        )
+    crumbs.append(ft.Icon(ft.Icons.CHEVRON_RIGHT, size=12, color=_MUTED))
+    crumbs.append(ft.Text(title, size=11.5, color=ft.Colors.ON_SURFACE))
+
     return ft.Column(
         spacing=12,
         controls=[
             ft.Row(
                 spacing=5,
+                wrap=True,
+                run_spacing=4,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[
-                    ft.Container(
-                        on_click=lambda _e: page.navigate(crumb_route),
-                        content=ft.Text(tr(crumb_key), size=11.5, color=_MUTED),
-                    ),
-                    ft.Icon(ft.Icons.CHEVRON_RIGHT, size=12, color=_MUTED),
-                    ft.Text(tr(meta.title_key), size=11.5, color=ft.Colors.ON_SURFACE),
-                ],
+                controls=crumbs,
             ),
             ft.Text(
-                tr(meta.title_key),
+                title,
                 size=32,
                 weight=ft.FontWeight.W_800,
                 style=ft.TextStyle(letter_spacing=-0.6, height=1.2),
@@ -453,7 +549,7 @@ def page_header(meta: PageMeta, *, badges: Sequence[ft.Control] = ()) -> ft.Cont
             ft.Container(
                 padding=ft.Padding.only(right=24),
                 content=ft.Text(
-                    tr(meta.desc_key),
+                    subtitle,
                     size=15,
                     color=_MUTED,
                     style=ft.TextStyle(height=1.75),
@@ -496,7 +592,7 @@ def _step_card(meta: PageMeta, *, forward: bool) -> ft.Control:
                     ],
                 ),
                 ft.Text(
-                    tr(meta.title_key),
+                    meta.title(tr),
                     size=13.5,
                     weight=ft.FontWeight.W_600,
                     color=ft.Colors.PRIMARY,
@@ -589,7 +685,13 @@ def site_layout() -> ft.Control:
 
     meta = page_for_route(location)
     is_home = meta is None or meta.key == "home"
-    headings = () if is_home or meta is None else outline_of(meta.key)
+    # 组件页永远有目录（定义 / 构成 / 何时使用 / 示例 / API）；普通页只有标题
+    # 才生成目录，没有就不占右边那一栏 —— 空栏比没有更让人分心。
+    has_outline = (
+        meta is not None
+        and not is_home
+        and (meta.is_component or bool(outline_of(meta.key)))
+    )
 
     body = ft.Row(
         expand=True,
@@ -598,7 +700,7 @@ def site_layout() -> ft.Control:
         controls=[
             *([] if is_home else [sidebar()]),
             ft.Container(expand=True, bgcolor=kit.PAGE_BG, content=outlet),
-            *([] if is_home or not headings else [outline_rail(headings)]),
+            *([outline_rail(meta.key)] if has_outline and meta is not None else []),
         ],
     )
 
@@ -631,7 +733,9 @@ def outline_of(key: str) -> tuple[tuple[str, str], ...]:
     """按页面 key 取 ``(锚点, 文案键)``。内容层是纯数据，所以能静态算出来。"""
     from docs.content import DOCS
 
-    return tuple((heading.anchor, heading.key) for heading in outline(DOCS.get(key, ())))
+    return tuple(
+        (heading.anchor, heading.key) for heading in outline(DOCS.get(key, ()))
+    )
 
 
 __all__ = [

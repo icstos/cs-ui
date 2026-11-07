@@ -37,13 +37,15 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import dataclass, field, replace  # noqa: F401  (replace 供子类/外部用)
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 import flet as ft
 
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.float_layer import use_float_layer
 from ui.core.i18n import t, use_t
+from ui.core.tokens import FONT_SIZE
 from ui.input.input import Label
 from ui.input.panel_field import (
     DISABLED_FG,
@@ -114,23 +116,37 @@ class CascaderNode:
 Path = tuple[Any, ...]
 
 
-def _normalize(raw: Any, *, label_key: str, value_key: str, children_key: str,
-               disabled_key: str, leaf_key: str) -> CascaderNode:
-    """把 dict / CascaderNode / 标量归一成 :class:`CascaderNode`。"""
+def _normalize(
+    raw: Any,
+    *,
+    label_key: str,
+    value_key: str,
+    children_key: str,
+    disabled_key: str,
+    leaf_key: str,
+) -> CascaderNode:
+    """把 dict / CascaderNode / 标量归一成 :class:`CascaderNode`。
+
+    ``CascaderNode`` 的子级也要递归 —— 允许 ``CascaderNode(children=[{...}])``
+    这种"半结构半数据"的写法。只做一层拷贝的话，循环里会把 dict 当节点用，
+    读 ``.children`` 就抛 ``AttributeError``。
+    """
+    kw = {
+        "label_key": label_key,
+        "value_key": value_key,
+        "children_key": children_key,
+        "disabled_key": disabled_key,
+        "leaf_key": leaf_key,
+    }
     if isinstance(raw, CascaderNode):
         return replace(
             raw,
             label=str(raw.label),
             value=raw.value if raw.value is not None else str(raw.label),
-            children=list(raw.children),
+            children=[_normalize(child, **kw) for child in raw.children],
         )
     if isinstance(raw, dict):
-        children = [
-            _normalize(c, label_key=label_key, value_key=value_key,
-                       children_key=children_key, disabled_key=disabled_key,
-                       leaf_key=leaf_key)
-            for c in (raw.get(children_key) or [])
-        ]
+        children = [_normalize(child, **kw) for child in (raw.get(children_key) or [])]
         label = raw.get(label_key)
         value = raw.get(value_key)
         return CascaderNode(
@@ -302,8 +318,10 @@ class Cascader(PanelField, Label):
         """把对外 ``value`` 装进内部选中态（构造 / refresh 时）。"""
         self._query = ""
         if self.multiple:
-            items = value if isinstance(value, (list, tuple)) else (
-                [] if value is None else [value]
+            items = (
+                value
+                if isinstance(value, (list, tuple))
+                else ([] if value is None else [value])
             )
             paths = {p for p in (self._to_path(i) for i in items) if p is not None}
             self._active = None
@@ -312,6 +330,9 @@ class Cascader(PanelField, Label):
                 # 与 set_checked 同一套语义：级联到子树
                 for path in list(paths):
                     self._subtree(path, True)
+            # 三态缓存要立刻算一次：否则面板第一次打开时，已勾选的节点画出来
+            # 全是空框（_states 只有 _toggle_check 之后才有值）。
+            self._refresh_states()
         else:
             path = self._to_path(value) if value is not None else None
             self._checked = set()
@@ -325,9 +346,7 @@ class Cascader(PanelField, Label):
         if self.multiple:
             snapshot = [self._emit_form(p) for p in self._checked_paths()]
         else:
-            snapshot = (
-                None if self._active is None else self._emit_form(self._active)
-            )
+            snapshot = None if self._active is None else self._emit_form(self._active)
         self.value = snapshot
         if snapshot != self._emitted:
             self._emitted = snapshot
@@ -383,6 +402,15 @@ class Cascader(PanelField, Label):
         """清空多选勾选（Element 同名方法的别名）。"""
         self.clear()
 
+    def _show_clear(self) -> bool:
+        """框内 × 只在真有选中时出现。
+
+        ``PanelField`` 的默认判断是 ``value is not None``，而多选清空后的值是
+        ``[]`` —— 它不是 ``None``，于是 × 会一直挂在框里，点了又没有可清的东西。
+        """
+        has_value = bool(self._checked) if self.multiple else self._active is not None
+        return self.clearable and not self.disabled and has_value
+
     def get_checked_nodes(self, leaf_only: bool = False) -> list[CascaderNode]:
         """当前选中的节点列表（多选取勾选集，单选取 0/1 个）。
 
@@ -394,9 +422,7 @@ class Cascader(PanelField, Label):
         else:
             paths = [self._active] if self._active is not None else []
         return [
-            self._by_path[p]
-            for p in paths
-            if not leaf_only or self._by_path[p].is_leaf
+            self._by_path[p] for p in paths if not leaf_only or self._by_path[p].is_leaf
         ]
 
     def select(self, path: Sequence[Any], close: bool = True) -> None:
@@ -469,7 +495,11 @@ class Cascader(PanelField, Label):
         node = self._by_path.get(path)
         if node is None:
             return []
-        return [c for c in ((path + (ch.value,)) for ch in node.children) if c in self._by_path]
+        return [
+            c
+            for c in ((path + (ch.value,)) for ch in node.children)
+            if c in self._by_path
+        ]
 
     def _subtree(self, path: Path, value: bool) -> None:
         """把勾选铺到整棵子树（禁用节点连同子树跳过）—— 迭代。"""
@@ -581,7 +611,9 @@ class Cascader(PanelField, Label):
 
     def _on_query_change(self, e: ft.ControlEvent) -> None:
         """过滤词键入：只更新面板，不动选中态。"""
-        self._query = e.data or ""
+        # 用 control.value 而不是 e.data：前者是控件的真值，后者在部分事件里
+        # 是字符串化的载荷，拿它当文本会出现"输入一个字符、过滤词变成 true"。
+        self._query = str(e.control.value or "")
         self.notify()  # type: ignore[attr-defined]
 
     # ------------------------------------------------------------------
@@ -629,7 +661,9 @@ class Cascader(PanelField, Label):
             body = field
 
         panel_w, panel_h = self._panel_size()
-        left, top, bottom = place_panel(page, self._anchor, self._field_h, panel_w, panel_h)
+        left, top, bottom = place_panel(
+            page, self._anchor, self._field_h, panel_w, panel_h
+        )
         use_float_layer(
             page=page,
             visible=floating and self.is_open and not self.disabled,
@@ -646,7 +680,9 @@ class Cascader(PanelField, Label):
     def _trailing_icon(self) -> ft.Control:
         """右侧图标：展开向下箭头 / 收起向上箭头（与 el 一致的双态）。"""
         return ft.Icon(
-            ft.Icons.KEYBOARD_ARROW_DOWN if not self.is_open else ft.Icons.KEYBOARD_ARROW_UP,
+            ft.Icons.KEYBOARD_ARROW_DOWN
+            if not self.is_open
+            else ft.Icons.KEYBOARD_ARROW_UP,
             size=18,
             color=ft.Colors.OUTLINE if self.disabled else ft.Colors.ON_SURFACE_VARIANT,
         )
@@ -758,12 +794,16 @@ class Cascader(PanelField, Label):
                         overflow=ft.TextOverflow.ELLIPSIS,
                     ),
                     ft.GestureDetector(
-                        on_tap=None if not removable else (lambda _e, p=path: self._remove(p)),
+                        on_tap=None
+                        if not removable
+                        else (lambda _e, p=path: self._remove(p)),
                         content=ft.Container(
                             padding=ft.Padding.all(2),
                             border_radius=ft.BorderRadius.all(3),
                             content=ft.Icon(
-                                ft.Icons.CLOSE, size=11, color=ft.Colors.ON_SURFACE_VARIANT
+                                ft.Icons.CLOSE,
+                                size=11,
+                                color=ft.Colors.ON_SURFACE_VARIANT,
                             ),
                         ),
                     ),
@@ -888,9 +928,7 @@ class Cascader(PanelField, Label):
                 )
             )
         elif not self.multiple and path == self._active:
-            controls.append(
-                ft.Icon(ft.Icons.CHECK, size=16, color=ft.Colors.PRIMARY)
-            )
+            controls.append(ft.Icon(ft.Icons.CHECK, size=16, color=ft.Colors.PRIMARY))
 
         hover_key = f"row:{path}"
         row = ft.Container(
@@ -946,13 +984,19 @@ class Cascader(PanelField, Label):
             return box
         return ft.GestureDetector(
             on_tap=lambda _e, p=path: self._toggle_check(p),
-            content=ft.Container(width=24, height=ITEM_H, alignment=ft.Alignment.CENTER_LEFT, content=box),
+            content=ft.Container(
+                width=24, height=ITEM_H, alignment=ft.Alignment.CENTER_LEFT, content=box
+            ),
         )
 
     def _radio_hit(self, path: Path, disabled: bool) -> ft.Control:
         """严格单选的单选点（任意级可选）。"""
         selected = self._active == path
-        color = DISABLED_FG if disabled else (ft.Colors.PRIMARY if selected else ft.Colors.OUTLINE)
+        color = (
+            DISABLED_FG
+            if disabled
+            else (ft.Colors.PRIMARY if selected else ft.Colors.OUTLINE)
+        )
         dot = ft.Container(
             width=16,
             height=16,
@@ -960,7 +1004,12 @@ class Cascader(PanelField, Label):
             border=ft.Border.all(1.5, color),
             alignment=ft.Alignment.CENTER,
             content=(
-                ft.Container(width=8, height=8, bgcolor=ft.Colors.PRIMARY, border_radius=ft.BorderRadius.all(4))
+                ft.Container(
+                    width=8,
+                    height=8,
+                    bgcolor=ft.Colors.PRIMARY,
+                    border_radius=ft.BorderRadius.all(4),
+                )
                 if selected
                 else None
             ),
@@ -969,7 +1018,9 @@ class Cascader(PanelField, Label):
             return dot
         return ft.GestureDetector(
             on_tap=lambda _e, p=path: self._pick_strict(p),
-            content=ft.Container(width=24, height=ITEM_H, alignment=ft.Alignment.CENTER_LEFT, content=dot),
+            content=ft.Container(
+                width=24, height=ITEM_H, alignment=ft.Alignment.CENTER_LEFT, content=dot
+            ),
         )
 
     def _pick_strict(self, path: Path) -> None:
@@ -1056,53 +1107,227 @@ class Cascader(PanelField, Label):
         self._expand(path)
 
 
-@ft.component
-def App():
-    """Cascader 组件运行示例。"""
-    options = [
-        {
-            "label": "指南",
-            "children": [
-                {"label": "设计原则", "children": [
-                    {"label": "一致"}, {"label": "反馈"}, {"label": "效率"},
-                ]},
-                {"label": "导航", "children": [{"label": "侧向"}, {"label": "顶部"}]},
-            ],
-        },
-        {
-            "label": "组件",
-            "children": [
-                {"label": "表单", "children": [
-                    {"label": "输入框"}, {"label": "选择器", "disabled": True},
-                ]},
-                {"label": "数据", "children": [{"label": "表格"}, {"label": "标签"}]},
-            ],
-        },
-    ]
-    single = Cascader(label="所属", options=options, value=["组件", "数据", "表格"])
-    strict = Cascader(label="任意级", options=options, check_strictly=True,
-                      value=["指南"], show_all_levels=False)
-    multi = Cascader(label="多选", options=options, multiple=True,
-                     value=[["指南", "设计原则", "一致"]], collapse_tags=True)
-    searchable = Cascader(label="搜索", options=options, filterable=True)
-
-    return ft.Column(
-        controls=[
-            ft.Text("Cascader 级联选择器", size=20, weight=ft.FontWeight.BOLD),
-            single.ui(),
-            strict.ui(),
-            multi.ui(),
-            searchable.ui(),
-            ft.Button(
-                content="打印当前值",
-                on_click=lambda _: print(
-                    f"{single.value} / {strict.value} / {multi.value} / {searchable.value}"
-                ),
-            ),
+# ---------------------------------------------------------------------------
+# 示例
+# ---------------------------------------------------------------------------
+_REGIONS = [
+    {
+        "label": "浙江省",
+        "children": [
+            {
+                "label": "杭州市",
+                "children": [
+                    {"label": "西湖区"},
+                    {"label": "滨江区"},
+                    {"label": "余杭区"},
+                ],
+            },
+            {"label": "宁波市", "children": [{"label": "海曙区"}, {"label": "鄞州区"}]},
         ],
-        spacing=14,
+    },
+    {
+        "label": "广东省",
+        "children": [
+            {"label": "广州市", "children": [{"label": "天河区"}, {"label": "越秀区"}]},
+            {"label": "深圳市", "children": [{"label": "南山区"}, {"label": "福田区"}]},
+        ],
+    },
+    {
+        "label": "江苏省",
+        "children": [
+            {"label": "南京市", "children": [{"label": "鼓楼区"}, {"label": "玄武区"}]},
+            {
+                "label": "苏州市",
+                "children": [{"label": "姑苏区"}, {"label": "工业园区"}],
+            },
+        ],
+    },
+]
+
+
+def _caption(text: str) -> ft.Control:
+    return ft.Text(text, size=FONT_SIZE["small"], color=ft.Colors.ON_SURFACE_VARIANT)
+
+
+def _as_text(value: Any) -> str:
+    """把对外 value 折成一行可读文本（单选是路径，多选是路径的列表）。"""
+    if value is None or value == [] or value == "":
+        return "未选择"
+    if isinstance(value, (list, tuple)):
+        if value and isinstance(value[0], (list, tuple)):
+            return " · ".join(" / ".join(str(part) for part in item) for item in value)
+        return " / ".join(str(part) for part in value)
+    return str(value)
+
+
+@ft.component
+def _echo(select: Cascader) -> ft.Control:
+    """回显对外值：这一行才是提交给后端的形状，框里的路径只是展示。"""
+    return _caption(f"提交值：{_as_text(select.value)}")
+
+
+@ft.component
+def _basic() -> ft.Control:
+    """省 → 市 → 区三级；点父级只展开，点到最后一级才落定。"""
+    select = ft.use_memo(
+        lambda: Cascader(
+            label="收货地区",
+            options=_REGIONS,
+            value=["浙江省", "杭州市", "西湖区"],
+            is_required=True,
+        ),
+        [],
+    )
+    return ft.Column(spacing=10, controls=[select.ui(), _echo(select)])
+
+
+@ft.component
+def _strict() -> ft.Control:
+    """同一份数据，check_strictly 打开后任意一级都能选，框里只显示末级。"""
+    select = ft.use_memo(
+        lambda: Cascader(
+            label="归属大区",
+            options=_REGIONS,
+            check_strictly=True,
+            show_all_levels=False,
+            value=["广东省"],
+        ),
+        [],
+    )
+    leaf_only = ft.use_memo(
+        lambda: Cascader(label="对比：默认只选叶子", options=_REGIONS), []
+    )
+    return ft.Column(
+        spacing=10,
+        controls=[
+            select.ui(),
+            leaf_only.ui(),
+            _echo(select),
+        ],
     )
 
 
+@ft.component
+def _filter() -> ft.Control:
+    """展开后直接在框内键入，面板换成扁平命中列表并高亮命中片段。"""
+    select = ft.use_memo(
+        lambda: Cascader(label="搜索地区", options=_REGIONS, filterable=True),
+        [],
+    )
+    return ft.Column(spacing=10, controls=[select.ui(), _echo(select)])
+
+
+_BASIC_CODE = """options = [
+    {"label": "浙江省", "children": [
+        {"label": "杭州市", "children": [{"label": "西湖区"}, {"label": "滨江区"}]},
+        {"label": "宁波市", "children": [{"label": "海曙区"}]},
+    ]},
+]
+
+select = Cascader(
+    label="收货地区",
+    options=options,
+    value=["浙江省", "杭州市", "西湖区"],   # 完整路径 → 框内显示「浙江省 / 杭州市 / 西湖区」
+)
+Column([select.ui(), Text(f"提交值：{select.value}")])"""
+
+_STRICT_CODE = """select = Cascader(
+    options=options,
+    check_strictly=True,     # 父级也能直接选，不再级联到子树
+    show_all_levels=False,   # 框内只显示最后一级
+    value=["广东省"],
+)"""
+
+_FILTER_CODE = """select = Cascader(
+    options=options,
+    filterable=True,         # 展开后框内可键入，面板切成扁平命中列表
+)"""
+
+
+SPEC = Spec(
+    name="Cascader",
+    summary="按「省 → 市 → 区」逐级点选，框内回显完整路径。",
+    definition=(
+        "级联选择器把一棵层级树拆成并排的几列：点开一级，右边长出下一级，点到叶子"
+        "才落定。它解决的是「这条数据有层级、但用户仍要看清全路径」—— 一条平铺的下拉"
+        "装不下父子关系，三个联动的下拉又要求用户在控件之间来回挪焦点。默认只有叶子"
+        "可选，因为父级本身通常不是一个可提交的答案。"
+    ),
+    anatomy=[
+        ("框体", "40px 高的输入框，单行显示完整路径（超宽省略），展开时描边转主色。"),
+        ("列", "每级一列 180px，列间一根发丝线；当前展开的那一级文字转主色并加粗。"),
+        ("父级行", "右侧一个灰色右箭头，点它只展开下一列，不会落定。"),
+        ("叶子行", "没有下级；单选时点下去即选中并收起，选中行尾部出现对勾。"),
+        ("清除", "有选中时框内出现 ×，一次清空整条路径（多选清空全部勾选）。"),
+        ("搜索", "filterable 时展开后可直接键入，面板换成扁平命中列表并显示完整路径。"),
+    ],
+    when=[
+        "行政区划、组织架构、商品类目这类天然的层级字段",
+        "用户需要确认完整路径，只给最后一级不足以说明问题",
+        "层级固定在两三层，并排的列放得下",
+    ],
+    avoid=[
+        "选项是平铺的一层：用 SelectBox，套上级联只多了两次点击",
+        "层级超过四层或单层节点上百：用 Tree，并排的列会横向溢出屏幕",
+        "要在一棵树里任意勾选多个分支：用 Tree 的多选，级联表达的仍是「一条路径」",
+    ],
+    examples=[
+        Example(
+            "省市区三级",
+            _basic,
+            hint="预置了一条完整路径；点开面板时列已经展开到「西湖区」所在的那一级。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "任意级可选",
+            _strict,
+            hint="上面那个开了 check_strictly，父级也能直接选；下面那个是默认行为，点父级只会展开。",
+            code=_STRICT_CODE,
+        ),
+        Example(
+            "可搜索",
+            _filter,
+            hint="展开后键入「南」，面板切成扁平列表，命中片段用主色高亮。",
+            code=_FILTER_CODE,
+        ),
+    ],
+    api=[
+        Api("options", "list[Any]", "[]", "选项树：dict / CascaderNode / 标量均可混用"),
+        Api("value", "Any", "None", "当前值：单选为路径列表，多选为路径列表的列表"),
+        Api("multiple", "bool", "False", "多选：复选框父子级联，框内以 Chip 展示"),
+        Api("check_strictly", "bool", "False", "父子不关联，任意一级都可直接选"),
+        Api(
+            "emit_path", "bool", "True", "对外值给完整路径（False 只给该节点的 value）"
+        ),
+        Api("show_all_levels", "bool", "True", "框内显示完整路径（False 只显示末级）"),
+        Api("separator", "str", '" / "', "路径分隔符，框内文本与 Chip 都用它"),
+        Api("filterable", "bool", "False", "展开后可在框内键入，面板切成扁平命中列表"),
+        Api("clearable", "bool", "True", "有选中时显示框内 ×，一次清空"),
+        Api(
+            "on_change",
+            "Callable[[Any], None] | None",
+            "None",
+            "选中变化回调，收到的是对外形式的值",
+        ),
+    ],
+    notes=[
+        tip(
+            "CascaderNode 的 children 现在会递归归一：之前只在 dict 分支里递归，"
+            "往 CascaderNode 里塞 dict 子节点，展开到那一级就会抛 AttributeError。"
+        ),
+        info(
+            "多选装入初始值后立刻重算一次三态，否则面板第一次打开时已勾选的节点全是"
+            "空框；框内的 × 也改成「真有选中才出现」—— 多选清空后的 [] 不是 None，"
+            "原来的判据会让 × 一直挂着。"
+        ),
+        warn(
+            "不做键盘导航：flet 1.0 的 KeyboardListener 在重绘后会把焦点交给兄弟节点，"
+            "没有稳定的控件级按键钩子。"
+        ),
+    ],
+    tags=("级联", "省市区", "树形选择", "cascader", "地区"),
+)
+
+
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

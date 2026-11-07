@@ -35,7 +35,8 @@
 
 4. **自动播放挂在 ``use_effect`` 上，用 token 作废旧计时**。``page.run_task``
    拿到的是 ``Future``，没有 cancel；所以每次重排就把 ``_token`` 加一，旧协程
-   醒来发现 token 变了就静默退出。悬停暂停只是"这一轮不排计时"。
+   醒来发现 token 变了就静默退出。**关掉自动播放 / 悬停暂停也照样作废**：
+   否则「暂停」之后那一次已排好的计时还会再翻一张。
 
 5. **圆点按 16×16 的命中区做，不是 4px 的小横条本身**。4px 高的目标点不中，
    这是最容易被忽略的可达性问题：可视尺寸 16×4，命中区上下各垫 6px。
@@ -55,6 +56,7 @@ from typing import Any
 import flet as ft
 
 from ui.core.config import logger
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.i18n import t, use_t
 from ui.core.theme import use_theme
 from ui.core.tokens import DURATION, FONT_SIZE, RADIUS, SPACE, overlay
@@ -301,12 +303,15 @@ class Carousel:
 
         依赖变化（切页 / 开关 / 间隔 / 悬停 / 页数）就会重跑：旧的协程靠
         ``_token`` 作废，新的从这一刻重新计时 —— "刚翻完不该马上又翻"。
+
+        ``_token`` 必须在最前面加一，哪怕这一轮不排计时：关掉自动播放或悬停
+        暂停时也要把**已经在睡**的那次作废，不然暂停之后还会莫名翻一张。
         """
-        if not self.autoplay or self._paused or len(self.slides) < 2:
-            return
         token = object.__getattribute__(self, "_token") + 1
         # 直接 setattr 会让 @ft.observable 触发一次重绘，而 _token 不影响画面
         object.__setattr__(self, "_token", token)
+        if not self.autoplay or self._paused or len(self.slides) < 2:
+            return
         delay = max(int(self.autoplay_speed), 200) / 1000
 
         async def tick() -> None:
@@ -475,8 +480,13 @@ class Carousel:
         "脸面"在浮现 / 未浮现之间换了个壳。
         """
         key = "prev" if direction < 0 else "next"
+        # 不循环时走到头，这一侧的箭头点了也不会动。以前它照常亮着、照常悬停、
+        # 点了什么都不发生 —— 看起来就是坏了。现在淡出并且不接点击。
+        at_edge = not self.loop and (
+            self._index <= 0 if direction < 0 else self._index >= len(self.slides) - 1
+        )
         shown = self.arrow == "always" or self._hovered or self._hover_key == key
-        lit = self._hover_key == key
+        lit = self._hover_key == key and not at_edge
         anchor: dict[str, float] = {"left": EDGE} if direction < 0 else {"right": EDGE}
         face = ft.Container(
             width=ARROW,
@@ -498,12 +508,14 @@ class Carousel:
             # 钉在垂直中线上而不是 top=0/bottom=0 撑满整列：撑满就是一整条
             # 看不见的挡板，会把内容区右边缘的点击全吃掉
             top=(self.height - ARROW) / 2,
-            opacity=1.0 if shown else 0.0,
+            opacity=0.0 if not shown else (0.38 if at_edge else 1.0),
             animate_opacity=ft.Animation(DURATION["fast"], ft.AnimationCurve.EASE_OUT),
             tooltip=t("ui.carousel.prev") if direction < 0 else t("ui.carousel.next"),
-            on_hover=None if not shown else (lambda e, k=key: self._hover_item(k, e)),
+            on_hover=None
+            if (not shown or at_edge)
+            else (lambda e, k=key: self._hover_item(k, e)),
             on_click=None
-            if not shown
+            if (not shown or at_edge)
             else (lambda _e, d=direction: self.prev() if d < 0 else self.next()),
             content=face if shown else ft.TransparentPointer(content=face),
             **anchor,
@@ -601,17 +613,28 @@ class Carousel:
 
 
 # ---------------------------------------------------------------------------
-# 演示
+# 示例
 # ---------------------------------------------------------------------------
-def _sample(i: int, title: str, subtitle: str) -> ft.Control:
-    """一张可以离线渲染的"图"：渐变底 + 文字。"""
+_MUTED = ft.Colors.ON_SURFACE_VARIANT
+
+#: 每页的标题与副标题。示例内容全部本地绘制，不引用网络图片。
+_CARDS: tuple[tuple[str, str], ...] = (
+    ("设计令牌", "一套令牌，明暗与主色自动跟随"),
+    ("组件库", "六十余个组件，交互与可访问性对齐"),
+    ("文档站", "每个组件都能就地跑起来"),
+    ("桌面端", "同一份代码，Windows / macOS 都能跑"),
+)
+
+
+def _sample(index: int, title: str, subtitle: str) -> ft.Control:
+    """一页"图"：渐变底 + 文字。离线可渲染，不依赖任何网络资源。"""
     palette = [
         ("#1F6FEB", "#4F46E5"),
         ("#0D9488", "#16A34A"),
         ("#EA580C", "#DC2626"),
         ("#7C3AED", "#DB2777"),
     ]
-    start, end = palette[i % len(palette)]
+    start, end = palette[index % len(palette)]
     return ft.Container(
         expand=True,
         padding=SPACE["6"],
@@ -639,40 +662,239 @@ def _sample(i: int, title: str, subtitle: str) -> ft.Control:
     )
 
 
+def _deck(count: int) -> list[ft.Control]:
+    """取前 ``count`` 页。"""
+    return [_sample(i, title, sub) for i, (title, sub) in enumerate(_CARDS[:count])]
+
+
+def _caption(text: str) -> ft.Text:
+    return ft.Text(text, size=FONT_SIZE["caption"], color=_MUTED)
+
+
 @ft.component
-def App():
-    """Carousel 运行示例。"""
-    slides = [
-        _sample(0, "设计系统", "一套令牌，明暗与主色自动跟随"),
-        _sample(1, "组件库", "六十余个组件，交互与可访问性对齐"),
-        _sample(2, "文档站", "每个组件都能就地跑起来"),
-        _sample(3, "桌面端", "Flet 打包，Windows / macOS 同一份代码"),
-    ]
-    return ft.Column(
-        spacing=24,
-        controls=[
-            ft.Text("Carousel", size=18, weight=ft.FontWeight.W_600),
-            ft.Container(width=620, content=Carousel(slides=slides, height=240).ui()),
-            ft.Text(
-                "dots='outside' · arrow='always'",
-                size=FONT_SIZE["small"],
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
-            ft.Container(
-                width=620,
-                content=Carousel(
-                    slides=slides,
-                    height=200,
-                    dots="outside",
-                    arrow="always",
-                    radius_dot=True,
-                    autoplay=True,
-                    loop=True,
-                ).ui(),
-            ),
-        ],
+def _basic() -> ft.Control:
+    """四页、循环、圆点压在内容上；切页结果回写到下面那行说明。"""
+    index, set_index = ft.use_state(0)
+    carousel = ft.use_memo(
+        lambda: Carousel(
+            slides=_deck(4),
+            height=220,
+            loop=True,
+            on_change=lambda _old, new: set_index(new),
+        ),
+        [],
+    )
+    return ft.Container(
+        width=680,
+        content=ft.Column(
+            spacing=SPACE["2"],
+            controls=[
+                carousel.ui(),
+                _caption(f"第 {index + 1} / {carousel.count} 张 · 箭头与圆点都能翻"),
+            ],
+        ),
     )
 
 
+@ft.component
+def _outside() -> ft.Control:
+    """圆点落到内容外、箭头常显：内容不是图片时主题色才读得清。"""
+    carousel = ft.use_memo(
+        lambda: Carousel(
+            slides=_deck(3),
+            height=200,
+            arrow="always",
+            dots="outside",
+            radius_dot=True,
+            loop=True,
+        ),
+        [],
+    )
+    return ft.Container(width=680, content=carousel.ui())
+
+
+@ft.component
+def _autoplay() -> ft.Control:
+    """自动播放默认是停的，点「播放」才开始 —— 演示页不该自己动起来。"""
+    carousel = ft.use_memo(
+        lambda: Carousel(
+            slides=_deck(3),
+            height=200,
+            autoplay_speed=2500,
+            dots="outside",
+            loop=True,
+        ),
+        [],
+    )
+    playing, set_playing = ft.use_state(False)
+
+    def toggle(_event: ft.Event[ft.Button]) -> None:
+        # 赋值即重绘：ui() 里的 use_effect 会按新的 autoplay 重排（或作废）计时
+        carousel.autoplay = not carousel.autoplay
+        set_playing(carousel.autoplay)
+
+    return ft.Container(
+        width=680,
+        content=ft.Column(
+            spacing=SPACE["2"],
+            controls=[
+                carousel.ui(),
+                ft.Row(
+                    spacing=SPACE["3"],
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        ft.Button("暂停" if playing else "播放", on_click=toggle),
+                        _caption("每 2.5 秒翻一张；指针停在上面会暂停计时"),
+                    ],
+                ),
+            ],
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 示例源码（“查看代码”面板）
+# ---------------------------------------------------------------------------
+_BASIC_CODE = """carousel = Carousel(
+    slides=[card_a, card_b, card_c],   # 每页自己撑满：图片 fit=COVER，卡片 expand=True
+    height=220,                        # 高度必填，每页按它横向排开
+    loop=True,
+    on_change=lambda old, new: print(old, "->", new),
+)
+
+Column([Container(width=680, content=carousel.ui())])"""
+
+_OUTSIDE_CODE = """Carousel(
+    slides=cards,
+    height=200,
+    arrow="always",      # hover 时箭头只在指针进入后才浮现
+    dots="outside",      # 内容不是图片时用它：圆点落在页面底色上，走主题色
+    radius_dot=True,
+    loop=True,
+)"""
+
+_AUTOPLAY_CODE = """carousel = Carousel(
+    slides=cards,
+    height=200,
+    autoplay_speed=2500,   # 毫秒；小于 200 会被夹到 200
+    pause_on_hover=True,   # 指针停上去就暂停
+    loop=True,
+)
+
+carousel.autoplay = True    # 运行期开关：赋值即重绘，计时重新排"""
+
+
+# ---------------------------------------------------------------------------
+# 组件说明
+# ---------------------------------------------------------------------------
+SPEC = Spec(
+    name="Carousel",
+    summary="同一块地方轮流摆几页内容：左右箭头、指示点，可选自动播放。",
+    definition=(
+        "轮播解决的是「位置只有一个，内容有好几份」。它按固定高度把每页横向排开，"
+        "切页时整条带子平移一格 —— 用位移而不是淡入淡出，因为「右边还有一张」这个"
+        "暗示只有看得见的边沿给得出来。它不加载也不裁剪内容：每页放图片、卡片还是"
+        "一段视频都由调用方决定，轮播只负责决定谁在台前。"
+    ),
+    anatomy=[
+        (
+            "舞台",
+            "圆角 8 的裁切窗口，高度由 height 定死；每页按这个高度横向排开，切页只改偏移量。",
+        ),
+        (
+            "箭头",
+            "32px 圆形、半透明黑底 + 白图标。arrow=hover 时指针进舞台才浮现，浮现前透明且不挡点击，点内容边缘不会被它吃掉。",
+        ),
+        (
+            "指示点",
+            "16×4 横条（radius_dot 换成 8px 圆），可视很小但命中区 22×16。inside 用白色压在内容上，outside 用主色 / outline 落在页面底色上。",
+        ),
+        (
+            "自动播放",
+            "计时挂在 use_effect 上：切页、悬停、改间隔都会作废旧计时从头算；指针停上去默认暂停，长文案最怕「刚想读就被翻走」。",
+        ),
+        (
+            "空态",
+            "slides 为空时给一行「暂无内容」，高度照旧 —— 高度塌成 0 的轮播在页面上等于消失了。",
+        ),
+    ],
+    when=[
+        "首页横幅、公告条：一个固定位置要轮换几份内容",
+        "产品截图、步骤引导：用户本来就该按顺序看完",
+        "空间被卡片挤死，但几张内容都得摆出来",
+    ],
+    avoid=[
+        "用户要在几份内容之间来回对照：用 Tabs —— 标签常驻可点，位置一眼可见，圆点只表示数量与顺序",
+        "表单、长文这类要读要填的内容：自动播放与误触都会打断，直接铺开",
+        "只有两三页且都放得下：并排 GridView 少一次点击，也不用等动画",
+    ],
+    examples=[
+        Example(
+            "基础用法",
+            _basic,
+            hint="四页循环，圆点压在内容下沿；切页后下面那行跟着变，on_change 拿到的是 (旧, 新)。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "外置圆点",
+            _outside,
+            hint="dots=outside + arrow=always：圆点落到内容外走主题色，箭头一直可见。",
+            code=_OUTSIDE_CODE,
+        ),
+        Example(
+            "自动播放",
+            _autoplay,
+            hint="默认停着，点「播放」才开始；指针停在轮播上会暂停，移开继续。",
+            code=_AUTOPLAY_CODE,
+        ),
+    ],
+    api=[
+        Api("slides", "Sequence[Control]", "[]", "每一页的内容，按显示顺序给"),
+        Api(
+            "height",
+            "float",
+            "220",
+            "轮播高度；<=0 直接抛 ValueError，每页按它横向排开",
+        ),
+        Api("width", "int | float | None", "None", "留空跟随父容器，挂载后自动量宽"),
+        Api("arrow", "str", "'hover'", "hover / always / never 三档"),
+        Api("dots", "str", "'inside'", "inside 压内容、outside 落内容外、none 不画"),
+        Api(
+            "dots_position",
+            "str",
+            "'bottom'",
+            "bottom / top / left / right，左右时自动竖排",
+        ),
+        Api("autoplay", "bool", "False", "自动播放；运行期赋值即生效"),
+        Api("loop", "bool", "False", "到最后一页是否绕回第一页"),
+        Api(
+            "on_change",
+            "Callable[[int, int], None] | None",
+            "None",
+            "切页回调，入参 (旧索引, 新索引)",
+        ),
+        Api(
+            "go(index)", "(int) -> None", "—", "跳到指定页；越界按 loop 绕回或夹到端点"
+        ),
+    ],
+    notes=[
+        tip(
+            "高度是硬约束：每页按它横向排开，没有高度就没有「一格」，所以 <=0 会直接抛"
+            " ValueError。宽度不用给 —— 挂载后由 on_size_change 量出真实宽度，父容器"
+            "变宽变窄它自己跟着变。"
+        ),
+        info(
+            "自动播放挂在 use_effect 上，切页 / 悬停 / 改 autoplay_speed 都会作废旧计时"
+            "从头算，刚翻完不会马上又翻；关掉自动播放也会立刻取消已经排好的那一次。"
+        ),
+        warn(
+            "loop=False 时，到头那一侧的箭头淡到 38% 并停止响应点击。点了没反应比看不见"
+            "更像故障，所以宁可让它显式地表示「到头了」。"
+        ),
+    ],
+    tags=("轮播", "carousel", "banner", "幻灯片", "自动播放"),
+)
+
+
 if __name__ == "__main__":
-    ft.run(lambda page: page.render(App))
+    run(SPEC)

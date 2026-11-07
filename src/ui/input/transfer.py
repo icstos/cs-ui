@@ -76,6 +76,7 @@ from dataclasses import dataclass, field
 
 import flet as ft
 
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.i18n import t, use_t
 from ui.core.styles import outline_input
 from ui.core.theme import use_theme
@@ -619,7 +620,20 @@ class Transfer(Label):
 
         图标垫一块圆形淡底：320px 高的空面板里，一枚 22px 的线框图标会飘得
         像渲染失败，给它一个"印章"就落地了。
+
+        搜索无结果是另一种空：这时候说「可选项都已移到右侧」是假话 —— 东西是
+        被筛掉了，不是被搬走了。这种情况只留一句「暂无数据」，不编下一步动作。
         """
+        if self._query[side].strip():
+            return ft.Container(
+                padding=ft.Padding.symmetric(horizontal=SPACE["4"]),
+                content=ft.Text(
+                    t("ui.common.empty"),
+                    size=FONT_SIZE["body"],
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    text_align=ft.TextAlign.CENTER,
+                ),
+            )
         if side == "left":
             icon = ft.Icons.INBOX
             main = t("ui.transfer.empty_source")
@@ -827,29 +841,219 @@ class Transfer(Label):
         )
 
 
+# ---------------------------------------------------------------------------
+# 示例
+# ---------------------------------------------------------------------------
+_COLUMNS = [
+    TransferItem("name", "姓名", "员工主数据"),
+    TransferItem("dept", "部门", "一级 / 二级部门"),
+    TransferItem("title", "职位"),
+    TransferItem("email", "邮箱", "企业邮箱"),
+    TransferItem("phone", "手机"),
+    TransferItem("salary", "薪资", "敏感字段", disabled=True),
+    TransferItem("job_no", "工号"),
+    TransferItem("joined", "入职日期", "按自然日显示"),
+]
+
+_FIELDS = [
+    TransferItem("name", "项目名称"),
+    TransferItem("code", "项目编号", "对外唯一"),
+    TransferItem("owner", "负责人"),
+    TransferItem("members", "成员", "可多人"),
+    TransferItem("start", "开始日期"),
+    TransferItem("end", "结束日期"),
+    TransferItem("budget", "预算", "财务口径"),
+    TransferItem("cost", "成本", "财务口径"),
+    TransferItem("status", "状态"),
+    TransferItem("tags", "标签", "最多 5 个"),
+    TransferItem("desc", "描述"),
+    TransferItem("link", "关联需求", "内部链接"),
+]
+
+
+def _caption(text: str) -> ft.Control:
+    return ft.Text(text, size=FONT_SIZE["small"], color=ft.Colors.ON_SURFACE_VARIANT)
+
+
 @ft.component
-def App():  # pragma: no cover - 冒烟用
-    """冒烟 / 手工验收用的最小页面。"""
-    tr = Transfer(
-        label="可见列",
-        data_source=[
-            TransferItem("name", "姓名"),
-            TransferItem("dept", "部门", description="一级 / 二级部门"),
-            TransferItem("title", "职位"),
-            TransferItem("email", "邮箱", description="企业邮箱"),
-            TransferItem("phone", "手机"),
-            TransferItem("salary", "薪资", disabled=True),
-        ],
-        target_keys=["name", "dept"],
+def _echo(tr: Transfer) -> ft.Control:
+    """回显 target_keys：右侧看得见顺序，这一行看得见值。"""
+    titles = "、".join(item.title for item in tr.selected_items)
+    return _caption(f"已选 {len(tr.target_keys)} 项：{titles or '空'}")
+
+
+@ft.component
+def _basic() -> ft.Control:
+    """左待选、右已选；勾一批点箭头搬一批，标题栏的「x / y」跟着变。"""
+    tr = ft.use_memo(
+        lambda: Transfer(
+            label="可见列",
+            data_source=_COLUMNS,
+            target_keys=["name", "dept"],
+        ),
+        [],
     )
-    return ft.Column(
-        spacing=16,
+    actions = ft.Row(
+        spacing=6,
         controls=[
-            tr.ui(),
-            ft.Text("被禁用的「薪资」两侧都搬不动。", size=12, color=ft.Colors.OUTLINE),
+            ft.TextButton("全选左侧", on_click=lambda _e: tr.toggle_all("left", True)),
+            ft.TextButton("清空勾选", on_click=lambda _e: tr.clear_selection()),
+            ft.TextButton(
+                "全部移回",
+                on_click=lambda _e: tr.move_keys(list(tr.target_keys), "left"),
+            ),
         ],
     )
+    return ft.Column(spacing=10, controls=[tr.ui(), actions, _echo(tr)])
 
 
-if __name__ == "__main__":  # pragma: no cover
-    ft.run(lambda page: page.render(App))
+@ft.component
+def _titled() -> ft.Control:
+    """自定义列头与列宽：12 项超出一屏，两列各自内部滚动。"""
+    tr = ft.use_memo(
+        lambda: Transfer(
+            data_source=_FIELDS,
+            target_keys=["name", "code", "owner"],
+            titles=("可选字段", "已选字段"),
+            list_width=220,
+            height=300,
+        ),
+        [],
+    )
+    return ft.Column(spacing=10, controls=[tr.ui(), _echo(tr)])
+
+
+@ft.component
+def _disabled() -> ft.Control:
+    """整体禁用：值仍然可读、顺序照旧，但行点不动、箭头不亮。"""
+    tr = ft.use_memo(
+        lambda: Transfer(
+            label="已发布版本可见列",
+            data_source=_COLUMNS,
+            target_keys=["name", "title"],
+            disabled=True,
+        ),
+        [],
+    )
+    return ft.Column(spacing=10, controls=[tr.ui(), _echo(tr)])
+
+
+_BASIC_CODE = """tr = Transfer(
+    label="可见列",
+    data_source=[
+        TransferItem("name", "姓名"),
+        TransferItem("dept", "部门", description="一级 / 二级部门"),
+        TransferItem("salary", "薪资", disabled=True),   # 两侧都搬不动
+    ],
+    target_keys=["name"],        # 右侧初始内容，恒按数据源排序
+    on_change=lambda keys, direction, moved: print(direction, moved),
+)
+Column([tr.ui(), Text(f"已选 {tr.target_keys}")])"""
+
+_TITLED_CODE = """tr = Transfer(
+    data_source=items,
+    target_keys=["name", "code"],
+    titles=("可选字段", "已选字段"),   # 留空则跟随语言包（待选 / 已选）
+    list_width=220,
+    height=300,
+)"""
+
+_DISABLED_CODE = """tr = Transfer(
+    data_source=items,
+    target_keys=["name", "title"],
+    disabled=True,          # 只能看：行、箭头、全选框、搜索框都不响应
+)"""
+
+
+SPEC = Spec(
+    name="Transfer",
+    summary="两栏清单之间搬条目：左待选、右已选，中间箭头整批搬移。",
+    definition=(
+        "穿梭框把「可选」和「已选」并排摆出来，勾选之后用中间的箭头整批搬移。它要"
+        "解决的是挑的时候需要对照：折叠式多选里只看得到已选项，判断「还差谁」得反复"
+        "展开面板；两栏常驻时，剩下的与已选的同屏可见，挑一批、搬一批，动作有节奏，"
+        "结果也一直摆在眼前。"
+    ),
+    anatomy=[
+        (
+            "列头",
+            "全选框 + 标题 + 「勾了几 / 共几条」。常显分子分母，读者不用猜这个数是什么。",
+        ),
+        ("搜索", "每列顶部一条细线框，按标题与说明过滤；只改变可见性，不改勾选。"),
+        ("行", "复选框 + 主文本（可选一行副文本），整行可点；勾选行铺 10% 主色。"),
+        ("箭头", "两个 32px 方块：右移在上、左移在下。没有可搬项时只剩淡灰图标。"),
+        ("空态", "图标 + 一句主文 + 一句提示，说明「为什么空、下一步做什么」。"),
+    ],
+    when=[
+        "权限、可见列、成员这类需要对照着挑的集合",
+        "已选与未选都要一直看得见，不能靠记忆比对",
+        "条目自带补充信息（部门、邮箱、口径），需要两行排版",
+    ],
+    avoid=[
+        "只挑三五个标签：用 MultiSelect，两栏 320 高只为选两个标签太重",
+        "选项互斥只能留一个：用 SelectBox 或 Radio，两栏会让人以为能同时保留",
+        "条目有层级：先用 Tree 定位到分支，再对结果做搬移",
+    ],
+    examples=[
+        Example(
+            "基础搬移",
+            _basic,
+            hint="勾一批点箭头；「薪资」是禁用条目，两侧都搬不动。下方按钮演示脚本调用的三个动作。",
+            code=_BASIC_CODE,
+        ),
+        Example(
+            "自定义列头",
+            _titled,
+            hint="titles 换掉默认的「待选 / 已选」，12 项在 300 高的列里各自滚动。",
+            code=_TITLED_CODE,
+        ),
+        Example(
+            "禁用态",
+            _disabled,
+            hint="整体禁用后仍是完整的两栏，只是不再接受任何操作。",
+            code=_DISABLED_CODE,
+        ),
+    ],
+    api=[
+        Api("data_source", "list[TransferItem]", "[]", "全部条目，左右两列都从它派生"),
+        Api("target_keys", "list[str]", "[]", "已选条目的 key；恒按数据源顺序排列"),
+        Api(
+            "titles",
+            "tuple[str, str] | None",
+            "None",
+            "两列标题（左, 右）；留空取语言包",
+        ),
+        Api("show_search", "bool", "True", "每列是否带搜索框"),
+        Api("show_select_all", "bool", "True", "列头是否显示全选框"),
+        Api("one_way", "bool", "False", "单向模式：只能从待选搬到已选，隐藏反向箭头"),
+        Api("list_width", "int | float", "240", "单列宽度"),
+        Api("height", "int | float", "320", "单列高度（列头 + 搜索 + 列表）"),
+        Api("disabled", "bool", "False", "整体禁用：行、箭头、全选框一起失效"),
+        Api(
+            "on_change",
+            "Callable[[list[str], str, list[str]], None] | None",
+            "None",
+            "搬运后回调：新的 target_keys、方向、本次搬走的 key",
+        ),
+    ],
+    notes=[
+        tip(
+            "不做双击移动：on_double_tap 与 on_tap 共存时，单击要等双击判定超时才"
+            "触发（约 300ms），每次勾选都慢半拍。搬移一律走中间箭头。"
+        ),
+        info(
+            "target_keys 恒按 data_source 排序，移入先后不参与排序 —— 右侧顺序因此"
+            "可重复，便于 diff 与持久化。就地改过 data_source 后记得调 invalidate()。"
+        ),
+        warn(
+            "搜索只影响可见性：被过滤掉的已勾项仍算勾选、仍会被搬走；列头全选框的三态"
+            "则只看当前可见项。两个半径不同，改动前先想清楚要对齐哪一个。搜索无结果时"
+            "空态只留「暂无数据」—— 这时说「都已移到右侧」是假话。"
+        ),
+    ],
+    tags=("穿梭框", "搬移", "两栏", "transfer", "权限"),
+)
+
+
+if __name__ == "__main__":
+    run(SPEC)

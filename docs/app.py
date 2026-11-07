@@ -34,12 +34,14 @@ def _doc_route(key: str) -> Callable[[], ft.Control]:
 
 
 #: 子路由直接从导航数据生成 —— 加一页只需在 ``site.py`` 里加一条 PageMeta。
+#: 文章页的内容在 ``DOCS`` 里；分类页 / 组件页的内容来自 ``ui.core.catalog``，
+#: 所以这里只按"有没有内容"过滤文章页。
 CHILDREN: list[ft.Route] = [
     ft.Route(index=True, component=home_page),
     *[
         ft.Route(path=page.route.lstrip("/"), component=_doc_route(page.key))
         for page in READING_ORDER
-        if page.key in DOCS
+        if page.kind != "page" or page.key in DOCS
     ],
 ]
 
