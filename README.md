@@ -61,7 +61,7 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 ## Requirements
 
 - Python >= 3.12
-- flet[all] == 1.1.0
+- flet[all] >= 1.1.2, < 1.2
 - flet-code-editor
 - flet-charts
 - flet-video / flet-audio / flet-webview
@@ -127,7 +127,7 @@ def HomePage() -> ft.Control:
                         content=Column(
                             controls=[
                                 Text("CS UI declarative demo", size=24, weight=ft.FontWeight.BOLD),
-                                Text("Built on flet 1.1.0.", size=14, color="#6b7280"),
+                                Text("Built on flet 1.1.2.", size=14, color="#6b7280"),
                                 Divider(),
                                 name.ui(),
                                 Row(

@@ -34,9 +34,19 @@ from typing import Any as _Any
 import flet as flet
 
 from ._registry import COMPONENT_MODULES as _COMPONENT_MODULES
+from .version import FLET_MIN as FLET_MIN
+from .version import FLET_SERIES as FLET_SERIES
+from .version import FLET_VERSION as FLET_VERSION
+from .version import __version__ as __version__
+from .version import require_flet as require_flet
 
-#: 公开别名：README 里 ``from ui import ft`` 取的就是 flet 模块本身
+#: 公共别名：README 里 ``from ui import ft`` 取的就是 flet 模块本身
 ft = flet
+
+# 版本守卫：装错 flet 时把问题说清楚，而不是在若干层之后抛 AttributeError。
+# 这里用 ``strict=False`` —— 跨版本系列只警告不中断（同系列补丁版行为一致），
+# 需要硬门槛的应用自己调 ``require_flet()``。
+require_flet(strict=False)
 
 #: ui 自己的子模块（``ui.layout`` 等）。必须显式登记：flet 的 ``__all__`` 里也有
 #: 同名项（``utils`` / ``icons`` / ``padding`` …），不能靠「flet 没有再试子模块」判定。
@@ -52,7 +62,6 @@ _SUBMODULES: tuple[str, ...] = (
     "input",
     "layout",
     "navigation",
-    "theme",
     "utils",
 )
 
@@ -130,7 +139,8 @@ __all__ = [
 # 真正缺失的名字（例如已下线的 ECharts）完全看不出来。
 # 产品名放独立字段，别占用 __name__。
 __pkg_name__ = "cs-ui"
-__version__ = "0.0.5"
+# ``__version__`` / ``FLET_VERSION`` / ``FLET_MIN`` 由 ``ui.version`` 提供（见文件顶部
+# 的导入）—— 版本只允许有一个事实源，别在这里再写一遍字面量。
 __author__ = "Shawn Chen"
 __email__ = "cs@cstos.com"
 __copyright__ = "Shawn Chen"

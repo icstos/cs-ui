@@ -84,7 +84,7 @@ def _render(block: Block, tr: Translator) -> ft.Control:
         case Callout():
             return kit.callout(
                 block.kind,
-                tr(block.body_key),
+                tr(block.body_key, **block.params),
                 tr(block.title_key) if block.title_key else None,
             )
         case Demo():

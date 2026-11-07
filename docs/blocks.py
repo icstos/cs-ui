@@ -6,8 +6,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from typing import Literal
 
 import flet as ft
@@ -65,11 +65,17 @@ class CodeTabs:
 
 @dataclass(frozen=True, slots=True)
 class Callout:
-    """提示框。``tip`` 用主色，``danger`` 用错误色。"""
+    """提示框。``tip`` 用主色，``danger`` 用错误色。
+
+    ``params`` 是文案里的占位符实参（如 ``{"flet": FLET_VERSION}``）。版本号这类
+    会随依赖升级而变的值必须走占位符 —— 直接写进语言包，升级时就得记得回来改
+    三份翻译，漏一次站点上就是旧话术。
+    """
 
     kind: CalloutKind
     body_key: str
     title_key: str | None = None
+    params: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,8 +148,13 @@ def tip(body_key: str, title_key: str | None = None) -> Callout:
     return Callout("tip", body_key, title_key)
 
 
-def note(body_key: str, title_key: str | None = None) -> Callout:
-    return Callout("info", body_key, title_key)
+def note(
+    body_key: str,
+    title_key: str | None = None,
+    /,
+    **params: str,
+) -> Callout:
+    return Callout("info", body_key, title_key, params)
 
 
 def warn(body_key: str, title_key: str | None = None) -> Callout:

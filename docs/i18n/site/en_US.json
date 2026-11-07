@@ -603,7 +603,7 @@
   "start.first.tip_title": "Why page.render",
   "start.first.title": "First window",
   "start.install.desc": "Pick one. Keep cs-ui and Flet in step when upgrading.",
-  "start.install.note": "Python 3.12+, Flet 1.1.0. Runs on Windows, macOS and Linux desktops.",
+  "start.install.note": "Python 3.12+, Flet {flet}. Runs on Windows, macOS and Linux desktops.",
   "start.install.note_title": "Requirements",
   "start.install.title": "Install",
   "start.intro": "Five minutes from now you'll have a window that runs, re-themes and re-languages itself.",

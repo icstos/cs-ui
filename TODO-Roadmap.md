@@ -13,6 +13,13 @@
 - 效率：简洁直观地使用、清晰明确地表达，符合用户体验的使用
 - 可控
 # 已完成
+- [x] 2026-11-07：适配 flet 1.1.2。版本收敛到 `src/ui/version.py` 一个事实源
+      （`FLET_MIN` / `FLET_SERIES` / `FLET_VERSION` / `require_flet()`），
+      pyproject 锁 `flet[all]>=1.1.2,<1.2`；跨系列只警告的宽松守卫在包导入时执行。
+      同时用上 1.1 的**带类型 Key**：`menu.scroll_key()` 返回 `ft.ScrollKey`，
+      文档站侧栏据此把当前组件滚进视野（此前用裸字符串，`scroll_to` 静默失效）。
+      顺手删掉两个只有 `# TODO` 的空壳（`ui/theme.py`、`ui/display/echarts.py`），
+      并让 `build_docs_i18n --check` 真正比对内容而不只是键数。
 - [x] 2026-11-07：每个组件自带一份 `SPEC`，文档站与实现同源。
 - [x] 2026-11-07：文档站改为两级菜单**。
 - [x] 2026-09-21：全量适配 flet 1.0.0（`ft.run` / `page.render_views` / `@ft.component` / hooks）

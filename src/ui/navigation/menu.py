@@ -72,6 +72,7 @@ from ui.core.tokens import (
 
 __all__ = [
     "ORIENTATIONS",
+    "SCROLL_KEY_PREFIX",
     "SIZES",
     "Menu",
     "MenuGroup",
@@ -80,6 +81,7 @@ __all__ = [
     "norm_selected",
     "prune_expanded",
     "row_height",
+    "scroll_key",
     "toggle_expanded",
     "visible_rows",
     "walk",
@@ -336,6 +338,28 @@ def visible_rows(
 def row_height(size: str) -> int:
     """档位 → 行高。非法档位退回 ``default``（不给调用方抛异常的机会）。"""
     return ROW_H.get(size, ROW_H["default"])
+
+
+#: 滚动锚点的名字前缀。带上它，菜单里的 key 就不会和页面上别的
+#: ``ScrollKey`` 撞名。
+SCROLL_KEY_PREFIX = "menu:"
+
+
+def scroll_key(key: str) -> ft.ScrollKey:
+    """菜单项 → 滚动锚点的 ``key``。
+
+    菜单通常比侧栏高（组件多的时候尤其明显），"当前页在下面第 40 行"这件事
+    光看高亮是看不见的 —— 用户得先自己滚下去。调用方拿到这个 key 之后：
+
+    .. code-block:: python
+
+        await column.scroll_to(scroll_key=menu.scroll_key(name), duration=0)
+
+    注意类型：Flet 1.1 的 ``Key`` 是**带类型**的，``ScrollKey`` 与普通字符串
+    （隐式 ``ValueKey``）在 Flutter 侧走的是两套查找。传字符串不报错、也不滚动，
+    是最难查的一种失效。
+    """
+    return ft.ScrollKey(f"{SCROLL_KEY_PREFIX}{key}")
 
 
 # ---------------------------------------------------------------------------
@@ -741,6 +765,12 @@ class Menu:
             animate=ROW_ANIM,
             tooltip=hint,
             data=item.key,
+            # 只给**选中那一行**挂滚动锚点：菜单比可视区高时，外层可以用
+            # ``Column.scroll_to(scroll_key=menu.scroll_key(...))`` 把"我在哪"
+            # 滚进视野。只标一行，同页出现多个菜单也不会互相抢。
+            # 必须是 ``ft.ScrollKey`` 而不是普通字符串 —— Key 在 Flet 1.1 里带类型，
+            # 字符串会被当成普通 ValueKey，``scroll_to`` 收到后不报错、也不滚动。
+            key=scroll_key(item.key) if selected else None,
             on_click=None if item.disabled else self._click,
             on_hover=None if item.disabled else self._hover_handler(item.key),
             content=ft.Row(
@@ -1044,9 +1074,7 @@ def _collapsed() -> ft.Control:
 def _horizontal() -> ft.Control:
     """顶栏水平菜单：只画一层，选中项靠底部 3px 主色线与主色字。"""
     menu = ft.use_memo(
-        lambda: Menu(
-            items=_tree(), orientation="horizontal", selected_key="host-list"
-        ),
+        lambda: Menu(items=_tree(), orientation="horizontal", selected_key="host-list"),
         [],
     )
     return ft.Container(
@@ -1058,7 +1086,7 @@ def _horizontal() -> ft.Control:
     )
 
 
-_MENU_CODE = '''menu = Menu(
+_MENU_CODE = """menu = Menu(
     items=[
         MenuItem("home", "概览", icon=ft.Icons.DASHBOARD_OUTLINED),
         MenuGroup("运维", [
@@ -1071,7 +1099,7 @@ _MENU_CODE = '''menu = Menu(
     selected_key="host-list",      # 选中项（半受控：点击会自己改）
     expanded_keys=("host",),       # 默认展开哪几组
     on_select=lambda item: ...,     # 叶子项被点中
-)'''
+)"""
 
 SPEC = Spec(
     name="Menu",
@@ -1082,7 +1110,10 @@ SPEC = Spec(
         "可以同时出现在展开态与折叠态，不必和「控件只能有一个父节点」较劲。"
     ),
     anatomy=[
-        ("行", "32 / 40 / 48 三档（small / default / large），图标 + 文字 + 可选徽标。"),
+        (
+            "行",
+            "32 / 40 / 48 三档（small / default / large），图标 + 文字 + 可选徽标。",
+        ),
         (
             "选中链路",
             "选中项 12% 主色底 + 主色字；它的祖先只转主色、不铺底 —— "
@@ -1104,7 +1135,9 @@ SPEC = Spec(
     ],
     examples=[
         Example("完整示例", App, hint="分组、子菜单、圆点、徽标、禁用项、折叠按钮。"),
-        Example("折叠态", _collapsed, hint="只剩图标；选中项藏在子级里时，父级图标也会亮。"),
+        Example(
+            "折叠态", _collapsed, hint="只剩图标；选中项藏在子级里时，父级图标也会亮。"
+        ),
         Example("水平菜单", _horizontal, hint="顶栏形态只画一层，选中靠底部主色线。"),
     ],
     target=Menu,

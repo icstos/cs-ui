@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from collections.abc import Sequence
 
 import flet as ft
@@ -33,6 +35,7 @@ from ui import LanguageSwitcher, Menu, MenuGroup, MenuItem, use_t
 from ui.core import catalog
 from ui.core import doc as doc_kit
 from ui.core.theme import use_theme
+from ui.navigation import menu as menu_api
 
 TOPBAR_HEIGHT = 60
 SIDEBAR_WIDTH = 252
@@ -390,6 +393,31 @@ def sidebar() -> ft.Control:
         scroll=ft.ScrollMode.AUTO,
         controls=[menu.ui(), ft.Container(height=8)],
     )
+
+    def _reveal_current() -> None:
+        """把当前页那一行滚进视野。
+
+        组件排在分类末尾时（``布局 › Table``、``表单 › SearchBar``）那一行本来
+        落在可视区外，读者只能看到一条被裁掉的边 —— 高亮存在，但"我在哪"传达
+        不到。这里在进入页面后滚一次。
+
+        ``scroll_to`` 要等客户端把这一帧画完才认得出 key，所以前几帧重试；
+        已经滚到位时再滚一次是无操作，不会抖。用 ``duration=0`` 直接跳，
+        读者翻页时不该看见侧栏在滑。
+        """
+
+        async def jump() -> None:
+            for delay in (0.0, 0.05, 0.15, 0.35):
+                await asyncio.sleep(delay)
+                # 首帧客户端还没布局完，认不出 key 是正常现象 —— 下一轮再试。
+                with contextlib.suppress(Exception):
+                    await menu_scroll.scroll_to(
+                        scroll_key=menu_api.scroll_key(selected), duration=0
+                    )
+
+        ft.context.page.run_task(jump)
+
+    ft.use_effect(_reveal_current, [location])
 
     return ft.Container(
         width=SIDEBAR_WIDTH,

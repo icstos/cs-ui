@@ -603,7 +603,7 @@
   "start.first.tip_title": "為什麼是 page.render",
   "start.first.title": "第一個介面",
   "start.install.desc": "任選一種方式。升級時讓 cs-ui 與 Flet 保持同步。",
-  "start.install.note": "Python 3.12+、Flet 1.1.0。Windows / macOS / Linux 桌面都可以執行。",
+  "start.install.note": "Python 3.12+、Flet {flet}。Windows / macOS / Linux 桌面都可以執行。",
   "start.install.note_title": "環境需求",
   "start.install.title": "安裝",
   "start.intro": "五分鐘後，你會有一個能跑、能切主題、能切語言的桌面視窗。",

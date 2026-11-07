@@ -38,6 +38,7 @@ import flet as ft
 
 from ui.core import catalog
 from ui.core import doc as doc_kit
+from ui.version import FLET_VERSION
 
 #: 结构下限：低于这个数就算"内容单薄"，写出来是提醒而不是失败（``--strict`` 才拦）。
 LIMITS = {
@@ -99,7 +100,9 @@ def collect(items: list[catalog.Entry]) -> list[tuple[str, doc_kit.Spec]]:
 
         raw = catalog._spec_from(module, item)  # noqa: SLF001 - 同仓工具，故意复用
         if raw is None:
-            shared = len({e.module for e in catalog.ENTRIES.values() if e.module == item.module})
+            shared = len(
+                {e.module for e in catalog.ENTRIES.values() if e.module == item.module}
+            )
             hint = "（同文件多组件，请用 SPECS 字典）" if shared > 1 else ""
             FAIL.append(f"{item.key}: 模块里没有属于它的 SPEC{hint}")
             continue
@@ -179,8 +182,14 @@ def main() -> None:
 
 
 def _report(total: int) -> None:
+    # 带上 flet 版本：这份体检的结论只对它跑过的那一版有效，输出里不写清楚，
+    # 换版本之后看到的 "fail=0" 就会被误当成"新版本也没问题"。
     print(f"\n{'=' * 66}", file=sys.stderr)
-    print(f"DOC CHECK: specs={total} fail={len(FAIL)} warn={len(WARN)}", file=sys.stderr)
+    print(
+        f"DOC CHECK: specs={total} fail={len(FAIL)} warn={len(WARN)} "
+        f"(flet {FLET_VERSION})",
+        file=sys.stderr,
+    )
     for item in FAIL:
         print(f"  FAIL  {item}", file=sys.stderr)
     for item in WARN:

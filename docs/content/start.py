@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from docs.blocks import Doc, code, h2, note, p, tabs, tip, ul
+from docs.site import FLET_VERSION
 
 _INSTALL = "pip install cs-ui"
 _INSTALL_UV = "uv pip install cs-ui"
@@ -75,7 +76,7 @@ QUICKSTART: Doc = (
         code(_INSTALL_UV, "uv", "bash"),
         code(_INSTALL_SRC, "source", "bash"),
     ),
-    note("start.install.note", "start.install.note_title"),
+    note("start.install.note", "start.install.note_title", flet=FLET_VERSION),
     h2("start.first.title"),
     p("start.first.desc"),
     code(_FIRST_APP, "main.py"),

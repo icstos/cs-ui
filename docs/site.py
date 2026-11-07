@@ -11,13 +11,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, Final, Literal, Protocol
 
 import flet as ft
 
 from ui.core import catalog
+from ui.version import FLET_VERSION
+from ui.version import __version__ as _ui_version
 
 # ---------------------------------------------------------------------------
 # 路径与版本
@@ -35,17 +36,18 @@ I18N_DIR: Final[Path] = DOCS_ROOT / "i18n" / "site"
 SITE_NAME: Final[str] = "cs-ui"
 GITHUB_URL: Final[str] = "https://github.com/icstos/cs-ui"
 FLET_URL: Final[str] = "https://flet.dev"
-FLET_VERSION: Final[str] = "1.1.0"
 PYTHON_VERSION: Final[str] = "3.12+"
 LICENSE_NAME: Final[str] = "MIT"
 
 
 def _detect_version() -> str:
-    """优先取已安装包版本，源码运行时退回发布版本。"""
-    try:
-        return version("cs-ui")
-    except PackageNotFoundError:
-        return "0.1.1"
+    """站点展示的 cs-ui 版本 —— 直接取库里的那一份，不再自己探测。
+
+    以前这里重复了一遍 ``importlib.metadata`` 逻辑并写了个 ``"0.1.1"`` 兜底，
+    结果 ``pyproject`` 是 ``0.1.1``、``ui.__version__`` 是 ``0.0.5``、页脚又是
+    另一个数 —— 三处都要改，必然漏。现在只有 :mod:`ui.version` 一个来源。
+    """
+    return _ui_version
 
 
 PACKAGE_VERSION: Final[str] = _detect_version()
