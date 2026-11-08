@@ -1,52 +1,41 @@
-"""输入类组件：按钮、文本框、选择器、滑块等。"""
+"""输入类组件：按钮、文本框、选择器、滑块等。
 
-from .button import Button
-from .cascader import Cascader, CascaderNode
-from .checkbox import Checkbox, CheckboxGroup
-from .chip import Chip
-from .color_picker import ColorPicker
-from .date_input import DateInput
-from .datetime_input import DateTimeInput
-from .file_picker import DirPicker, FilePicker, FileSaver
-from .image_picker import ImagePicker
-from .input import Input
-from .multi_select import MultiSelect
-from .number_input import NumberInput
-from .radio import Radio
-from .rating import Rating
-from .search_bar import SearchBar
-from .segmented_button import SegmentedButton
-from .select_box import SelectBox, SelectOption
-from .slider import RangeSlider, Slider
-from .switch import Switch
-from .transfer import Transfer, TransferItem
+门面惰性（见 :mod:`ui._lazy`）：``Button`` 只加载 ``button``；颜色选择器、级联、
+穿梭框这些重量级组件不再陪跑。
+"""
 
-__all__ = [
-    "Button",
-    "Cascader",
-    "CascaderNode",
-    "Checkbox",
-    "CheckboxGroup",
-    "Chip",
-    "ColorPicker",
-    "DateInput",
-    "DateTimeInput",
-    "DirPicker",
-    "FilePicker",
-    "FileSaver",
-    "ImagePicker",
-    "Input",
-    "MultiSelect",
-    "NumberInput",
-    "Radio",
-    "RangeSlider",
-    "Rating",
-    "SearchBar",
-    "SegmentedButton",
-    "SelectBox",
-    "SelectOption",
-    "Slider",
-    "Switch",
-    "Transfer",
-    "TransferItem",
-]
+from ui._lazy import lazy_exports
+
+lazy_exports(
+    globals(),
+    {
+        "Button": ".button",
+        "Cascader": ".cascader",
+        "CascaderNode": ".cascader",
+        "Checkbox": ".checkbox",
+        "CheckboxGroup": ".checkbox",
+        "Chip": ".chip",
+        "ColorPicker": ".color_picker",
+        "DateInput": ".date_input",
+        "DateTimeInput": ".datetime_input",
+        "DirPicker": ".file_picker",
+        "FilePicker": ".file_picker",
+        "FileSaver": ".file_picker",
+        "ImagePicker": ".image_picker",
+        "Input": ".input",
+        "MultiSelect": ".multi_select",
+        "NumberInput": ".number_input",
+        "Radio": ".radio",
+        "RangeSlider": ".slider",
+        "Rating": ".rating",
+        "SearchBar": ".search_bar",
+        "SegmentedButton": ".segmented_button",
+        "SelectBox": ".select_box",
+        "SelectOption": ".select_box",
+        "Slider": ".slider",
+        "Switch": ".switch",
+        "Transfer": ".transfer",
+        "TransferItem": ".transfer",
+    },
+    __name__,
+)

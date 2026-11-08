@@ -62,6 +62,7 @@ import flet as ft
 from ui.core.config import logger
 from ui.core.locales import CATALOGS as FRAMEWORK_CATALOGS
 from ui.core.locales import DEFAULT_LOCALE, FALLBACK_LOCALE
+from ui.core.paths import config_dir as _config_dir
 from ui.core.tokens import FONT_SIZE, RADIUS, SPACE
 
 __all__ = [
@@ -576,16 +577,8 @@ class FileStore:
 
 
 def config_dir() -> Path:
-    """配置文件目录（跟随平台惯例）。"""
-    env = os.getenv("FLET_APP_STORAGE_DATA")
-    if env:
-        return Path(env)
-    if sys.platform == "win32":
-        base = os.getenv("LOCALAPPDATA") or os.getenv("APPDATA")
-        return Path(base or Path.home(), "cs-ui")
-    if sys.platform == "darwin":
-        return Path.home() / "Library" / "Application Support" / "cs-ui"
-    return Path(os.getenv("XDG_CONFIG_HOME") or Path.home() / ".config") / "cs-ui"
+    """配置文件目录（跟随平台惯例）。实现在 :mod:`ui.core.paths`，此处保留别名。"""
+    return _config_dir()
 
 
 def default_config_path() -> Path:

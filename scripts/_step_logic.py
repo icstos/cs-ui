@@ -110,8 +110,11 @@ check("一行 = 轴轨 + 内容（STRETCH 需要 intrinsic_height）",
       (type(first_row).__name__, first_row.intrinsic_height), ("Row", True))
 rail, body = first_row.controls
 check("轴轨宽度 = 圆点直径", rail.width, v.dot_size)
-check("轴轨里是线 + 圆点", len(rail.controls), 2)
-check("首步线从圆点中心起画", rail.controls[0].top, v.dot_size / 2)
+# 轴轨按圆点拆成「进入 / 离开」两段线 + 圆点：整条同色会让当前步上方的线提前
+# 变灰，和横向模式画出来的进度对不上。
+check("轴轨里是两段线 + 圆点", len(rail.controls), 3)
+check("进入段从顶端画起", rail.controls[0].top, 0)
+check("两段线在圆点中心处分界", rail.controls[1].top, v.dot_size / 2)
 check("内容列占满剩余宽度", body.expand, True)
 
 # ---------------------------------------------------------------------------

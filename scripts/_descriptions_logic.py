@@ -186,8 +186,16 @@ check("Element 的 medium 别名", Descriptions(size="medium")._pad_h, 12)
 check("非法档位兜底 default", Descriptions(size="huge")._pad_h, 12)
 check("字典入参", Descriptions(items=[{"label": "a", "value": "b"}])._items[0].value, "b")
 check("二元组入参", Descriptions(items=[("a", "b")])._items[0].label, "a")
-check("空数据 → 空容器", type(Descriptions().content).__name__, "Container")
-check("只有标题、没有字段时只剩表头", len(Descriptions(title="T").content.controls), 1)
+# 空数据**不再**缩成空容器：整块塌成 0 高时，调用方会以为组件没渲染出来。
+# 现在的行为是留一行「暂无数据」占位 —— 断言就照着这个行为写。
+_empty = Descriptions()
+check("空数据 → 一块占位行", type(_empty.content).__name__, "Column")
+check("空数据 → 占位行里有文案", len(_empty.content.controls), 1)
+check(
+    "只有标题、没有字段 → 表头 + 占位行",
+    len(Descriptions(title="T").content.controls),
+    2,
+)
 
 d = Descriptions(items=ITEMS[:1])
 d.set_items([DescriptionsItem("x", "y"), DescriptionsItem("z", "w")])

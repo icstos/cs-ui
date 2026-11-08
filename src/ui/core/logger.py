@@ -1,14 +1,21 @@
 """
 日志器组件: copyed from cs-utils
+
+**惰性初始化**：``Logger`` 对象本身在导入时只记下参数，真正的 handler（以及
+"创建日志目录 / 打开文件"这两步 I/O）推迟到**第一条日志**才发生。
+
+这不只是省几毫秒。``import ui`` 会顺着组件模块走到这里 —— 如果构造即建目录，
+那么「装到只读的 site-packages 里」或「冻结成单文件 exe」时，任何一次 import
+都会因为 ``mkdir`` 失败而炸掉，而调用方根本没打算写日志。日志是**旁路能力**，
+它坏了不该拖垮主流程：文件 sink 失败时降级成控制台并警告一次，不留异常。
 """
 
 import logging
-import logging.handlers
 import time
+from collections.abc import Callable
 from enum import Enum
 from functools import wraps
 from pathlib import Path
-from collections.abc import Callable
 
 
 class LogType(Enum):
@@ -29,7 +36,11 @@ _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 class Logger:
-    """统一的日志器封装，支持按大小/按时间轮转，以及开发/测试/发布三种运行模式。"""
+    """统一的日志器封装，支持按大小/按时间轮转，以及开发/测试/发布三种运行模式。
+
+    第一次调用 :meth:`debug` / :meth:`info` 等方法时才真正建立 handler；
+    在此之前只有几个字段，构造是常数时间、且不碰磁盘。
+    """
 
     def __init__(
         self,
@@ -42,8 +53,15 @@ class Logger:
         self.name = name
         self.log_type = log_type
         self.run_mode = run_mode
+        self._logger: logging.Logger | None = None  # 首次写日志时才建
 
-        self._logger = self._build_logger()
+    # ---- 惰性建链 ----
+    @property
+    def logger(self) -> logging.Logger:
+        """底层 :class:`logging.Logger`（首次访问时完成配置）。"""
+        if self._logger is None:
+            self._logger = self._build_logger()
+        return self._logger
 
     def _build_logger(self) -> logging.Logger:
         logger = logging.getLogger(self.name)
@@ -60,12 +78,16 @@ class Logger:
             stream_handler.setFormatter(formatter)
             logger.addHandler(stream_handler)
 
-        # 文件 handler
-        if self.log_type == LogType.FILE_SIZE:
-            file_handler = self._build_filesize_handler(formatter)
-        else:
-            file_handler = self._build_timed_handler(formatter)
-        logger.addHandler(file_handler)
+        # 文件 handler：建目录 / 开文件都在这一步，失败就降级为「只走控制台」
+        try:
+            self.file.parent.mkdir(exist_ok=True, parents=True)
+            if self.log_type == LogType.FILE_SIZE:
+                file_handler = self._build_filesize_handler(formatter)
+            else:
+                file_handler = self._build_timed_handler(formatter)
+            logger.addHandler(file_handler)
+        except OSError as exc:  # 只读安装、权限不足、磁盘满……
+            logger.warning("日志文件不可写（%s），本次仅输出到控制台", exc)
 
         return logger
 
@@ -80,7 +102,9 @@ class Logger:
         max_bytes: int = 10 * 1024 * 1024,
         backup_count: int = 10,
     ) -> logging.Handler:
-        handler = logging.handlers.RotatingFileHandler(
+        from logging.handlers import RotatingFileHandler  # 6ms，只有真写文件才需要
+
+        handler = RotatingFileHandler(
             filename=self.file,
             mode="a",
             maxBytes=max_bytes,
@@ -97,12 +121,14 @@ class Logger:
         interval: int = 4,
         backup_count: int = 10,
     ) -> logging.Handler:
+        from logging.handlers import TimedRotatingFileHandler
+
         # 微秒级时间戳后缀，避免多进程写同一文件冲突，年份取后两位
         timestamp = time.strftime("%y%m%d%H%M%S", time.localtime())
         microsecond = f"{time.time() % 1:.6f}"[2:]
         log_file = f"{self.file}_{timestamp}{microsecond}"
 
-        handler = logging.handlers.TimedRotatingFileHandler(
+        handler = TimedRotatingFileHandler(
             filename=log_file,
             when=when,
             interval=interval,
@@ -114,20 +140,23 @@ class Logger:
         return handler
 
     # ---- 代理方法 ----
-    def debug(self, msg: str) -> None:
-        self._logger.debug(msg)
+    # 签名故意与 ``logging.Logger`` 一致（``msg, *args, **kwargs``）。收窄成
+    # ``debug(self, msg)`` 会让 ``logger.debug("...", exc_info=True)`` 抛 TypeError
+    # —— 而那正是"已经在处理异常"的分支，报错会顶掉原始异常，现场全丢。
+    def debug(self, msg: str, *args: object, **kwargs: object) -> None:
+        self.logger.debug(msg, *args, **kwargs)
 
-    def info(self, msg: str) -> None:
-        self._logger.info(msg)
+    def info(self, msg: str, *args: object, **kwargs: object) -> None:
+        self.logger.info(msg, *args, **kwargs)
 
-    def warning(self, msg: str) -> None:
-        self._logger.warning(msg)
+    def warning(self, msg: str, *args: object, **kwargs: object) -> None:
+        self.logger.warning(msg, *args, **kwargs)
 
-    def error(self, msg: str) -> None:
-        self._logger.error(msg)
+    def error(self, msg: str, *args: object, **kwargs: object) -> None:
+        self.logger.error(msg, *args, **kwargs)
 
-    def critical(self, msg: str) -> None:
-        self._logger.critical(msg)
+    def critical(self, msg: str, *args: object, **kwargs: object) -> None:
+        self.logger.critical(msg, *args, **kwargs)
 
 
 def timed_log(show_time: bool = False) -> Callable:

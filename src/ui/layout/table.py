@@ -28,7 +28,6 @@ Table 在 ``ft.DataTable`` 外面补三件日常必需的东西：可选的「�
 
 from __future__ import annotations
 
-import copy
 from dataclasses import dataclass, field
 
 import flet as ft
@@ -85,12 +84,19 @@ class TableState:
     current_page: int = 1
     zebra: bool = False
 
-    #: 深拷贝后的数据源。`init=False` 因为它由 `data_table` 推导，不该被外部传。
+    #: 数据源引用。``init=False`` 因为它由 ``data_table`` 推导，不该被外部传。
     _source: ft.DataTable = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        # 深拷贝：build_rows 会插入编号列，不能污染调用方的数据
-        self._source = copy.deepcopy(self.data_table)
+        # 曾经这里是 ``copy.deepcopy(self.data_table)``，理由是"build_rows 会插入
+        # 编号列，别污染调用方的数据"。但这条理由不成立：``build_rows`` 里
+        # ``cells = list(row.cells)`` 已经先复制了列表，``columns()`` 也是
+        # ``list(self._source.columns)`` —— 插入只发生在**副本**上，数据源一个字节
+        # 都没被改。而 ``Table`` 是组件，``_default_state`` 每次重绘都跑一遍，
+        # 深拷贝于是变成了"每帧复制整张表"：实测 200×6 的表光这一行就要 15ms，
+        # 行数越多样越慢（1000 行 ~75ms），翻页时整页都会卡一下。
+        # 现在只留引用。若将来真要就地改数据源，请改那份副本，别改这里。
+        self._source = self.data_table
 
     @property
     def num_rows(self) -> int:

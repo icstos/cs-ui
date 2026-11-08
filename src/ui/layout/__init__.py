@@ -1,39 +1,33 @@
-"""布局类组件：容器、栅格、标签页、步骤条、页面骨架等。"""
+"""布局类组件：容器、栅格、标签页、步骤条、页面骨架等。
 
-from .card import Card
-from .column import Column
-from .container import Container
-from .divider import Divider, VerticalDivider
-from .expander import Expander
-from .grid_view import GridView
-from .list_view import ListView
-from .page import PageLayout
-from .row import Row
-from .stack import Stack
-from .step import Step, StepItem
-from .table import Table, TableState
-from .tabs import Tab, TabBar, TabBarView, Tabs
-from .view import View
+门面惰性（见 :mod:`ui._lazy`）：拿一个 ``Card`` 不会连带加载表格、标签页、步骤条。
+"""
 
-__all__ = [
-    "Card",
-    "Column",
-    "Container",
-    "Divider",
-    "Expander",
-    "GridView",
-    "ListView",
-    "PageLayout",
-    "Row",
-    "Stack",
-    "Step",
-    "StepItem",
-    "Tab",
-    "TabBar",
-    "TabBarView",
-    "Table",
-    "TableState",
-    "Tabs",
-    "VerticalDivider",
-    "View",
-]
+from ui._lazy import lazy_exports
+
+lazy_exports(
+    globals(),
+    {
+        "Card": ".card",
+        "Column": ".column",
+        "Container": ".container",
+        "Divider": ".divider",
+        "VerticalDivider": ".divider",
+        "Expander": ".expander",
+        "GridView": ".grid_view",
+        "ListView": ".list_view",
+        "PageLayout": ".page",
+        "Row": ".row",
+        "Stack": ".stack",
+        "Step": ".step",
+        "StepItem": ".step",
+        "Table": ".table",
+        "TableState": ".table",
+        "Tab": ".tabs",
+        "TabBar": ".tabs",
+        "TabBarView": ".tabs",
+        "Tabs": ".tabs",
+        "View": ".view",
+    },
+    __name__,
+)

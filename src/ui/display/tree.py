@@ -72,6 +72,16 @@ SELECTED_BG = ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY)
 HOVER_BG = overlay(0.06)
 GUIDE_COLOR = ft.Colors.OUTLINE_VARIANT
 
+# 复选框未选中态的边框只有"常态 / 禁用"两种。逐行新建 ``ft.Border`` + ``with_opacity``
+# 实测约 10µs，可勾选的树几百行就要白扔几毫秒 —— 缓存成两个值。
+# 值是令牌串（``"outline"`` / ``"outline,0.4"``），由 Flutter 按当前主题解析，
+# 所以提前建好不会把配色固定在浅色主题上。
+_CHECK_BORDER = ft.Border.all(1.5, ft.Colors.OUTLINE)
+_CHECK_BORDER_OFF = ft.Border.all(1.5, ft.Colors.with_opacity(0.4, ft.Colors.OUTLINE))
+_CHECK_RADIUS = ft.BorderRadius.all(3)  # 同上：三种状态共用一个圆角值
+_HALF_BAR_RADIUS = ft.BorderRadius.all(1)  # 半选短横的圆角，同上
+_CHECK_MARGIN = ft.Margin.only(right=2)  # 复选框与标签之间的固定间距
+
 
 class _Check(enum.Enum):
     """复选框三态。只用于渲染，不作为持久状态（半选由子节点反推）。"""
@@ -177,7 +187,8 @@ class Tree:
         current: 初始当前行的 key。
         default_expand_all: 初始展开全部，默认 False。
         disabled: 整体禁用。
-        hoverable: 行悬停高亮，默认 True。超大且频繁重绘的树可关掉省一次渲染。
+        hoverable: 行悬停高亮，默认 True。悬停只就地改那一行的底色、不重建整棵树，
+            所以只有"不想要这个反馈"时才关它，性能上没什么可省的。
         empty_text: 空数据文案，``None`` 取语言包。
         on_node_click: 点击节点回调，参数为该节点。
         on_node_context: 右键节点回调，``(node, event)``。
@@ -218,7 +229,8 @@ class Tree:
         self.expanded = set(self.expanded)
         self.checked = set(self.checked)
         # 运行期状态一律下划线开头：不参与序列化，改了靠 notify() 重绘。
-        self._hover: Key | None = None
+        # 注意**没有** ``_hover``：悬停属于单行，由 :func:`_tree_row` 各管各的；
+        # 放进这棵树就会被当成"树的状态变了"，划过一行重画整棵。
         self._query = ""
         self._index: dict[Key, _Row] = {}
         self._rows: list[_Row] = []
@@ -577,28 +589,30 @@ class Tree:
         if self.on_node_click:
             self.on_node_click(row.node)
 
-    def _on_hover_row(
-        self, key: Key, hovering: bool, _event: ft.ControlEvent | None = None
-    ) -> None:
-        """悬停高亮：同一个 key 重复进入 / 离开时提前返回，避免抖动重绘。"""
-        if (self._hover == key) == hovering:
-            return
-        self._hover = key if hovering else None
-        self.notify()  # type: ignore[attr-defined]
-
     # ------------------------------------------------------------------
     # 内部：渲染
     # ------------------------------------------------------------------
 
-    def _row_control(self, row: _Row) -> ft.Control:
-        """一行：引导线 + 箭头 + 复选框 + 图标 + 文本 + 尾部。"""
+    def _row_control(
+        self,
+        row: _Row,
+        *,
+        hovered: bool = False,
+        on_enter: Callable | None = None,
+        on_exit: Callable | None = None,
+    ) -> ft.Control:
+        """一行：引导线 + 箭头 + 复选框 + 图标 + 文本 + 尾部。
+
+        ``hovered`` / ``on_enter`` / ``on_exit`` 由 :func:`_tree_row` 提供：悬停状态
+        属于**行**，不属于树 —— 放在树上就会"划过一行重画全部"。
+        """
         disabled = self.disabled or row.node.disabled
         state = self._states.get(row.key, _Check.UNCHECKED)
         selected = self.highlight_current and self.current == row.key
 
         if selected:
             bgcolor: ft.ColorValue | None = SELECTED_BG
-        elif self._hover == row.key and not disabled:
+        elif hovered and not disabled:
             bgcolor = HOVER_BG
         else:
             bgcolor = None
@@ -642,13 +656,14 @@ class Tree:
         handlers: dict[str, object] = {}
         if not disabled:
             handlers["on_tap"] = partial(self._on_row_tap, row.key)
-            if self.hoverable:
-                # 用 enter / exit 而不是 on_hover：GestureDetector 的 hover 事件
-                # 载荷是 None，只有 Container 才给 "true"/"false"（真机踩过）
-                handlers["on_enter"] = partial(self._on_hover_row, row.key, True)
-                handlers["on_exit"] = partial(self._on_hover_row, row.key, False)
             if self.on_node_context is not None:
                 handlers["on_secondary_tap"] = partial(self._on_row_context, row.key)
+            # 悬停用 enter / exit：GestureDetector 的 hover 载荷是 None，
+            # 拿不到"进/出"（只有 Container 给 "true"/"false"）。
+            if on_enter is not None:
+                handlers["on_enter"] = on_enter
+            if on_exit is not None:
+                handlers["on_exit"] = on_exit
         if not handlers:
             return body
         return ft.GestureDetector(content=body, **handlers)  # type: ignore[arg-type]
@@ -709,7 +724,7 @@ class Tree:
             box = ft.Container(
                 width=CHECK_BOX,
                 height=CHECK_BOX,
-                border_radius=ft.BorderRadius.all(3),
+                border_radius=_CHECK_RADIUS,
                 bgcolor=ft.Colors.OUTLINE if disabled else ft.Colors.PRIMARY,
                 alignment=ft.Alignment.CENTER,
                 content=ft.Icon(ft.Icons.CHECK, size=12, color=ft.Colors.ON_PRIMARY),
@@ -718,13 +733,13 @@ class Tree:
             box = ft.Container(
                 width=CHECK_BOX,
                 height=CHECK_BOX,
-                border_radius=ft.BorderRadius.all(3),
+                border_radius=_CHECK_RADIUS,
                 bgcolor=ft.Colors.OUTLINE if disabled else ft.Colors.PRIMARY,
                 alignment=ft.Alignment.CENTER,
                 content=ft.Container(
                     width=8,
                     height=2,
-                    border_radius=ft.BorderRadius.all(1),
+                    border_radius=_HALF_BAR_RADIUS,
                     bgcolor=ft.Colors.ON_PRIMARY,
                 ),
             )
@@ -734,20 +749,15 @@ class Tree:
             box = ft.Container(
                 width=CHECK_BOX,
                 height=CHECK_BOX,
-                border_radius=ft.BorderRadius.all(3),
+                border_radius=_CHECK_RADIUS,
                 bgcolor=None,
-                border=ft.Border.all(
-                    1.5,
-                    ft.Colors.with_opacity(0.4, ft.Colors.OUTLINE)
-                    if disabled
-                    else ft.Colors.OUTLINE,
-                ),
+                border=_CHECK_BORDER_OFF if disabled else _CHECK_BORDER,
             )
 
         hit = ft.Container(
             width=CHECK_HIT,
             height=CHECK_HIT,
-            margin=ft.Margin.only(right=2),
+            margin=_CHECK_MARGIN,
             alignment=ft.Alignment.CENTER,
             content=box,
         )
@@ -809,7 +819,9 @@ class Tree:
         )
 
     def _body(self, rows: list[_Row]) -> ft.Control:
-        controls = [self._row_control(row) for row in rows]
+        # 每行一个组件：悬停状态挂在行自己身上，划过一行只重绘那一行，
+        # 而不是整棵树（见 :func:`_tree_row`）。
+        controls = [_tree_row(self, row, key=row.key) for row in rows]
         if self.height is not None:
             # 长树给固定视口：ListView 按需构建，滚动时才生成行
             return ft.ListView(
@@ -901,6 +913,37 @@ def _project() -> list[TreeNode]:
             ],
         ),
     ]
+
+
+# ---------------------------------------------------------------------------
+# 每行一个组件：把"悬停"关在一行之内
+# ---------------------------------------------------------------------------
+@ft.component
+def _tree_row(tree: Tree, row: _Row) -> ft.Control:
+    """树行 = 一个独立组件，悬停状态挂在它自己身上。
+
+    悬停若记在 ``Tree`` 上，``notify()`` 会让整棵树重绘 —— 一屏 60 行就是
+    60 次行构建 + 一份全新的控件树下发。拆到行上之后，划过一行只重绘那一行。
+    （为什么不"就地改颜色 + update()"：已挂载的控件在 flet 1.1 里是冻结的，
+    改属性与 ``update()`` 都会抛 ``Frozen controls cannot be updated``。）
+    """
+    hovered, set_hovered = ft.use_state(False)
+
+    def on_enter(_e: ft.Event) -> None:
+        if not hovered:
+            set_hovered(True)
+
+    def on_exit(_e: ft.Event) -> None:
+        if hovered:
+            set_hovered(False)
+
+    live = tree.hoverable
+    return tree._row_control(
+        row,
+        hovered=hovered and live,
+        on_enter=on_enter if live else None,
+        on_exit=on_exit if live else None,
+    )
 
 
 @ft.component

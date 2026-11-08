@@ -43,14 +43,23 @@ def _record(name: str, error: BaseException | None) -> None:
         traceback.print_exception(type(error), error, error.__traceback__)
 
 
-def _make_renderer(target, attr_name: str) -> Callable[[ft.Page], None]:
+def _make_renderer(
+    target, attr_name: str, *, via_ui: bool = False
+) -> Callable[[ft.Page], None]:
     """根据目标形态返回一个 ``render(page)`` 回调。
 
-    - ``@ft.component`` 函数 → ``page.render(target)``
     - 传统 ``main(page)`` 入口 → 直接调用
+    - 带 ``ui()`` 的组件（``@ft.observable`` 状态类）→ ``page.render(实例.ui)``
+    - 其余（``@ft.control`` 控件 / ``@ft.component`` 函数）→ ``page.render(target)``
+
+    ``via_ui`` 不是可有可无的花样：``Tree`` / ``Calendar`` 这类组件的状态字段
+    里有 ``set``，直接 ``page.render(Tree)`` 会让 flet 把整个实例当控件序列化，
+    撞上 ``can not serialize 'set' object``。真实调用路径永远是 ``tree.ui()``。
     """
     if attr_name == "main":
         return lambda page: target(page)
+    if via_ui and hasattr(target, "ui"):
+        return lambda page: page.render(target().ui)
     return lambda page: page.render(target)
 
 
@@ -103,13 +112,18 @@ def main() -> None:
         help="渲染后依次访问的路由，逗号分隔，如 /,/general,/form",
     )
     parser.add_argument("--settle", type=float, default=0.8, help="每次渲染后等待秒数")
+    parser.add_argument(
+        "--via-ui",
+        action="store_true",
+        help="目标带 ui() 时渲染 target().ui 而不是 target 本身（状态类组件必须这样测）",
+    )
     args = parser.parse_args()
 
     module = importlib.import_module(args.module)
     target = getattr(module, args.attr)
 
     routes = [r.strip() for r in args.routes.split(",") if r.strip()]
-    render = _make_renderer(target, args.attr)
+    render = _make_renderer(target, args.attr, via_ui=args.via_ui)
 
     print(
         f"smoke: {args.module}.{args.attr}  routes={routes or '(none)'}",

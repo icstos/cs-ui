@@ -1,17 +1,22 @@
-"""导航类组件：应用栏、面包屑、菜单、分页。"""
+"""导航类组件：应用栏、面包屑、菜单、分页。
 
-from .app_bar import AppBar
-from .bread_crumb import BreadCrumb, Crumb
-from .menu import Menu, MenuGroup, MenuItem
-from .pagination import Pagination, PaginationState
+门面惰性（见 :mod:`ui._lazy`）：``from ui.navigation import Menu`` 只加载 ``menu``，
+不会把应用栏 / 面包屑 / 分页一起拖进来。
+"""
 
-__all__ = [
-    "AppBar",
-    "BreadCrumb",
-    "Crumb",
-    "Menu",
-    "MenuGroup",
-    "MenuItem",
-    "Pagination",
-    "PaginationState",
-]
+from ui._lazy import lazy_exports
+
+lazy_exports(
+    globals(),
+    {
+        "AppBar": ".app_bar",
+        "BreadCrumb": ".bread_crumb",
+        "Crumb": ".bread_crumb",
+        "Menu": ".menu",
+        "MenuGroup": ".menu",
+        "MenuItem": ".menu",
+        "Pagination": ".pagination",
+        "PaginationState": ".pagination",
+    },
+    __name__,
+)

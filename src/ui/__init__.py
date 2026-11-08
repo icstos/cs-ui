@@ -37,7 +37,6 @@ from ._registry import COMPONENT_MODULES as _COMPONENT_MODULES
 from .version import FLET_MIN as FLET_MIN
 from .version import FLET_SERIES as FLET_SERIES
 from .version import FLET_VERSION as FLET_VERSION
-from .version import __version__ as __version__
 from .version import require_flet as require_flet
 
 #: 公共别名：README 里 ``from ui import ft`` 取的就是 flet 模块本身
@@ -68,6 +67,11 @@ _SUBMODULES: tuple[str, ...] = (
 #: 不属于任何子包 ``__all__``、但曾经由 star-import 暴露出来的名字
 _EXTRA_LAZY: dict[str, str] = {"App": "ui.app"}
 
+#: 惰性求值的模块级属性。``__version__`` 要读安装元数据（首次约 37ms），
+#: 而 `import ui` 本身并不需要它 —— 只有显示版本号的地方（关于页 / CLI）才触发。
+#: 不进 ``__all__``：star-import 一直不带下划线名字，这里保持原样。
+_LATE_ATTRS: dict[str, str] = {"__version__": "ui.version"}
+
 #: flet 的**子模块**（不是 ``__all__`` 里的名字，`getattr(flet, ...)` 拿不到）。
 #: 原先用 ``from flet import canvas`` 显式导入，光这一行就要 85ms（flet.canvas 会拖进
 #: 一整套绘图控件），改成用到时再导入。
@@ -86,7 +90,11 @@ def __getattr__(name: str) -> _Any:
     elif name in _FLET_SUBMODULES:
         value = importlib.import_module(f"flet.{name}")
     else:
-        module_path = _COMPONENT_MODULES.get(name) or _EXTRA_LAZY.get(name)
+        module_path = (
+            _COMPONENT_MODULES.get(name)
+            or _EXTRA_LAZY.get(name)
+            or _LATE_ATTRS.get(name)
+        )
         if module_path is not None:
             value = getattr(importlib.import_module(module_path), name)
         else:
@@ -117,7 +125,8 @@ def __dir__() -> list[str]:
 # ``from ui import *`` 的导出面 = 改造前 star-import 的并集：
 # flet 全部公开名 + ft_init 的 536 个别名（⊆ flet.__all__）+ 各子包 __all__
 # + 子模块名 + 'ft'
-__all__ = [
+# 由几份来源拼成并集，ruff 静态看不到里面的元素类型
+__all__ = [  # noqa: PLE0604
     *sorted(
         {
             *flet.__all__,

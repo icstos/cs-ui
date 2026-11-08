@@ -411,10 +411,10 @@ class Menu:
     on_expand: Callable[[tuple[str, ...]], None] | None = None
     on_collapse_change: Callable[[bool], None] | None = None
 
-    #: 当前悬停的行键（"" / "host" / "home" …）。存在实例上而不是 ``use_state``：
-    #: ``ui()`` 是被调用方**显式调用**的（``menu.ui()``），每次外层重绘都会重建
-    #: 组件实例，hooks 里的状态跟着清零 —— 悬停会闪。字段跟着 Menu 实例走，稳。
-    _hover: str = field(default="", init=False, repr=False)
+    # 悬停状态**故意不放在这里**。曾经有一个 ``_hover: str`` 字段，配
+    # ``notify()`` 重绘 —— 鼠标划过一行就要重建整棵菜单（上百行控件 + 一次下发）。
+    # 现在悬停挂在**每一行自己的组件**里（见 :func:`_row_view`）：状态一变只重画
+    # 那一行，其余行 flet 的 diff 看到同一个控件对象直接跳过。
 
     # ------------------------------------------------------------------
     # 对外的小动作
@@ -463,18 +463,36 @@ class Menu:
         if callable(notify):
             notify()
 
-    def _effective_expanded(self) -> tuple[str, ...]:
+    def _effective_expanded(self, path: Sequence[str] | None = None) -> tuple[str, ...]:
         """真正生效的展开集合：``expanded_keys`` + 选中项的祖先链。
 
         **只算出来，不写回字段** —— 写回去就等于"用户永远收不起任何一个装着
         选中项的父级"，那是个很招人烦的小毛病。渲染时父项的箭头也必须看这份
         集合，否则会出现"子项明明露着、父项箭头却朝下"的自相矛盾。
+
+        Args:
+            path: 已知的选中链路（``find_path`` 的结果）。一次渲染里这个链路要被
+                用两回（算展开集合、标祖先高亮），传进来就不用重复遍历整棵树。
         """
         expanded = prune_expanded(self.items, self.expanded_keys)
-        path = find_path(self.items, self.selected_key)
-        if not path:
+        trail = path if path is not None else find_path(self.items, self.selected_key)
+        if not trail:
             return expanded
-        return tuple(dict.fromkeys((*expanded, *path[:-1])))
+        return tuple(dict.fromkeys((*expanded, *trail[:-1])))
+
+    def _group_starts(self) -> dict[str, MenuGroup]:
+        """ "分组标题挂在哪一行之前"：组内第一项的键 → 分组。一次 O(项数)。
+
+        曾经是每画一行就回扫一遍顶层 ``items``（``_group_before``），
+        行数 × 顶层项数 —— 120 行的菜单要跑一万多次比较，光这一项就占渲染时间
+        的 16%。分组标题只可能出现在**组内第一项**之前，所以一张
+        ``第一项键 → 分组`` 的表就够，查一次是 dict.get。
+        """
+        starts: dict[str, MenuGroup] = {}
+        for node in self.items:
+            if isinstance(node, MenuGroup) and node.items:
+                starts.setdefault(node.items[0].key, node)
+        return starts
 
     def _item_of(self, key: str) -> MenuItem | None:
         for item in walk(self.items):
@@ -520,9 +538,13 @@ class Menu:
 
     # -- 垂直 ----------------------------------------------------------
     def _vertical(self) -> ft.Control:
-        expanded = self._effective_expanded()
+        # 选中链路一次算清：既要拿它补展开集合，又要标祖先高亮。
+        path = find_path(self.items, self.selected_key)
+        expanded = self._effective_expanded(path)
         rows = visible_rows(self.items, expanded, collapsed=self.collapsed)
-        ancestors = set(find_path(self.items, self.selected_key)[:-1])
+        ancestors = set(path[:-1])
+        # 分组标题的挂载点一次算清（原先每行回扫一遍顶层，行数 × 项数）
+        group_starts = {} if self.collapsed else self._group_starts()
         body: list[ft.Control] = []
 
         if self.header is not None and not self.collapsed:
@@ -532,18 +554,19 @@ class Menu:
                 )
             )
 
-        for index, (item, depth) in enumerate(rows):
-            group = self._group_before(rows, index)
+        for item, depth in rows:
+            group = group_starts.get(item.key)
             if group is not None:
                 body.append(self._group_title(group))
             body.append(
-                self._row(
+                _row_view(
+                    self,
                     item,
                     depth,
                     selected=item.key == self.selected_key,
                     in_path=item.key in ancestors,
                     expanded=item.key in expanded,
-                    hovered=self._hover == item.key,
+                    key=item.key,
                 )
             )
 
@@ -572,25 +595,6 @@ class Menu:
             ),
         )
 
-    def _group_before(
-        self, rows: Sequence[tuple[MenuItem, int]], index: int
-    ) -> MenuGroup | None:
-        """``rows[index]`` 是不是某个分组的第一项；是就返回那个分组。
-
-        分组标题只在**组的第一项之前**出现。跟着"可见行"算而不是跟着原始
-        树算，是因为收起某个父级后，它下面的组标题也该跟着消失。
-        """
-        if self.collapsed:
-            return None
-        current = rows[index][0].key
-        for node in self.items:
-            if isinstance(node, MenuGroup) and node.items:
-                if node.items[0].key == current:
-                    return node
-                if any(item.key == current for item in node.items):
-                    return None  # 组内第一项已被收起，标题也跟着走
-        return None
-
     def _group_title(self, group: MenuGroup) -> ft.Control:
         """分组标题：小一号、更淡，只做视觉切分。"""
         return ft.Container(
@@ -610,69 +614,66 @@ class Menu:
     # -- 水平 ----------------------------------------------------------
     def _horizontal(self) -> ft.Control:
         """顶栏：只画一层。子项在这里不展开（原因见模块文档第 2 条）。"""
-        size = self._size_key
-        height = row_height(size)
-        text_size = ROW_TEXT[size]
-        icon_size = ROW_ICON[size]
         # 顶栏只画一层，可当前选中项很可能是某个一级项的子项 —— 那就把它的
         # **一级祖先**点亮。否则用户在"主机列表"页上，顶栏一片灰，等于没导航。
         ancestors = set(find_path(self.items, self.selected_key)[:-1])
-        tabs: list[ft.Control] = []
-
-        for item in _tops(self.items):
-            selected = item.key == self.selected_key or item.key in ancestors
-            lit = self._hover == item.key and not item.disabled
-            tabs.append(
-                ft.Container(
-                    height=height,
-                    padding=ft.Padding.symmetric(horizontal=SPACE["4"]),
-                    alignment=ft.Alignment.CENTER,
-                    # 选中靠底部 3px 与主色字，不铺底色 —— 顶栏是页面的一部分，
-                    # 铺一块色会把它切成"卡片里的导航"，反而更碎（Arco 的水平
-                    # 菜单同理：只有一条 label，没有块）。未选中也留同宽的透明边，
-                    # 换选中时文字不上下跳。
-                    border=ft.Border.only(
-                        bottom=ft.BorderSide(
-                            3,
-                            ft.Colors.PRIMARY if selected else ft.Colors.TRANSPARENT,
-                        )
-                    ),
-                    content=ft.Row(
-                        spacing=ICON_GAP,
-                        tight=True,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        controls=[
-                            *(
-                                [
-                                    ft.Icon(
-                                        item.icon,
-                                        size=icon_size,
-                                        color=self._icon_fg(item, selected, False, lit),
-                                    )
-                                ]
-                                if item.icon
-                                else []
-                            ),
-                            ft.Text(
-                                item.text,
-                                size=text_size,
-                                color=self._fg(item, selected, False, lit),
-                                weight=FONT_WEIGHT["medium"] if selected else None,
-                                no_wrap=True,
-                            ),
-                            *(
-                                [self._badge(item, lit=selected)]
-                                if item.badge is not None
-                                else []
-                            ),
-                        ],
-                    ),
-                    data=item.key,
-                    on_click=None if item.disabled else self._click,
-                    on_hover=(None if item.disabled else self._hover_handler(item.key)),
-                )
+        tabs = [
+            _tab_view(
+                self, item, item.key == self.selected_key or item.key in ancestors
             )
+            for item in _tops(self.items)
+        ]
         return ft.Row(spacing=0, tight=True, controls=tabs)
+
+    def _tab(self, item: MenuItem, selected: bool, hovered: bool) -> ft.Control:
+        """顶栏的一项。悬停只换字色 —— 顶栏不铺底色（见下）。"""
+        size = self._size_key
+        icon = (
+            ft.Icon(
+                item.icon,
+                size=ROW_ICON[size],
+                color=self._icon_fg(item, selected, False, hovered),
+            )
+            if item.icon
+            else None
+        )
+        return ft.Container(
+            height=row_height(size),
+            padding=ft.Padding.symmetric(horizontal=SPACE["4"]),
+            alignment=ft.Alignment.CENTER,
+            # 选中靠底部 3px 与主色字，不铺底色 —— 顶栏是页面的一部分，
+            # 铺一块色会把它切成"卡片里的导航"，反而更碎（Arco 的水平
+            # 菜单同理：只有一条 label，没有块）。未选中也留同宽的透明边，
+            # 换选中时文字不上下跳。
+            border=ft.Border.only(
+                bottom=ft.BorderSide(
+                    3,
+                    ft.Colors.PRIMARY if selected else ft.Colors.TRANSPARENT,
+                )
+            ),
+            content=ft.Row(
+                spacing=ICON_GAP,
+                tight=True,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    *([icon] if icon else []),
+                    ft.Text(
+                        item.text,
+                        size=ROW_TEXT[size],
+                        color=self._fg(item, selected, False, hovered),
+                        weight=FONT_WEIGHT["medium"] if selected else None,
+                        no_wrap=True,
+                    ),
+                    *(
+                        [self._badge(item, lit=selected)]
+                        if item.badge is not None
+                        else []
+                    ),
+                ],
+            ),
+            data=item.key,
+            on_click=None if item.disabled else self._click,
+        )
 
     # -- 单行 ----------------------------------------------------------
     def _row(
@@ -683,11 +684,17 @@ class Menu:
         selected: bool,
         in_path: bool,
         expanded: bool,
-        hovered: bool,
+        hovered: bool = False,
+        on_hover: Callable | None = None,
     ) -> ft.Container:
-        """一行菜单项。折叠态只剩图标。"""
+        """一行菜单项。折叠态只剩图标。
+
+        ``hovered`` / ``on_hover`` 由 :func:`_row_view` 提供 —— 悬停状态挂在**每一行
+        自己的组件**里，划过一行只有那一行重绘（见该函数的说明）。
+        """
         size = self._size_key
         hint = item.tooltip or item.text
+        hover_handler = None if (item.disabled or on_hover is None) else on_hover
 
         if self.collapsed:
             # 折叠后只剩图标，选中项的**父级**也必须亮起来：选中项本身藏在
@@ -710,7 +717,7 @@ class Menu:
                 tooltip=hint,
                 data=item.key,
                 on_click=None if item.disabled else self._click,
-                on_hover=None if item.disabled else self._hover_handler(item.key),
+                on_hover=hover_handler,
             )
 
         leading: list[ft.Control] = []
@@ -757,6 +764,18 @@ class Menu:
                 )
             )
 
+        label = ft.Text(
+            item.text,
+            size=ROW_TEXT[size],
+            color=self._fg(item, selected, in_path, hovered),
+            weight=FONT_WEIGHT["medium"]
+            if (selected or in_path or item.children)
+            else None,
+            no_wrap=True,
+            overflow=ft.TextOverflow.ELLIPSIS,
+            expand=True,
+        )
+
         return ft.Container(
             height=row_height(size),
             padding=ft.Padding.only(left=pad_left, right=LEAD),
@@ -772,25 +791,11 @@ class Menu:
             # 字符串会被当成普通 ValueKey，``scroll_to`` 收到后不报错、也不滚动。
             key=scroll_key(item.key) if selected else None,
             on_click=None if item.disabled else self._click,
-            on_hover=None if item.disabled else self._hover_handler(item.key),
+            on_hover=hover_handler,
             content=ft.Row(
                 spacing=ICON_GAP,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[
-                    *leading,
-                    ft.Text(
-                        item.text,
-                        size=ROW_TEXT[size],
-                        color=self._fg(item, selected, in_path, hovered),
-                        weight=FONT_WEIGHT["medium"]
-                        if (selected or in_path or item.children)
-                        else None,
-                        no_wrap=True,
-                        overflow=ft.TextOverflow.ELLIPSIS,
-                        expand=True,
-                    ),
-                    *trailing,
-                ],
+                controls=[*leading, label, *trailing],
             ),
         )
 
@@ -932,27 +937,65 @@ class Menu:
             content=button,
         )
 
-    def _hover_handler(self, key: str) -> Callable:
-        """行悬停：只记一个键，画面没变就不重绘。
 
-        ``e.data`` 是 ``"true"`` / ``"false"`` **字符串**，不是 bool（分页器踩过）。
-        离开的事件偶尔会晚到别的行上，所以退出时要比一下键 —— 否则快速划过两行
-        会把还亮着的那行抹掉。
-        """
+# ---------------------------------------------------------------------------
+# 每行一个组件：把"悬停"关在一行之内
+# ---------------------------------------------------------------------------
+@ft.component
+def _row_view(
+    menu: Menu,
+    item: MenuItem,
+    depth: int,
+    *,
+    selected: bool,
+    in_path: bool,
+    expanded: bool,
+) -> ft.Control:
+    """菜单行 = 一个独立组件，悬停状态挂在它自己身上。
 
-        def handler(e, _key=key):
-            on = str(e.data).strip().lower() == "true"
-            if on:
-                if self._hover == _key:
-                    return
-                self._hover = _key
-            else:
-                if self._hover != _key:
-                    return
-                self._hover = ""
-            self._repaint()
+    这是"悬停不要重绘整棵菜单"的唯一干净做法。flet 1.1 里组件重绘的粒度是
+    **组件**：状态放在 ``Menu`` 上，改一次就要重建上百行；拆到行上，hover 只让
+    **这一行**重绘（实测 ``_row`` 的调用次数从 94 次降到 1 次）。
 
-        return handler
+    为什么不用"就地改颜色 + update()"这条更省的路
+    ------------------------------------------------
+    已挂载的控件在 flet 1.1 里是**冻结**的（``_frozen``），改属性或调 ``update()``
+    都会抛 ``Frozen controls cannot be updated``。冻结是框架刻意的设计：渲染后的
+    控件树不可变，改 UI 的正确入口是重绘组件。硬解冻等于和框架对着干，跨版本
+    必然出问题 —— 所以这里走"缩小重绘范围"，而不是"绕过冻结"。
+    """
+    hovered, set_hovered = ft.use_state(False)
+
+    def on_hover(e: ft.ControlEvent) -> None:
+        on = str(e.data).strip().lower() == "true"
+        if on != hovered:
+            set_hovered(on)
+
+    return menu._row(
+        item,
+        depth,
+        selected=selected,
+        in_path=in_path,
+        expanded=expanded,
+        hovered=hovered,
+        on_hover=on_hover,
+    )
+
+
+@ft.component
+def _tab_view(menu: Menu, item: MenuItem, selected: bool) -> ft.Control:
+    """顶栏一项，同上：悬停只影响这一项。"""
+    hovered, set_hovered = ft.use_state(False)
+
+    def on_hover(e: ft.ControlEvent) -> None:
+        on = str(e.data).strip().lower() == "true"
+        if on != hovered:
+            set_hovered(on)
+
+    tab = menu._tab(item, selected, hovered and not selected)
+    if not item.disabled:
+        tab.on_hover = on_hover
+    return tab
 
 
 # ---------------------------------------------------------------------------

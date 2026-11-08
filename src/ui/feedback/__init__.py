@@ -2,18 +2,20 @@
 
 - :class:`~ui.feedback.message.Message` —— 主动操作的反馈，顶部居中、自动消失。
 - :class:`~ui.feedback.notification.Notification` —— 系统级提醒，贴角、带标题。
+
+门面惰性（见 :mod:`ui._lazy`）：弹出「保存成功」不必先加载对话框与进度条。
 """
 
-from .alert_dialog import AlertDialog
-from .loading import Loading
-from .message import Message
-from .notification import Notification
-from .progress_bar import ProgressBar
+from ui._lazy import lazy_exports
 
-__all__ = [
-    "AlertDialog",
-    "Loading",
-    "Message",
-    "Notification",
-    "ProgressBar",
-]
+lazy_exports(
+    globals(),
+    {
+        "AlertDialog": ".alert_dialog",
+        "Loading": ".loading",
+        "Message": ".message",
+        "Notification": ".notification",
+        "ProgressBar": ".progress_bar",
+    },
+    __name__,
+)

@@ -73,6 +73,18 @@ SIZES: dict[str, tuple[int, int, float]] = {
 #: 兼容 Element 的档位命名，避免迁移时踩空。
 _SIZE_ALIASES = {"medium": "default", "large": "default", "mini": "small"}
 
+#: 「画哪两条边」只有四种组合，边线值也就只有一条 —— 建一次共享到底。
+#: ``ft.Border`` 是纯值对象（序列化出去就完事），共享实例不会互相影响。
+#: 不画的那一边必须**显式传 None**：``ft.Border()`` 的字段默认值是
+#: ``BorderSide(width=0, style=NONE)``，画出来同样是无线，但语义是"有边、宽度 0"。
+_EDGE_SIDE = ft.BorderSide(LINE_W, LINE)
+_EDGES: dict[tuple[bool, bool], ft.Border] = {
+    (True, True): ft.Border(right=_EDGE_SIDE, bottom=_EDGE_SIDE),
+    (True, False): ft.Border(right=_EDGE_SIDE, bottom=None),
+    (False, True): ft.Border(right=None, bottom=_EDGE_SIDE),
+    (False, False): ft.Border(right=None, bottom=None),
+}
+
 
 @dataclass
 class DescriptionsItem:
@@ -447,11 +459,14 @@ class Descriptions(ft.Container):
         )
 
     def _edge(self, *, right: bool, bottom: bool) -> ft.Border:
-        """只画右 / 下两条边，外框由外层容器负责 —— 永远不会出现双线。"""
-        return ft.Border(
-            right=ft.BorderSide(LINE_W, LINE) if right else None,
-            bottom=ft.BorderSide(LINE_W, LINE) if bottom else None,
-        )
+        """只画右 / 下两条边，外框由外层容器负责 —— 永远不会出现双线。
+
+        四种组合共享同一批 :class:`flet.Border` 值（见 :data:`_EDGES`）：
+        ``ft.Border(...)`` 每建一个要验一遍颜色、再造 ``BorderSide``，实测 7µs ——
+        与新建一个 :class:`flet.Container` 同价。一张 24 字段的表有 48 个格子，
+        逐格新建就把 0.35ms 花在了"同一条灰线"上。
+        """
+        return _EDGES[(right, bottom)]
 
     # ------------------------------------------------------------------
     # 运行时更新
