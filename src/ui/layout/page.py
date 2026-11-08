@@ -222,7 +222,7 @@ def _sidebar() -> ft.Control:
         controls=[
             ft.Container(
                 padding=ft.Padding.only(
-                    left=SPACE["3"], top=SPACE["3"], bottom=SPACE["2"]
+                    left=SPACE["4"], top=SPACE["4"], bottom=SPACE["2"]
                 ),
                 content=ft.Text(
                     "侧栏",
@@ -233,7 +233,7 @@ def _sidebar() -> ft.Control:
             ),
             *[
                 ft.Container(
-                    padding=ft.Padding.symmetric(horizontal=SPACE["3"], vertical=7),
+                    padding=ft.Padding.symmetric(horizontal=SPACE["4"], vertical=8),
                     border_radius=RADIUS["sm"],
                     bgcolor=overlay(0.08) if name == "用户" else None,
                     content=ft.Text(
@@ -312,7 +312,7 @@ def _skeleton() -> ft.Control:
                 ),
                 ft.Container(
                     height=36,
-                    padding=ft.Padding.symmetric(horizontal=SPACE["3"]),
+                    padding=ft.Padding.symmetric(horizontal=SPACE["4"]),
                     bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
                     border=ft.Border(top=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
                     alignment=ft.Alignment.CENTER_LEFT,

@@ -1,8 +1,14 @@
-from enum import Enum, unique
 from dataclasses import dataclass
+from enum import Enum, unique
+
 import flet as ft
 
-DEFAULT_FORM_HEIGHT = 36
+from ui.core.tokens import CONTROL_HEIGHT
+
+#: 表单控件（输入框 / 下拉 / 按钮）的统一高度。
+#: 曾经在 core 与 3 个组件里各写一遍 ``= 36``，谁改一处就漂一格；
+#: 现在只有 tokens 一个来源。
+DEFAULT_FORM_HEIGHT = CONTROL_HEIGHT["md"]
 
 
 class RUN_MODE(Enum):

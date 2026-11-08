@@ -45,11 +45,19 @@ from dataclasses import dataclass, field
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip
+from ui.core.empty import empty_line
 from ui.core.float_layer import overlay_usable, use_float_layer
 from ui.core.format import format_list
 from ui.core.i18n import t, use_t
-from ui.core.tokens import FONT_SIZE
+from ui.core.tokens import (
+    FONT_SIZE,
+    ICON_SIZE,
+    disabled_layer,
+    selected_layer,
+    state_layer,
+)
 from ui.input.input import Label
+from ui.input.panel_field import DISABLED_FG
 
 __all__ = ["MultiSelect"]
 
@@ -70,11 +78,11 @@ DEFAULT_FIELD_HEIGHT = 40  # 尺寸上报前的兜底值
 SCREEN_MARGIN = 8  # 面板与窗口边缘的最小间距
 
 #: 选中行背景：淡蓝（对齐 Streamlit 的选中高亮）
-SELECTED_BG = ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY)
+SELECTED_BG = selected_layer()
 #: 悬停行背景：淡灰
-HOVER_BG = ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE)
-#: 到上限后被锁住的行：文字与图标一起压到 38% 的灰（与整组禁用同一档）
-LOCKED_FG = ft.Colors.with_opacity(0.38, ft.Colors.ON_SURFACE)
+HOVER_BG = state_layer("hover")
+#: 到上限后被锁住的行：文字与图标一起压到禁用档的灰（与整组禁用同一档）
+LOCKED_FG = disabled_layer()
 
 
 def _truthy(value: object) -> bool:
@@ -426,7 +434,7 @@ class MultiSelect(Label):
             ft.Icon(
                 ft.Icons.ARROW_DROP_UP if self.is_open else ft.Icons.ARROW_DROP_DOWN,
                 size=20,
-                color=ft.Colors.OUTLINE,
+                color=ft.Colors.ON_SURFACE_VARIANT,
             )
         )
 
@@ -462,7 +470,7 @@ class MultiSelect(Label):
                 ft.Text(
                     self.placeholder or t("ui.common.placeholder"),
                     size=TEXT_SIZE,
-                    color=ft.Colors.OUTLINE,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
                     no_wrap=True,
                     overflow=ft.TextOverflow.ELLIPSIS,
                 )
@@ -479,10 +487,8 @@ class MultiSelect(Label):
             border_radius=ft.BorderRadius.all(4),
             content=ft.Icon(
                 ft.Icons.CLOSE,
-                size=13,
-                color=ft.Colors.OUTLINE
-                if self.disabled
-                else ft.Colors.ON_SURFACE_VARIANT,
+                size=ICON_SIZE["sm"],
+                color=DISABLED_FG if self.disabled else ft.Colors.ON_SURFACE_VARIANT,
             ),
         )
         if not self.disabled:
@@ -533,7 +539,7 @@ class MultiSelect(Label):
             content_padding=ft.Padding.symmetric(horizontal=4, vertical=0),
             border=ft.NoInputBorder(),
             hint_text=t("ui.common.search"),
-            hint_style=ft.TextStyle(size=CHIP_TEXT_SIZE, color=ft.Colors.OUTLINE),
+            hint_style=ft.TextStyle(size=CHIP_TEXT_SIZE, color=ft.Colors.ON_SURFACE_VARIANT),
             on_change=self._on_query_change,
         )
 
@@ -565,16 +571,13 @@ class MultiSelect(Label):
             )
         else:
             # 一个选项都没有，和"搜了但没有命中"是同一件事：这一屏给不出东西。
+            # 左对齐 + 与选项行同内边距 —— 读起来像"列表的最后一行"。
             blocks.append(
-                ft.Container(
+                empty_line(
+                    t("ui.multiselect.empty"),
                     height=ROW_HEIGHT,
+                    align=ft.Alignment.CENTER_LEFT,
                     padding=ft.Padding.symmetric(horizontal=PANEL_PAD + 8),
-                    alignment=ft.Alignment.CENTER_LEFT,
-                    content=ft.Text(
-                        t("ui.multiselect.empty"),
-                        size=CHIP_TEXT_SIZE,
-                        color=ft.Colors.OUTLINE,
-                    ),
                 )
             )
 

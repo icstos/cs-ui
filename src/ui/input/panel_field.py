@@ -34,15 +34,17 @@ import flet as ft
 
 from ui.core.float_layer import overlay_usable
 from ui.core.i18n import t
+from ui.core.tokens import CONTROL_HEIGHT, RADIUS, disabled_layer, state_layer
 
-__all__ = ["PanelField", "place_panel", "panel_shell"]
+__all__ = ["PanelField", "panel_shell", "place_panel"]
 
 # ---------------------------------------------------------------------------
 # 折叠态输入框
 # ---------------------------------------------------------------------------
 FIELD_WIDTH = 240  # 输入框默认宽度
-FIELD_HEIGHT = 40  # 输入框高度
-FIELD_RADIUS = 8  # 输入框 / 面板圆角
+#: 与 Input / SelectBox 同高，同一行表单不会出现"台阶"（曾写死 40）。
+FIELD_HEIGHT = CONTROL_HEIGHT["md"]
+FIELD_RADIUS = RADIUS["lg"]  # 输入框 / 面板圆角
 FIELD_PAD_H = 10  # 输入框左右内边距
 
 # ---------------------------------------------------------------------------
@@ -70,8 +72,8 @@ SCREEN_MARGIN = 8  # 面板与窗口边缘的最小间距
 # ---------------------------------------------------------------------------
 # 配色（全部走主题色，明暗主题下都可用）
 # ---------------------------------------------------------------------------
-HOVER_BG = ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE)  # 悬停底色
-DISABLED_FG = ft.Colors.with_opacity(0.38, ft.Colors.ON_SURFACE)  # 禁用字色
+HOVER_BG = state_layer("hover")  # 悬停底色（M3 悬停档 8%）
+DISABLED_FG = disabled_layer()  # 禁用字色（M3 禁用档 38%）
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +197,7 @@ class PanelField:
         return ft.GestureDetector(
             on_tap=lambda _e: self.clear(),  # type: ignore[attr-defined]
             content=ft.Container(
-                padding=ft.Padding.all(3),
+                padding=ft.Padding.all(4),
                 border_radius=ft.BorderRadius.all(4),
                 bgcolor=HOVER_BG if self._hover == "clear" else None,  # type: ignore[attr-defined]
                 on_hover=lambda e: self._hover_key("clear", _truthy(e.data)),

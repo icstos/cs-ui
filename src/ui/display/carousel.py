@@ -57,9 +57,10 @@ import flet as ft
 
 from ui.core.config import logger
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
+from ui.core.empty import empty_block
 from ui.core.i18n import t, use_t
 from ui.core.theme import use_theme
-from ui.core.tokens import DURATION, FONT_SIZE, RADIUS, SPACE, overlay
+from ui.core.tokens import DURATION, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, overlay
 
 __all__ = [
     "ARROW_MODES",
@@ -439,14 +440,8 @@ class Carousel:
         )
 
     def _empty(self) -> ft.Control:
-        return ft.Container(
-            alignment=ft.Alignment.CENTER,
-            content=ft.Text(
-                t("ui.carousel.empty"),
-                size=FONT_SIZE["body"],
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
-        )
+        # 高度交给外层：轮播本身是定高的，空态只需在中间居中一行。
+        return empty_block(t("ui.carousel.empty"), height=None)
 
     def _slide(self, page: int) -> ft.Control:
         """一页。``offset`` 的单位是"自身的倍数"，宽即一格，所以直接写格数。"""
@@ -617,6 +612,15 @@ class Carousel:
 # ---------------------------------------------------------------------------
 _MUTED = ft.Colors.ON_SURFACE_VARIANT
 
+#: 示例页的渐变底。**具名常量而不是内联字面量**：这是演示用的品牌色组合，
+#: 不是界面令牌，但要能一眼看出"这四个是刻意的"。
+_SLIDE_PALETTE: tuple[tuple[str, str], ...] = (
+    ("#1F6FEB", "#4F46E5"),  # PRIMARY_SEEDS: blue -> indigo
+    ("#0D9488", "#16A34A"),  # teal -> green
+    ("#EA580C", "#DC2626"),  # orange -> red
+    ("#7C3AED", "#DB2777"),  # violet -> pink
+)
+
 #: 每页的标题与副标题。示例内容全部本地绘制，不引用网络图片。
 _CARDS: tuple[tuple[str, str], ...] = (
     ("设计令牌", "一套令牌，明暗与主色自动跟随"),
@@ -628,13 +632,7 @@ _CARDS: tuple[tuple[str, str], ...] = (
 
 def _sample(index: int, title: str, subtitle: str) -> ft.Control:
     """一页"图"：渐变底 + 文字。离线可渲染，不依赖任何网络资源。"""
-    palette = [
-        ("#1F6FEB", "#4F46E5"),
-        ("#0D9488", "#16A34A"),
-        ("#EA580C", "#DC2626"),
-        ("#7C3AED", "#DB2777"),
-    ]
-    start, end = palette[index % len(palette)]
+    start, end = _SLIDE_PALETTE[index % len(_SLIDE_PALETTE)]
     return ft.Container(
         expand=True,
         padding=SPACE["6"],
@@ -650,7 +648,10 @@ def _sample(index: int, title: str, subtitle: str) -> ft.Control:
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 ft.Text(
-                    title, size=22, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE
+                    title,
+                    size=FONT_SIZE["headline_lg"],
+                    weight=FONT_WEIGHT["semibold"],
+                    color=ft.Colors.WHITE,
                 ),
                 ft.Text(
                     subtitle,

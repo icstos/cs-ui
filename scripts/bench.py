@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import gc
 import json
 import math
 import statistics
@@ -55,6 +56,10 @@ from _harness import build as _build
 #: 与基线比对时的容差（性能只会因为"改坏了"而变慢，小幅波动不拦）
 TOLERANCE = 0.25
 
+#: 回归判定的绝对下限（毫秒）。差值小于这个数一律不算 —— 在 0.02ms 上
+#: 算百分比是没有意义的：一次调度抖动就能让它翻倍，红绿全看运气。
+MIN_ABS_DELTA_MS = 0.5
+
 #: 每个用例的重复次数（取中位数；中位数比均值抗偶发 GC / 调度抖动）
 REPEAT = 9
 
@@ -63,12 +68,31 @@ REPEAT = 9
 # 采样工具
 # ---------------------------------------------------------------------------
 def _median_ms(fn: Callable[[], Any], repeat: int = REPEAT) -> float:
+    """跑 ``repeat`` 次取中位数（毫秒）。
+
+    测量期间**关掉循环 GC**。每个用例都会造出几千个短期控件对象，开着 GC 时
+    什么时候回收取决于前面跑过什么 —— 同一段代码在"刚跑完 import 段"和"单独
+    跑"两种情况下能差 30%（实测 6.7ms → 8.9ms），红绿全看调用顺序。关掉 GC
+    再测、测完立刻回收，数字才只反映被测代码本身。
+    """
     fn()  # 预热：第一次会带上懒导入 / 分支预测 / 缓存填充
-    samples: list[float] = []
-    for _ in range(repeat):
-        start = time.perf_counter()
-        fn()
-        samples.append((time.perf_counter() - start) * 1000)
+
+    gc_was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        samples: list[float] = []
+        for _ in range(repeat):
+            # 每轮开始前清一次：只关 GC 不回收的话，9 轮堆越攒越大，
+            # 后面的样本会比前面的慢（calendar 实测 2.7ms → 4.1ms）。
+            # gc.collect() 在 disabled 状态下仍然会执行，可以照常调用。
+            gc.collect()
+            start = time.perf_counter()
+            fn()
+            samples.append((time.perf_counter() - start) * 1000)
+    finally:
+        if gc_was_enabled:
+            gc.enable()
+        gc.collect()
     return round(statistics.median(samples), 3)
 
 
@@ -309,6 +333,20 @@ SECTIONS: dict[str, Callable[[], dict[str, float]]] = {
 # ---------------------------------------------------------------------------
 # 输出
 # ---------------------------------------------------------------------------
+def _is_regression(value: float, base: float) -> bool:
+    """判定一次测量是否算回归。
+
+    **必须同时满足"相对超标"和"绝对可感"**。热路径那几支只有 0.01~0.08ms，
+    在这个量级上跑一次多 20µs 就会显示 +60%，可它连一次函数调用的抖动都比
+    这个差值大 —— 只看百分比，基准会在同代码上随机翻红，几次之后就没人信它了。
+    """
+    if not base or math.isnan(base) or math.isnan(value):
+        return False
+    if value - base < MIN_ABS_DELTA_MS:
+        return False
+    return value > base * (1 + TOLERANCE)
+
+
 def _print_block(
     title: str, data: dict[str, float], baseline: dict[str, float]
 ) -> None:
@@ -316,10 +354,9 @@ def _print_block(
     print("-" * 66)
     for label, value in data.items():
         base = baseline.get(label)
-        # isnan 守卫：某个用例跑失败时值记成 NaN，别让它把整块比对标红
         if base and not math.isnan(base) and not math.isnan(value):
             ratio = value / base
-            mark = "  " if ratio <= 1 + TOLERANCE else "!!"
+            mark = "!!" if _is_regression(value, base) else "  "
             delta = f"{ratio - 1:+.0%}"
             print(f"{mark} {label:44s}{value:9.2f}ms{delta:>8s}")
         else:
@@ -365,14 +402,12 @@ def main() -> int:
         )
         print(f"\n已写入 {args.json}")
 
-    # 回归判定：任一指标超出容差即失败
+    # 回归判定：任一指标超出容差即失败（含绝对下限，见 _is_regression）
     regressions = [
         f"{section} / {label}: {value:.2f}ms vs {baseline[section][label]:.2f}ms"
         for section, block in results.items()
         for label, value in block.items()
-        if (base := baseline.get(section, {}).get(label))
-        and not math.isnan(value)
-        and value > base * (1 + TOLERANCE)
+        if _is_regression(value, baseline.get(section, {}).get(label, 0.0))
     ]
     if regressions:
         print("\n性能回归：")

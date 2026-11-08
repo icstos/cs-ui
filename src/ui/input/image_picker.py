@@ -18,13 +18,15 @@ from pathlib import Path
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
-from ui.core.tokens import FONT_SIZE, RADIUS, SPACE
+from ui.core.tokens import FONT_SIZE, ICON_SIZE, RADIUS, SPACE
 from ui.input.input import Input
 
 __all__ = ["ImagePicker"]
 
 BOX = 150  # 预览方块边长：再大就压过同排的表单字段
-ICON_SIZE = 28
+#: 空预览框的占位图标：这是"空状态"，按刻度取 3xl（32）——
+#: 它是整块控件唯一的可点区域，比正文图标大两档才撑得住 150px 的方框。
+PLACEHOLDER_ICON_SIZE = ICON_SIZE["3xl"]
 _MUTED = ft.Colors.ON_SURFACE_VARIANT
 
 
@@ -54,7 +56,7 @@ class ImagePicker(Input):
         if not exists:
             return ft.Icon(
                 ft.Icons.ADD_PHOTO_ALTERNATE_OUTLINED,
-                size=ICON_SIZE,
+                size=PLACEHOLDER_ICON_SIZE,
                 color=_MUTED,
             )
         return ft.Image(
@@ -68,7 +70,7 @@ class ImagePicker(Input):
                 bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
                 content=ft.Icon(
                     ft.Icons.BROKEN_IMAGE_OUTLINED,
-                    size=ICON_SIZE,
+                    size=PLACEHOLDER_ICON_SIZE,
                     color=_MUTED,
                 ),
             ),

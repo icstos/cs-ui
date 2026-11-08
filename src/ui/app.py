@@ -7,6 +7,7 @@ import flet as ft
 
 from ui.core.config import logger
 from ui.core.i18n import t, use_t
+from ui.core.tokens import FONT_SIZE, RADIUS
 
 FONT_DIR = Path(Path(__file__).parent, "data/fonts").resolve()
 FONTS = {"AlibabaPuHuiTi": str(Path(FONT_DIR, "AlibabaPuHuiTi-3-55-Regular.otf"))}
@@ -28,7 +29,7 @@ def Home():
             ft.Button(
                 content="About", on_click=lambda _: ft.context.page.navigate("/about")
             ),
-            ft.Text("Welcome home", size=24),
+            ft.Text("Welcome home", size=FONT_SIZE["headline_lg"]),
         ]
     )
 
@@ -80,9 +81,9 @@ def NotFoundView():
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        bgcolor=ft.Colors.GREY_200,
+        bgcolor=ft.Colors.SURFACE_CONTAINER,
         padding=20,
-        border_radius=10,
+        border_radius=RADIUS["lg"],
     )
 
 

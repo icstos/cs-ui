@@ -14,13 +14,17 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import flet as ft
+
 from ui.core.doc import Example, Spec, run
+from ui.core.tokens import FONT_SIZE, ICON_SIZE
 
 __all__ = ["BreadCrumb", "Crumb"]
 
 SEPARATOR_ICON = ft.Icons.CHEVRON_RIGHT
-ICON_SIZE = 16
-TEXT_SIZE = 14
+#: 分隔符：与 body 文字同行的 md 档（16），比文字大一档才不至于显得断开
+SEPARATOR_ICON_SIZE = ICON_SIZE["md"]
+#: 路径导航用 subtitle 一档（14）：比正文略重，又不到标题的量级
+CRUMB_TEXT_SIZE = FONT_SIZE["subtitle"]
 
 
 @dataclass
@@ -91,7 +95,7 @@ class BreadCrumb(ft.Row):
                 controls.append(
                     ft.Icon(
                         icon=self.separator,
-                        size=ICON_SIZE,
+                        size=SEPARATOR_ICON_SIZE,
                         color=self.inactive_color,
                     )
                 )
@@ -103,8 +107,8 @@ class BreadCrumb(ft.Row):
         weight = ft.FontWeight.W_600 if is_last else None
         content: ft.Control = ft.Row(
             controls=[
-                *([ft.Icon(crumb.icon, size=ICON_SIZE, color=color)] if crumb.icon else []),
-                ft.Text(crumb.text, size=TEXT_SIZE, color=color, weight=weight),
+                *([ft.Icon(crumb.icon, size=SEPARATOR_ICON_SIZE, color=color)] if crumb.icon else []),
+                ft.Text(crumb.text, size=CRUMB_TEXT_SIZE, color=color, weight=weight),
             ],
             spacing=4,
             tight=True,
@@ -144,7 +148,7 @@ def App():
     return ft.Column(
         controls=[
             ft.Text("BreadCrumb 面包屑", size=20, weight=ft.FontWeight.BOLD),
-            ft.Text("支持纯文本、可点击跳转与自定义图标", size=13, color="#6b7280"),
+            ft.Text("支持纯文本、可点击跳转与自定义图标", size=FONT_SIZE["body"], color=ft.Colors.ON_SURFACE_VARIANT),
             ft.Divider(),
             BreadCrumb(
                 items=[

@@ -166,7 +166,7 @@ def _player_body(
     clock = ft.Text(
         f"{_clock(position)} / {_clock(state.duration)}",
         size=FONT_SIZE["caption"],
-        color=ft.Colors.OUTLINE,
+        color=ft.Colors.ON_SURFACE_VARIANT,
         no_wrap=True,
     )
 

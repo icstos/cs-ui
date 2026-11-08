@@ -56,6 +56,8 @@ from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.float_layer import use_float_layer
 from ui.core.format import format_datetime
 from ui.core.i18n import t, use_t
+from ui.core.icons import STEP_DOWN, STEP_UP
+from ui.core.tokens import FONT_SIZE
 from ui.input.calendar_panel import (
     CAL_GRID_H,
     CAL_GRID_W,
@@ -549,7 +551,7 @@ class DateTimeInput(CalendarPanel, Label):
             alignment=ft.Alignment.CENTER,
             content=self._nav_button(
                 f"t{kind}:{'up' if delta < 0 else 'down'}",
-                ft.Icons.EXPAND_LESS if delta < 0 else ft.Icons.EXPAND_MORE,
+                STEP_UP if delta < 0 else STEP_DOWN,
                 lambda: self._step_time(kind, delta),
                 t("ui.datetime.prev_step") if delta < 0 else t("ui.datetime.next_step"),
             ),
@@ -786,7 +788,7 @@ class DateTimeInput(CalendarPanel, Label):
 def _caption(text: str) -> ft.Control:
     return ft.Text(
         text,
-        size=12.5,
+        size=FONT_SIZE["small"],
         color=ft.Colors.ON_SURFACE_VARIANT,
         style=ft.TextStyle(height=1.6),
     )

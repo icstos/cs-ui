@@ -34,13 +34,13 @@ import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.i18n import t, use_t
-from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, SPACE, overlay
+from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, SPACE, overlay, state_layer
 from ui.navigation.pagination import Pagination, PaginationState
 
 __all__ = ["Table", "TableState", "pandas_to_datatable"]
 
 #: 悬停行底色（角色名 → 明暗自适应）
-ROW_HOVER = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
+ROW_HOVER = state_layer("hover", role=ft.Colors.PRIMARY)
 
 #: 斑马纹底色：比悬停更轻，只用来分行、不抢内容
 ROW_STRIPE = overlay(0.03)

@@ -24,7 +24,7 @@ import flet as ft
 
 from ui.core.constants import LayoutType
 from ui.core.doc import Api, Example, Spec, info, run, tip
-from ui.core.tokens import FONT_SIZE, RADIUS, SPACE, overlay
+from ui.core.tokens import FONT_SIZE, RADIUS, SPACE, disabled_layer, selected_layer
 from ui.input.input import Label
 
 __all__ = ["Radio", "RadioCard"]
@@ -35,12 +35,12 @@ ACTIVE = ft.Colors.PRIMARY
 #: 文字三档：正文 / 说明 / 禁用
 TEXT = ft.Colors.ON_SURFACE
 MUTED = ft.Colors.ON_SURFACE_VARIANT
-TEXT_DISABLED = overlay(0.38)
+TEXT_DISABLED = disabled_layer()
 
 #: 选中卡片：主色淡底 + 主色描边，靠两层一起表态，单靠描边在深色主题下太弱
 CARD_BORDER = ft.Colors.OUTLINE_VARIANT
 CARD_BORDER_SELECTED = ft.Colors.PRIMARY
-CARD_BG_SELECTED = overlay(0.08, role=ft.Colors.PRIMARY)
+CARD_BG_SELECTED = selected_layer("subtle")
 
 
 @dataclass(frozen=True)

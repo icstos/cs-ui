@@ -214,7 +214,7 @@ class Message:
             bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
             border=ft.Border.all(1, overlay(0.06)),
             border_radius=RADIUS["xl"],
-            padding=ft.Padding.symmetric(horizontal=SPACE["3"] + 2, vertical=9),
+            padding=ft.Padding.symmetric(horizontal=SPACE["4"] + 2, vertical=8),
             shadow=elevation(2),
             content=ft.Row(
                 controls=controls,

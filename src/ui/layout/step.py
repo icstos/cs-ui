@@ -382,7 +382,7 @@ class Step(ft.Container):
         for index in range(len(self._items)):
             status = self._status(index)
             chip = ft.Container(
-                padding=ft.Padding.symmetric(horizontal=8, vertical=5),
+                padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                 border_radius=8,
                 content=ft.Row(
                     spacing=8,

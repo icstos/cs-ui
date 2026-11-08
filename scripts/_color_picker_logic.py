@@ -187,7 +187,7 @@ check("native_color -> parse_color 全 256 档透明度往返无漂移", drift, 
 section("构造与默认值")
 
 plain = ColorPicker(value="#1F6FEB")
-check("默认尺寸（与其它输入组件一致）", (plain.width, plain.height), (240, 40))
+check("默认尺寸（与其它输入组件一致）", (plain.width, plain.height), (240, 36))
 check("默认允许透明度", plain.allow_alpha, True)
 check("默认记法 rgb", plain._format, "rgb")
 check("默认显示十六进制文本", plain.show_value, True)
@@ -503,7 +503,7 @@ section("折叠态输入框")
 field = plain._build_field(plain._field_content(), plain._trailing())
 check("折叠态是手势盒（整框可点）", isinstance(field, ft.GestureDetector), True)
 box = field.content
-check("盒尺寸取 width / height", (box.width, box.height), (240, 40))
+check("盒尺寸取 width / height", (box.width, box.height), (240, 36))
 check("未展开时边框是常态色", box.border.top.color, ft.Colors.OUTLINE_VARIANT)
 plain.is_open = True
 check("展开时边框转主色",

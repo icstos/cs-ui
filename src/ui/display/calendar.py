@@ -58,8 +58,17 @@ from ui.core.format import (
     weekday_names,
 )
 from ui.core.i18n import t, use_t
+from ui.core.icons import PANEL_CLOSE, PANEL_OPEN
 from ui.core.theme import use_theme
-from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, hairline, overlay
+from ui.core.tokens import (
+    FONT_SIZE,
+    FONT_WEIGHT,
+    RADIUS,
+    SPACE,
+    hairline,
+    overlay,
+    state_layer,
+)
 
 __all__ = ["MODES", "Calendar", "month_grid", "shift_month"]
 
@@ -377,7 +386,7 @@ class Calendar:
         return ft.Container(
             padding=ft.Padding.symmetric(horizontal=TITLE_PAD_H, vertical=TITLE_PAD_V),
             border_radius=RADIUS["md"],
-            bgcolor=overlay(0.06) if hovered else None,
+            bgcolor=state_layer("hover") if hovered else None,
             on_click=lambda _e: self.set_mode(target),
             on_hover=lambda e: self._hover_unit("title", e.data),
             content=ft.Row(
@@ -393,9 +402,7 @@ class Calendar:
                     ),
                     # 小箭头是"可以点"的视觉提示：没有它，标题看着像纯文字
                     ft.Icon(
-                        ft.Icons.ARROW_DROP_DOWN_ROUNDED
-                        if self.mode == "month"
-                        else ft.Icons.ARROW_DROP_UP_ROUNDED,
+                        PANEL_CLOSE if self.mode != "month" else PANEL_OPEN,
                         size=18,
                         color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
@@ -498,7 +505,7 @@ class Calendar:
         if picked:
             bg: ft.ColorValue | None = ft.Colors.PRIMARY
         elif hovered:
-            bg = overlay(0.08)
+            bg = state_layer("hover")
         else:
             bg = None
 
@@ -582,7 +589,7 @@ class Calendar:
             ),
             bgcolor=ft.Colors.PRIMARY
             if picked
-            else (overlay(0.08) if hovered else None),
+            else (state_layer("hover") if hovered else None),
             border_radius=RADIUS["full"],
             alignment=ft.Alignment.CENTER,
             content=ft.Text(
@@ -652,7 +659,7 @@ def _nav_button(icon: str, tooltip: str, on_click: Any) -> ft.Control:
         tooltip=tooltip,
         style=ft.ButtonStyle(
             color={ft.ControlState.DEFAULT: ft.Colors.ON_SURFACE_VARIANT},
-            overlay_color=overlay(0.08),
+            overlay_color=state_layer("hover"),
         ),
         on_click=on_click,
     )

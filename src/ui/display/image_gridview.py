@@ -23,6 +23,7 @@ import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.i18n import t, use_t
+from ui.core.tokens import FONT_SIZE
 from ui.display.image import Image
 from ui.navigation.pagination import Pagination, PaginationState
 
@@ -241,7 +242,7 @@ class ImageGridView:
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     ft.Icon(ft.Icons.IMAGE_OUTLINED, size=20, color=MUTED),
-                    ft.Text(suffix, size=10, color=MUTED),
+                    ft.Text(suffix, size=FONT_SIZE["caption"], color=MUTED),
                 ],
             ),
         )

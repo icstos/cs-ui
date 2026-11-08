@@ -26,18 +26,19 @@ from pathlib import Path
 
 import flet as ft
 
+from ui.core.constants import DEFAULT_FORM_HEIGHT
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.styles import outline_input
-from ui.core.tokens import FONT_SIZE, RADIUS, SPACE
+from ui.core.tokens import FONT_SIZE, ICON_SIZE, RADIUS, SPACE
 
 __all__ = ["Input", "Label"]
 
-ICON_SIZE = 16
+#: 字段前缀图标（文件选择那类）：与 body 文字（13）同行，取 md 档 16。
+FIELD_ICON_SIZE = ICON_SIZE["md"]
 #: 标签字号：比正文大一档（正文 13），标签仍然略重，但不至于压过输入内容。
 #: 以前写死 16，比输入文字大一号，两行挤在一起时读起来像两个标题。
 LABEL_SIZE = FONT_SIZE["subtitle"]
 BORDER_RADIUS = RADIUS["lg"]
-DEFAULT_FORM_HEIGHT = 36
 SPACING = SPACE["2"]  # 标签与输入框之间
 
 
@@ -221,7 +222,7 @@ class Input(Label):
                     icon=ft.Icons.FILE_OPEN_OUTLINED
                     if self.data_type == "file"
                     else ft.Icons.FOLDER_OPEN_OUTLINED,
-                    size=ICON_SIZE,
+                    size=FIELD_ICON_SIZE,
                     color=ft.Colors.ON_PRIMARY if is_pick else None,
                 ),
                 on_click=handle_file_picker

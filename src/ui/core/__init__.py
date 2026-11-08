@@ -87,6 +87,14 @@ _ORIGIN: dict[str, str] = {
     "use_i18n": ".i18n",
     "use_t": ".i18n",
     "validate": ".i18n",
+    # icons —— 语义图标（一个动作一个图标，见 ui.core.icons）
+    # 只导出"表达约定"的那几个；CLOSE / SEARCH 这类通用名留在 ui.core.icons 里，
+    # 免得 ui.core 顶层出现一堆看不出用途的单词。
+    "DISCLOSURE": ".icons",
+    "PANEL_CLOSE": ".icons",
+    "PANEL_OPEN": ".icons",
+    "STEP_DOWN": ".icons",
+    "STEP_UP": ".icons",
     # styles —— 输入类控件的统一外观
     "INPUT_HEIGHT": ".styles",
     "INPUT_RADIUS": ".styles",
@@ -103,34 +111,43 @@ _ORIGIN: dict[str, str] = {
     "theme_context": ".theme",
     "theme_state": ".theme",
     "use_theme": ".theme",
-    # tokens —— 设计令牌（间距 / 圆角 / 字号 / 语义色）
+    # tokens —— 设计令牌（间距 / 圆角 / 字号 / 图标 / 控件高 / 状态层 / 语义色）
+    "CONTROL_HEIGHT": ".tokens",
+    "DISABLED_OPACITY": ".tokens",
+    "DURATION": ".tokens",
     "ELEVATION": ".tokens",
     "FONT_SIZE": ".tokens",
     "FONT_WEIGHT": ".tokens",
     "GAP": ".tokens",
     "GAP_LOOSE": ".tokens",
     "GAP_TIGHT": ".tokens",
+    "ICON_SIZE": ".tokens",
     "PAD": ".tokens",
     "PAD_LOOSE": ".tokens",
     "PRIMARY_SEEDS": ".tokens",
     "RADIUS": ".tokens",
+    "SELECTED_OPACITY": ".tokens",
     "SEMANTIC": ".tokens",
     "SEMANTIC_ON": ".tokens",
     "SEMANTIC_ROLES": ".tokens",
     "SEMANTIC_TEXT": ".tokens",
     "SPACE": ".tokens",
     "SPACE_STEPS": ".tokens",
+    "STATE": ".tokens",
+    "disabled_layer": ".tokens",
     "elevation": ".tokens",
     "focus_border": ".tokens",
     "hairline": ".tokens",
     "on_semantic": ".tokens",
     "overlay": ".tokens",
     "scrim": ".tokens",
+    "selected_layer": ".tokens",
     "semantic": ".tokens",
     "semantic_text": ".tokens",
+    "state_layer": ".tokens",
 }
 
-# __all__ 由 _ORIGIN 表推导（91 个名字，手写两遍必然漂移）；
+# __all__ 由 _ORIGIN 表推导（数量不写死在这里，手写两遍必然漂移）；
 # ruff 只能看到字面量，认不出 sorted() 返回的就是 list。
 __all__ = sorted(_ORIGIN)  # noqa: PLE0605
 

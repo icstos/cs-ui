@@ -41,7 +41,7 @@ class CodeEditor(fce.CodeEditor):
         if self.padding is None:
             self.padding = ft.Padding.all(SPACE["3"])
         if self.text_style is None:
-            self.text_style = ft.TextStyle(size=12.5, height=1.55)
+            self.text_style = ft.TextStyle(size=FONT_SIZE["small"], height=1.55)
         # 空内容时 CodeEditor 会缩成一条线；只给「没有显式高度」的情况兜底，
         # 调用方写了 height 就完全按调用方的来。
         if self.height is None and self.min_height is None:

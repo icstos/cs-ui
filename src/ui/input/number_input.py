@@ -42,7 +42,8 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
-from ui.core.tokens import FONT_SIZE, RADIUS, overlay
+from ui.core.icons import STEP_DOWN, STEP_UP
+from ui.core.tokens import FONT_SIZE, RADIUS, disabled_layer, state_layer
 from ui.input.input import Label
 
 __all__ = ["NumberInput"]
@@ -66,8 +67,8 @@ CONTROLS_POSITIONS: tuple[str, ...] = ("both", "right", "none")
 # ---------------------------------------------------------------------------
 # 配色：全部走主题角色，明暗主题自动跟随
 # ---------------------------------------------------------------------------
-HOVER_BG = overlay(0.08)  # 按钮悬停底色（M3 的悬停档）
-DISABLED_FG = ft.Colors.with_opacity(0.38, ft.Colors.ON_SURFACE)  # 禁用字色 / 到界图标
+HOVER_BG = state_layer("hover")  # 按钮悬停底色（M3 的悬停档 8%）
+DISABLED_FG = disabled_layer()  # 禁用字色 / 到界图标
 
 # ---------------------------------------------------------------------------
 # 文本判定
@@ -511,9 +512,9 @@ class NumberInput(Label):
             content=ft.Column(
                 spacing=0,
                 controls=[
-                    self._mini_button("inc", ft.Icons.KEYBOARD_ARROW_UP, 1, spec),
+                    self._mini_button("inc", STEP_UP, 1, spec),
                     ft.Container(height=1, bgcolor=ft.Colors.OUTLINE_VARIANT),
-                    self._mini_button("dec", ft.Icons.KEYBOARD_ARROW_DOWN, -1, spec),
+                    self._mini_button("dec", STEP_DOWN, -1, spec),
                 ],
             ),
         )

@@ -24,10 +24,6 @@ from ui.input.input import Label
 
 __all__ = ["Chip"]
 
-ICON_SIZE = 16
-BORDER_RADIUS = 8
-DEFAULT_FORM_HEIGHT = 36
-
 
 @ft.observable
 @dataclass

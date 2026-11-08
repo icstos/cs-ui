@@ -32,6 +32,7 @@ import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.i18n import t
+from ui.core.tokens import FONT_SIZE
 
 __all__ = ["SearchBar"]
 
@@ -86,7 +87,7 @@ class SearchBar(ft.SearchBar):
 def _caption(text: str) -> ft.Control:
     return ft.Text(
         text,
-        size=12.5,
+        size=FONT_SIZE["small"],
         color=ft.Colors.ON_SURFACE_VARIANT,
         style=ft.TextStyle(height=1.6),
     )

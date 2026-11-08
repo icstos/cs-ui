@@ -69,6 +69,7 @@ from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.float_layer import use_float_layer
 from ui.core.format import calendar_title, format_date, format_list
 from ui.core.i18n import t, use_t
+from ui.core.tokens import FONT_SIZE
 from ui.input.calendar_panel import (
     CAL_W,
     FIELD_HEIGHT,
@@ -840,7 +841,7 @@ class DateInput(CalendarPanel, Label):
 def _caption(text: str) -> ft.Control:
     return ft.Text(
         text,
-        size=12.5,
+        size=FONT_SIZE["small"],
         color=ft.Colors.ON_SURFACE_VARIANT,
         style=ft.TextStyle(height=1.6),
     )

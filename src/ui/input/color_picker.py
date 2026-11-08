@@ -61,11 +61,13 @@ from flet import canvas as fcanvas
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.float_layer import use_float_layer
 from ui.core.i18n import t, use_t
+from ui.core.icons import PANEL_OPEN
 from ui.core.styles import outline_input
+from ui.core.tokens import FONT_SIZE, ICON_SIZE, RADIUS
 from ui.input.input import Label
 from ui.input.panel_field import (
+    DISABLED_FG,
     FIELD_HEIGHT,
-    FIELD_RADIUS,
     FIELD_WIDTH,
     HOVER_BG,
     LABEL_SIZE,
@@ -93,8 +95,8 @@ ALPHA_GAP = 10  # 透明度条与 SV 取色区的垂直间距
 SV_H = 146  # SV 取色区高
 SV_W = INNER_W - STRIP_W - STRIP_GAP  # SV 取色区宽 = 248
 
-RADIUS = 6  # 取色区 / 色条圆角
-CHIP_RADIUS = 4  # 小色块圆角
+PANEL_RADIUS = RADIUS["md"]  # 取色区 / 色条圆角
+CHIP_RADIUS = RADIUS["sm"]  # 小色块圆角
 CURSOR = 14  # SV 光标直径
 THUMB = 4  # 色条滑块厚度
 
@@ -774,9 +776,9 @@ class ColorPicker(PanelField, Label):
     def _trailing(self) -> ft.Control:
         """折叠态右端的下拉箭头（禁用时压灰）。"""
         return ft.Icon(
-            ft.Icons.KEYBOARD_ARROW_DOWN,
-            size=18,
-            color=ft.Colors.OUTLINE if self.disabled else ft.Colors.ON_SURFACE_VARIANT,
+            PANEL_OPEN,
+            size=ICON_SIZE["lg"],
+            color=DISABLED_FG if self.disabled else ft.Colors.ON_SURFACE_VARIANT,
         )
 
     def _field_content(self) -> ft.Control:
@@ -813,7 +815,7 @@ class ColorPicker(PanelField, Label):
             color=self._fg,
             content_padding=ft.Padding.symmetric(vertical=6),
             hint_text=self.placeholder or t("ui.color.placeholder"),
-            hint_style=ft.TextStyle(size=SMALL_SIZE, color=ft.Colors.OUTLINE),
+            hint_style=ft.TextStyle(size=SMALL_SIZE, color=ft.Colors.ON_SURFACE_VARIANT),
             input_filter=ft.InputFilter(allow=True, regex_string=_HEX_ALLOWED),
             read_only=self.disabled,
             # 关键：收起（或禁用）时不吃指针事件，否则外层 GestureDetector 拿不到点击。
@@ -985,7 +987,7 @@ class ColorPicker(PanelField, Label):
         return ft.Container(
             width=SV_W,
             height=SV_H,
-            border_radius=ft.BorderRadius.all(RADIUS),
+            border_radius=ft.BorderRadius.all(PANEL_RADIUS),
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
             content=ft.GestureDetector(
                 on_tap_down=self._on_sv,
@@ -1022,7 +1024,7 @@ class ColorPicker(PanelField, Label):
                         ft.Container(
                             width=SV_W,
                             height=SV_H,
-                            border_radius=ft.BorderRadius.all(RADIUS),
+                            border_radius=ft.BorderRadius.all(PANEL_RADIUS),
                             border=ft.Border.all(
                                 1, ft.Colors.with_opacity(0.18, ft.Colors.ON_SURFACE)
                             ),
@@ -1167,7 +1169,7 @@ class ColorPicker(PanelField, Label):
         """面板里的十六进制输入框（带描边，便于看清输入区）。"""
         return ft.Container(
             height=ROW_H,
-            border_radius=ft.BorderRadius.all(FIELD_RADIUS - 2),
+            border_radius=ft.BorderRadius.all(RADIUS["sm"]),
             border=ft.Border.all(
                 1, ft.Colors.ERROR if self._invalid else ft.Colors.OUTLINE_VARIANT
             ),
@@ -1182,7 +1184,7 @@ class ColorPicker(PanelField, Label):
                 color=ft.Colors.ERROR if self._invalid else ft.Colors.ON_SURFACE,
                 content_padding=ft.Padding.symmetric(vertical=6),
                 hint_text="#RRGGBB",
-                hint_style=ft.TextStyle(size=SMALL_SIZE, color=ft.Colors.OUTLINE),
+                hint_style=ft.TextStyle(size=SMALL_SIZE, color=ft.Colors.ON_SURFACE_VARIANT),
                 input_filter=ft.InputFilter(allow=True, regex_string=_HEX_ALLOWED),
                 on_change=self._on_hex_change,
                 on_submit=self._on_hex_submit,
@@ -1196,7 +1198,7 @@ class ColorPicker(PanelField, Label):
         return ft.Container(
             width=COMPARE_W,
             height=ROW_H,
-            border_radius=ft.BorderRadius.all(FIELD_RADIUS - 2),
+            border_radius=ft.BorderRadius.all(RADIUS["sm"]),
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
             content=ft.Row(
@@ -1225,7 +1227,7 @@ class ColorPicker(PanelField, Label):
             width=FMT_W,
             height=ROW_H,
             alignment=ft.Alignment.CENTER,
-            border_radius=ft.BorderRadius.all(FIELD_RADIUS - 2),
+            border_radius=ft.BorderRadius.all(RADIUS["sm"]),
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             bgcolor=HOVER_BG if self._hover == "fmt" else None,
             on_click=lambda _e: self._toggle_format(),
@@ -1282,10 +1284,10 @@ class ColorPicker(PanelField, Label):
                     prefix,
                     size=LABEL_SIZE,
                     weight=ft.FontWeight.W_600,
-                    color=ft.Colors.OUTLINE,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 border=outline_input(
-                    radius=FIELD_RADIUS - 2, color=ft.Colors.OUTLINE_VARIANT
+                    radius=RADIUS["sm"], color=ft.Colors.OUTLINE_VARIANT
                 ),
                 filled=False,
                 dense=True,
@@ -1370,7 +1372,7 @@ class ColorPicker(PanelField, Label):
             expand=True,
             height=height,
             bgcolor=native_color(*rgba),
-            border_radius=ft.BorderRadius.all(CHIP_RADIUS - 1),
+            border_radius=ft.BorderRadius.all(RADIUS["xs"]),
             border=ft.Border.all(
                 1,
                 ft.Colors.PRIMARY
@@ -1467,7 +1469,7 @@ class ColorPicker(PanelField, Label):
 def _caption(text: str) -> ft.Control:
     return ft.Text(
         text,
-        size=12.5,
+        size=FONT_SIZE["small"],
         color=ft.Colors.ON_SURFACE_VARIANT,
         style=ft.TextStyle(height=1.6),
     )

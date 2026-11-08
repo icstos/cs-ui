@@ -47,7 +47,8 @@
 是反的**。按浅色挑好的档位，切到暗色时列头就和列表反过来，看起来像是漏了样式。
 本组件统一用 :func:`~ui.core.tokens.overlay` 叠在面板色上 —— 同一个 alpha 在
 浅色下变暗、暗色下变亮，"谁更靠前"这层关系两种模式都成立，幅度也由 alpha 直接
-控制（列头 6%，悬停 6%，勾选行 10% 主色）。
+控制（列头 6%，悬停 8%，勾选行 8% 主色 —— 后两者分别取自 ``state_layer``
+与 ``selected_layer``，与其他组件同一档）。
 
 三处刻意的取舍：
 
@@ -77,17 +78,22 @@ from dataclasses import dataclass, field
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
+from ui.core.empty import empty_block, empty_line
 from ui.core.i18n import t, use_t
 from ui.core.styles import outline_input
 from ui.core.theme import use_theme
 from ui.core.tokens import (
     FONT_SIZE,
     FONT_WEIGHT,
+    ICON_SIZE,
     RADIUS,
     SPACE,
+    disabled_layer,
     elevation,
     hairline,
     overlay,
+    selected_layer,
+    state_layer,
 )
 from ui.input.input import Label
 
@@ -140,18 +146,18 @@ PANEL_BG = ft.Colors.SURFACE_CONTAINER_LOW
 #: 列头底：面板色 + 6% 覆盖（浅色下略深、暗色下略亮，始终"头在前"）
 HEAD_BG = overlay(0.06)
 #: 悬停行底色
-HOVER_BG = overlay(0.06)
+HOVER_BG = state_layer("hover")
 #: 禁用字色
-DISABLED_FG = overlay(0.38)
-#: 勾选行底色（淡主色）
-PICKED_BG = overlay(0.10, role=ft.Colors.PRIMARY)
-#: 箭头点亮底色。比勾选行（0.10）**实**一档：勾选是"状态"，点亮是"按钮可用"，
+DISABLED_FG = disabled_layer()
+#: 勾选行底色（淡主色）：多选语义用 subtle 档，别自己挑一个 0.10
+PICKED_BG = selected_layer("subtle")
+#: 箭头点亮底色。比勾选行**实**一档：勾选是"状态"，点亮是"按钮可用"，
 #: 两者同深浅时，用户会以为中间那格也被选中了。
 ARROW_BG = overlay(0.14, role=ft.Colors.PRIMARY)
 #: 箭头悬停底色
-ARROW_BG_HOVER = overlay(0.24, role=ft.Colors.PRIMARY)
+ARROW_BG_LIT = overlay(0.24, role=ft.Colors.PRIMARY)
 #: 不可用箭头的图标色 —— 不可用时不该占视觉重量，淡到"知道它在"就行
-FAINT = overlay(0.38)
+FAINT = disabled_layer()
 
 
 # ---------------------------------------------------------------------------
@@ -577,7 +583,9 @@ class Transfer(Label):
                 # 圆角只能经 border 传，用 NoInputBorder 会得到一个生硬的直角矩形。
                 border=outline_input(
                     radius=RADIUS["md"],
-                    color=overlay(0.12) if self.disabled else ft.Colors.OUTLINE_VARIANT,
+                    color=disabled_layer("container")
+                    if self.disabled
+                    else ft.Colors.OUTLINE_VARIANT,
                     focused_color=ft.Colors.PRIMARY,
                 ),
                 text_size=FONT_SIZE["small"],
@@ -585,7 +593,7 @@ class Transfer(Label):
                 prefix=ft.Container(
                     width=20,
                     alignment=ft.Alignment.CENTER_LEFT,
-                    content=ft.Icon(ft.Icons.SEARCH, size=15, color=ft.Colors.OUTLINE),
+                    content=ft.Icon(ft.Icons.SEARCH, size=ICON_SIZE["md"], color=ft.Colors.ON_SURFACE_VARIANT),
                 ),
                 hint_text=t("ui.transfer.search"),
                 hint_style=ft.TextStyle(
@@ -625,15 +633,7 @@ class Transfer(Label):
         被筛掉了，不是被搬走了。这种情况只留一句「暂无数据」，不编下一步动作。
         """
         if self._query[side].strip():
-            return ft.Container(
-                padding=ft.Padding.symmetric(horizontal=SPACE["4"]),
-                content=ft.Text(
-                    t("ui.common.empty"),
-                    size=FONT_SIZE["body"],
-                    color=ft.Colors.ON_SURFACE_VARIANT,
-                    text_align=ft.TextAlign.CENTER,
-                ),
-            )
+            return empty_line(t("ui.common.empty"))
         if side == "left":
             icon = ft.Icons.INBOX
             main = t("ui.transfer.empty_source")
@@ -642,36 +642,8 @@ class Transfer(Label):
             icon = ft.Icons.ARROW_FORWARD
             main = t("ui.transfer.empty_target")
             hint = t("ui.transfer.empty_target_hint")
-        return ft.Container(
-            padding=ft.Padding.symmetric(horizontal=SPACE["4"]),
-            content=ft.Column(
-                spacing=SPACE["2"],
-                tight=True,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[
-                    ft.Container(
-                        width=48,
-                        height=48,
-                        border_radius=RADIUS["full"],
-                        bgcolor=overlay(0.04),
-                        alignment=ft.Alignment.CENTER,
-                        content=ft.Icon(icon, size=24, color=ft.Colors.OUTLINE),
-                    ),
-                    ft.Text(
-                        main,
-                        size=FONT_SIZE["body"],
-                        color=ft.Colors.ON_SURFACE_VARIANT,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Text(
-                        hint,
-                        size=FONT_SIZE["small"],
-                        color=ft.Colors.OUTLINE,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                ],
-            ),
-        )
+        # height=None：高度由外层 expand=True 的容器撑开，这里只负责内容居中。
+        return empty_block(main, hint=hint, icon=icon, height=None)
 
     def _row(self, item: TransferItem, side: str) -> ft.Control:
         """一行：复选框 + 主文本（+ 副文本）。整行可点，点哪都算勾选。"""
@@ -767,7 +739,7 @@ class Transfer(Label):
             width=ARROW,
             height=ARROW,
             border_radius=RADIUS["md"],
-            bgcolor=(ARROW_BG_HOVER if hovered else ARROW_BG) if active else None,
+            bgcolor=(ARROW_BG_LIT if hovered else ARROW_BG) if active else None,
             border=ft.Border.all(
                 1, ft.Colors.PRIMARY if active else ft.Colors.OUTLINE_VARIANT
             ),
@@ -980,7 +952,7 @@ SPEC = Spec(
             "全选框 + 标题 + 「勾了几 / 共几条」。常显分子分母，读者不用猜这个数是什么。",
         ),
         ("搜索", "每列顶部一条细线框，按标题与说明过滤；只改变可见性，不改勾选。"),
-        ("行", "复选框 + 主文本（可选一行副文本），整行可点；勾选行铺 10% 主色。"),
+        ("行", "复选框 + 主文本（可选一行副文本），整行可点；勾选行铺 8% 主色。"),
         ("箭头", "两个 32px 方块：右移在上、左移在下。没有可搬项时只剩淡灰图标。"),
         ("空态", "图标 + 一句主文 + 一句提示，说明「为什么空、下一步做什么」。"),
     ],

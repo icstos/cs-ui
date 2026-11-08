@@ -20,7 +20,7 @@ flet 在把控件树交给 Flutter 之前，会从根控件开始**递归**配�
 用法::
 
     python scripts/_config_depth_probe.py --app examples/demo.py
-    python scripts/_config_depth_probe.py --app scripts/_shot_page.py --page FormPage
+    python scripts/_config_depth_probe.py --app scripts/_shot_docs.py
     python scripts/_config_depth_probe.py --selftest      # 自检：造环给探针抓
 
 判读::

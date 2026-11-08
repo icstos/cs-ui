@@ -340,7 +340,7 @@ def _basic() -> ft.Control:
                 controls=[
                     ft.Button("重播", on_click=lambda _e: anim.play()),
                     ft.Text(
-                        "play() 从 start 重新数一遍", size=11, color=ft.Colors.OUTLINE
+                        "play() 从 start 重新数一遍", size=11, color=ft.Colors.ON_SURFACE_VARIANT
                     ),
                 ],
             ),
@@ -408,7 +408,7 @@ def _retarget() -> ft.Control:
             ft.Text(
                 "只改 end：从当前值续着走，不回 0 重播。",
                 size=11,
-                color=ft.Colors.OUTLINE,
+                color=ft.Colors.ON_SURFACE_VARIANT,
             ),
         ],
     )

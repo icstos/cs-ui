@@ -20,7 +20,7 @@ import flet as ft
 import flet_code_editor as fce
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
-from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE
+from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, disabled_layer
 
 __all__ = [
     "SPECS",
@@ -157,7 +157,7 @@ class Quote(ft.Container):
                 ft.Text(
                     f"—— {self.attribution}",
                     size=FONT_SIZE["small"],
-                    color=ft.Colors.OUTLINE,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
                 )
             )
 
@@ -219,7 +219,7 @@ class Link(ft.Text):
         # 文字仍然是主色蓝，看起来完全能点。
         if not self.disabled:
             return
-        muted = ft.Colors.with_opacity(0.38, ft.Colors.ON_SURFACE)
+        muted = disabled_layer()
         self.color = muted
         self.style = ft.TextStyle(
             decoration=ft.TextDecoration.UNDERLINE,
@@ -254,7 +254,7 @@ class Code(fce.CodeEditor):
         if self.padding is None:
             self.padding = ft.Padding.all(SPACE["3"])
         if self.text_style is None:
-            self.text_style = ft.TextStyle(size=12.5, height=1.55)
+            self.text_style = ft.TextStyle(size=FONT_SIZE["small"], height=1.55)
         # 空内容时 CodeEditor 会缩成一条线，示例舞台跟着塌掉。
         if self.min_height is None:
             self.min_height = 44
@@ -303,7 +303,7 @@ class Json(fce.CodeEditor):
         if self.padding is None:
             self.padding = ft.Padding.all(SPACE["3"])
         if self.text_style is None:
-            self.text_style = ft.TextStyle(size=12.5, height=1.55)
+            self.text_style = ft.TextStyle(size=FONT_SIZE["small"], height=1.55)
         if self.min_height is None:
             self.min_height = 44
 
@@ -319,7 +319,12 @@ _LONG = (
 
 @ft.component
 def _text_basic() -> ft.Control:
-    """四档常用字号：正文 / 次要 / 标签 / 统计数字。"""
+    """四档常用字号：正文 / 次要 / 标签 / 统计数字。
+
+    文字色只有两档：``ON_SURFACE``（正文）与 ``ON_SURFACE_VARIANT``（一切次要
+    文字）。**层次交给字号，不交给对比度** —— 曾经给「标签」用过 ``OUTLINE``，
+    那是边框角色，浅色主题下对比度只有约 3.2:1，11px 的小字读不清。
+    """
     return ft.Column(
         spacing=SPACE["3"],
         controls=[
@@ -328,14 +333,14 @@ def _text_basic() -> ft.Control:
                 size=FONT_SIZE["body"],
             ),
             Text(
-                "次要：补充说明、时间戳、单位用这一档，颜色再降一级。",
+                "次要：12px，补充说明、时间戳、单位；换 ON_SURFACE_VARIANT。",
                 size=FONT_SIZE["small"],
                 color=ft.Colors.ON_SURFACE_VARIANT,
             ),
             Text(
-                "标签：11px，跟在徽标或图表坐标轴旁边。",
+                "标签：11px，跟在徽标或图表坐标轴旁边；色同次要，只降字号。",
                 size=FONT_SIZE["caption"],
-                color=ft.Colors.OUTLINE,
+                color=ft.Colors.ON_SURFACE_VARIANT,
             ),
             Text(
                 "1,286",
@@ -358,7 +363,7 @@ def _text_truncate() -> ft.Control:
                     ft.Text(
                         "单行：no_wrap + ELLIPSIS",
                         size=FONT_SIZE["caption"],
-                        color=ft.Colors.OUTLINE,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                     ft.Container(
                         width=260,
@@ -376,7 +381,7 @@ def _text_truncate() -> ft.Control:
                     ft.Text(
                         "两行：max_lines=2 + ELLIPSIS",
                         size=FONT_SIZE["caption"],
-                        color=ft.Colors.OUTLINE,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                     ft.Container(
                         width=260,
@@ -416,7 +421,7 @@ def _text_roles() -> ft.Control:
                         content=ft.Text(
                             role,
                             size=FONT_SIZE["caption"],
-                            color=ft.Colors.OUTLINE,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
                             style=ft.TextStyle(letter_spacing=0.2),
                         ),
                     ),
@@ -451,7 +456,7 @@ def _heading_scale() -> ft.Control:
                         content=ft.Text(
                             f"H{index}",
                             size=FONT_SIZE["caption"],
-                            color=ft.Colors.OUTLINE,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
                     ),
                     ft.Container(
@@ -461,7 +466,7 @@ def _heading_scale() -> ft.Control:
                     ft.Text(
                         f"{size}px",
                         size=FONT_SIZE["caption"],
-                        color=ft.Colors.OUTLINE,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                 ],
             )

@@ -23,14 +23,12 @@ import flet as ft
 from ui.core.constants import LayoutType
 from ui.core.doc import Api, Example, Spec, info, run, tip
 from ui.core.i18n import t
-from ui.core.tokens import FONT_SIZE, RADIUS, SPACE, overlay
+from ui.core.tokens import FONT_SIZE, RADIUS, SPACE, disabled_layer
 from ui.input.input import Label
 
 __all__ = ["Checkbox", "CheckboxGroup"]
 
-ICON_SIZE = 16
 BORDER_RADIUS = RADIUS["lg"]
-DEFAULT_FORM_HEIGHT = 36
 
 # ---------------------------------------------------------------------------
 # 配色：全部走主题角色。原来写死 BLUE / GREY / BLACK，换主色或切到深色主题后
@@ -39,8 +37,8 @@ DEFAULT_FORM_HEIGHT = 36
 CHECK_BG = ft.Colors.PRIMARY
 CHECK_FG = ft.Colors.ON_PRIMARY
 CHECK_BORDER = ft.Colors.OUTLINE
-DISABLED_FG = overlay(0.38)
-DISABLED_BG = overlay(0.38)
+DISABLED_FG = disabled_layer()
+DISABLED_BG = disabled_layer()
 
 
 def _box(

@@ -35,18 +35,21 @@ from __future__ import annotations
 
 import flet as ft
 
+from ui.core.tokens import CONTROL_HEIGHT, RADIUS
+
 __all__ = [
-    "INPUT_RADIUS",
     "INPUT_HEIGHT",
+    "INPUT_RADIUS",
     "outline_input",
     "underline_input",
 ]
 
-#: 输入类控件的默认圆角
-INPUT_RADIUS = 6
+#: 输入类控件的默认圆角（= 令牌 ``RADIUS["md"]``）。
+#: 不另给数字：同一个圆角写两处，改一处必然漂。
+INPUT_RADIUS = RADIUS["md"]
 
-#: 输入类控件的默认高度
-INPUT_HEIGHT = 36
+#: 输入类控件的默认高度（= 令牌 ``CONTROL_HEIGHT["md"]``）。
+INPUT_HEIGHT = CONTROL_HEIGHT["md"]
 
 #: 聚焦态边框默认颜色
 DEFAULT_FOCUSED_COLOR = ft.Colors.PRIMARY
@@ -95,7 +98,7 @@ def _state_borders(
 
 
 def outline_input(
-    radius: int | float = INPUT_RADIUS,
+    radius: float = INPUT_RADIUS,
     color: ft.ColorValue | None = None,
     focused_color: ft.ColorValue | None = None,
     width: float = 1.0,

@@ -47,8 +47,9 @@ from typing import Any
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
+from ui.core.empty import empty_line
 from ui.core.i18n import t
-from ui.core.tokens import FONT_SIZE, SPACE, semantic_text
+from ui.core.tokens import FONT_SIZE, RADIUS, SPACE, semantic_text
 
 __all__ = ["Descriptions", "DescriptionsItem"]
 
@@ -61,7 +62,8 @@ LABEL_BG: ft.ColorValue = ft.Colors.SURFACE_CONTAINER_HIGH
 SURFACE: ft.ColorValue = ft.Colors.SURFACE
 MUTED: ft.ColorValue = ft.Colors.ON_SURFACE_VARIANT
 
-RADIUS = 8
+#: 表格外框圆角：与面板 / 卡片同档
+TABLE_RADIUS = RADIUS["lg"]
 LABEL_W = 92  # 横向模式的标签列宽（固定像素，标签因此跨行对齐）
 
 #: 尺寸档位 → (水平内边距, 垂直内边距, 字号)
@@ -196,7 +198,7 @@ class Descriptions(ft.Container):
         left: ft.Control = (
             ft.Text(
                 self.title,
-                size=15,
+                size=FONT_SIZE["subtitle"],
                 weight=ft.FontWeight.W_600,
                 color=ft.Colors.ON_SURFACE,
             )
@@ -230,19 +232,20 @@ class Descriptions(ft.Container):
             grid: ft.Control = ft.Column(spacing=0, controls=cells)
         else:
             # 没有字段时留一行占位：整块缩成 0 高，调用方会以为是没渲染出来。
-            grid = ft.Container(
+            grid = empty_line(
+                t("ui.common.empty"),
+                height=None,
+                size=self._font,
                 padding=ft.Padding.symmetric(
                     horizontal=self._pad_h, vertical=self._pad_v * 2
                 ),
-                alignment=ft.Alignment.CENTER,
-                content=ft.Text(t("ui.common.empty"), size=self._font, color=MUTED),
             )
         if not self.bordered:
             return grid
         return ft.Container(
             bgcolor=SURFACE,
             border=ft.Border.all(LINE_W, LINE),
-            border_radius=RADIUS,
+            border_radius=TABLE_RADIUS,
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
             content=grid,
         )

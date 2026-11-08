@@ -5,6 +5,9 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 ## Features
 
 - **Batteries included** — `from ui import *` re-exports everything from Flet plus all CS UI components
+- **Consistent interaction states** — hover / selected / disabled are three token-backed
+  levels (`state_layer` / `selected_layer` / `disabled_layer`, 8% / 12% / 38%–12%): the same
+  "glide over it" reads the same weight in menus, paging, calendars and transfer lists
 - **Design tokens + Material 3 theming** — no raw color / radius / font-size literals inside
   components. A single brand seed (`color_scheme_seed`) derives the whole M3 color scheme, so
   light/dark and brand-color switching are **framework-level** operations, not per-widget recoloring
@@ -363,14 +366,20 @@ ft.Colors.PRIMARY, ft.Colors.SURFACE_CONTAINER_LOWEST, ft.Colors.ON_SURFACE_VARI
 **Framework-resolved tokens** cover the semantic roles M3 does not ship (`ui.core.tokens`):
 
 ```python
-from ui import SPACE, RADIUS, FONT_SIZE, GAP, PAD, elevation, overlay, hairline
+from ui import (
+    SPACE, RADIUS, FONT_SIZE, GAP, PAD, elevation, hairline,
+    state_layer, selected_layer, disabled_layer, overlay,
+)
 
-SPACE["4"]          # 16 — a 4pt scale: (0,1,2,3,4,5,6,8,10,12,16,20,24,32,40)
-RADIUS["lg"]        # 8
-FONT_SIZE["body"]   # 13
-elevation(2)        # five shadow levels, tinted with the 'shadow' role so it follows light/dark
-overlay(0.06)       # 'onsurface,0.06' — a translucent scrim that adapts automatically
-hairline()          # 1px divider
+SPACE["4"]                  # 16 — a 4pt scale: (0,1,2,3,4,5,6,8,10,12,16,20,24,32,40)
+RADIUS["lg"]                # 8
+FONT_SIZE["body"]           # 13
+elevation(2)                # five shadow levels, tinted with the 'shadow' role so it follows light/dark
+state_layer("hover")        # 'onsurface,0.08' — hover surface (M3 hover level)
+selected_layer("normal")    # 'primary,0.12' — selected surface
+disabled_layer()            # 'onsurface,0.38' — disabled text / icons
+disabled_layer("container") # 'onsurface,0.12' — disabled control fill / border
+hairline()                  # 1px divider
 ```
 
 **Semantic colors come in three tiers** — one value cannot serve every use:
@@ -441,27 +450,50 @@ python scripts/gen_ui_registry.py           # regenerate after adding components
 python scripts/gen_ui_registry.py --check   # verify it hasn't drifted
 ```
 
-## Examples
+### Run every regression in one command
 
-Run the demo to see every component in action (11 category pages plus a 404 page):
+Consistency does not survive "remember to run it", so all checks live behind one entry point:
 
 ```bash
-python examples/demo.py
+python scripts/check_all.py                 # 25 checks / ~50 s (static gate + audit + logic + docs)
+python scripts/check_all.py --stage fast    # static gate + token audit only (enough when restyling)
+python scripts/check_all.py --stage visual  # real-window screenshots + grey-block detection (minutes)
+```
+
+| Check | What it protects |
+|---|---|
+| `ruff --select F821,F811,F841` | undefined names / redefinitions / unused locals (a missing token import surfaces here) |
+| `audit_consistency.py` | raw colors, off-scale font / icon / radius, odd spacing, `OUTLINE` as text color, dark-hostile fills |
+| `_tokens_logic.py` | token contract: facade parity, monotonic scales, state-layer progression, safe fallbacks, single-source constants, interaction values |
+| `_*_logic.py` | per-component logic (state derivation, clamping, callbacks) |
+| `_doc_check.py` | SPEC / examples / API completeness for all 71 components |
+| `gen_ui_registry.py --check` | `ui.__all__` vs registry drift |
+| `build_docs_i18n.py --check` | site copy in sync across three languages |
+
+## Examples
+
+The component documentation site *is* the example library: all 71 components ship
+runnable examples plus API notes, one route per page.
+
+```bash
+python docs/main.py
 ```
 
 | Route | Contents |
 |-------|----------|
-| `/` | Home navigation (enter each category) |
-| `/general` | Text / buttons / icons / chips |
-| `/layout` | Containers / lists / tables / steps |
-| `/navigation` | Breadcrumb / tabs / paging |
-| `/form` | Inputs / selectors / transfer / slider / rating |
-| `/upload` | Files / directories / save / images |
-| `/feedback` | Message / notification / dialog / progress |
-| `/display` | Calendar / carousel / heatmap / logs / code / images |
-| `/charts` | Line / area / bar / scatter charts |
-| `/media` | Audio / video / PDF |
-| `/about` | Migration cheat-sheet and design notes |
+| `/` | Home |
+| `/docs/quickstart` `/docs/architecture` `/docs/theming` `/docs/i18n` | Guide articles |
+| `/components` | Overview (general / layout / navigation / form / display / feedback / chart / media) |
+| `/components/<group>/<component>` | One component: definition / composition / when to use / examples / API / notes |
+| `/about` | About |
+
+When you changed styling and want proof it actually rendered (a grey block means a
+Flutter-side render failure):
+
+```bash
+python scripts/_visual_check.py              # 13 representative pages, light
+python scripts/_visual_check.py --mode dark  # dark theme
+```
 
 Additional test files:
 

@@ -1,29 +1,29 @@
 {
   "import": {
-    "import flet（参照基准）": 88.2,
-    "import ui": 90.5,
-    "import ui.navigation.menu": 166.2,
-    "import ui.layout.table": 160.5,
-    "import ui.input.button": 163.9,
-    "import ui.display.descriptions": 183.0,
-    "from ui.chart import BarChart": 848.0
+    "import flet（参照基准）": 87.7,
+    "import ui": 93.4,
+    "import ui.navigation.menu": 190.5,
+    "import ui.layout.table": 185.2,
+    "import ui.input.button": 182.5,
+    "import ui.display.descriptions": 208.1,
+    "from ui.chart import BarChart": 854.0
   },
   "render": {
-    "menu 60 顶层 / 240 项 / 10 分组": 5.751,
-    "tree 60 顶层（折叠）": 6.734,
-    "tree 60×4（全展开）": 22.521,
-    "tree 60×4（全展开 + 勾选框）": 32.432,
-    "table 200×6（分页 10 行）": 0.885,
-    "descriptions 24 字段": 1.613,
-    "pagination 1286 项": 0.526,
-    "calendar 月视图": 2.613,
-    "heatmap 365 天": 6.112
+    "menu 60 顶层 / 240 项 / 10 分组": 5.908,
+    "tree 60 顶层（折叠）": 7.582,
+    "tree 60×4（全展开）": 24.955,
+    "tree 60×4（全展开 + 勾选框）": 35.989,
+    "table 200×6（分页 10 行）": 1.015,
+    "descriptions 24 字段": 1.716,
+    "pagination 1286 项": 0.642,
+    "calendar 月视图": 3.664,
+    "heatmap 365 天": 6.376
   },
   "micro": {
     "menu.find_path（命中叶子）": 0.035,
     "menu.find_path（未命中）": 0.035,
-    "menu.visible_rows（默认）": 0.006,
-    "menu.prune_expanded": 0.045,
-    "menu.norm_selected": 0.024
+    "menu.visible_rows（默认）": 0.011,
+    "menu.prune_expanded": 0.055,
+    "menu.norm_selected": 0.026
   }
 }

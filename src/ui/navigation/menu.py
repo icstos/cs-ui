@@ -66,8 +66,11 @@ from ui.core.tokens import (
     FONT_WEIGHT,
     RADIUS,
     SPACE,
+    disabled_layer,
     hairline,
     overlay,
+    selected_layer,
+    state_layer,
 )
 
 __all__ = [
@@ -116,7 +119,7 @@ GROUP_TOP = SPACE["3"]  # 12  分组标题上方的空档
 # / ``item_selected`` / ``icon_default``）落到 M3 角色上：
 #
 #   行文字   on_surface_variant       行图标  outline（比文字淡一档）
-#   悬停     on_surface 字 + 6% 底    选中    主色字 + 12% 主色底
+#   悬停     on_surface 字 + 8% 底    选中    主色字 + 12% 主色底
 #
 # 三个决定：
 #   * **选中不铺主色实底**。侧边栏一屏几十行，满饱和的蓝会压过页面正文；
@@ -137,9 +140,9 @@ FG_ICON_HOVER = ft.Colors.ON_SURFACE_VARIANT
 #: 选中项 / 选中项祖先：主色。文字与图标同色 —— 这条链是"当前所在位置"，
 #: 应当整条一起亮，而不是只亮一行。
 FG_SELECTED = ft.Colors.PRIMARY
-BG_SELECTED = overlay(0.12, role=ft.Colors.PRIMARY)
-BG_HOVER = overlay(0.06)
-FG_DISABLED = overlay(0.38)
+BG_SELECTED = selected_layer()
+BG_HOVER = state_layer("hover")
+FG_DISABLED = disabled_layer()
 FG_MUTED = ft.Colors.OUTLINE  # 展开箭头 / 分组标题
 #: 行状态的过渡：悬停底色硬切会"啪"地跳一下，120ms 让它是"漫过来"的
 ROW_ANIM = ft.Animation(DURATION["fast"], ft.AnimationCurve.EASE_OUT)
@@ -842,7 +845,7 @@ class Menu:
         return bool((item.dot or self.dot) and item.is_leaf and item.icon is None)
 
     def _dot(self) -> ft.Control:
-        """小圆点：始终主色 —— 它在选中行上落在 10% 主色底里，主色依然读得出来，
+        """小圆点：始终主色 —— 它在选中行上落在 12% 主色底里，主色依然读得出来，
         换成反相色反而会变成一块"比周围更暗"的杂点。"""
         return ft.Container(
             width=DOT_SIZE,
@@ -1108,7 +1111,7 @@ def _collapsed() -> ft.Control:
         padding=6,
         bgcolor=ft.Colors.SURFACE,
         border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-        border_radius=10,
+        border_radius=RADIUS["lg"],
         content=menu.ui(),
     )
 
@@ -1123,7 +1126,7 @@ def _horizontal() -> ft.Control:
     return ft.Container(
         bgcolor=ft.Colors.SURFACE,
         border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-        border_radius=10,
+        border_radius=RADIUS["lg"],
         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
         content=menu.ui(),
     )

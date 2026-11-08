@@ -24,14 +24,16 @@ import flet as ft
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.i18n import t
 from ui.core.styles import INPUT_RADIUS, outline_input
-from ui.core.tokens import SPACE
+from ui.core.tokens import CONTROL_HEIGHT, SPACE
 from ui.input.input import Label
 
 __all__ = ["SelectBox", "SelectOption"]
 
 TEXT_SIZE = 14
 PADDING = 10
-INPUT_HEIGHT = 42
+#: 与输入框同高 —— 放在同一行表单里不能出现"台阶"。
+#: 曾经写死 42，比 Input 的 36 高出一截。
+INPUT_HEIGHT = CONTROL_HEIGHT["md"]
 #: 默认宽度：下拉框不跟着最长选项撑开 —— 一个「中华人民共和国…」的选项
 #: 会把整行表单顶出容器，而候选的完整文本在弹层里本来就能读到。
 DEFAULT_WIDTH = 240

@@ -28,7 +28,15 @@ from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.format import format_number
 from ui.core.i18n import t, use_t
 from ui.core.styles import outline_input
-from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, overlay
+from ui.core.tokens import (
+    FONT_SIZE,
+    FONT_WEIGHT,
+    ICON_SIZE,
+    RADIUS,
+    SPACE,
+    disabled_layer,
+    state_layer,
+)
 
 __all__ = ["Pagination", "PaginationState", "get_center_pages"]
 
@@ -41,7 +49,7 @@ BTN = 32  # 页码 / 翻页按钮边长
 BTN_RADIUS = RADIUS["sm"]  # 4px
 PAGER_GAP = SPACE["2"]  # 8   相邻页码之间
 GROUP_GAP = SPACE["4"]  # 16  组与组之间
-ICON_SIZE = 18  # 翻页箭头
+ARROW_ICON_SIZE = ICON_SIZE["lg"]  # 翻页箭头：与 subtitle 文字同级
 TEXT_PAD = 8  # 页码文字的左右留白
 JUMP_W = 48  # 跳页输入框宽度
 SIZE_W = 84  # 每页条数下拉宽度
@@ -52,7 +60,7 @@ SIZE_W = 84  # 每页条数下拉宽度
 #: 翻页箭头：默认次要文字，悬停提亮到正文
 NAV_FG = ft.Colors.ON_SURFACE_VARIANT
 NAV_FG_HOVER = ft.Colors.ON_SURFACE
-NAV_BG_HOVER = overlay(0.06)
+NAV_BG_HOVER = state_layer("hover")
 
 #: 页码格子：透明底 + 发丝描边，文字同翻页箭头（一排里不该有两种灰度）
 PAGE_FG = ft.Colors.ON_SURFACE_VARIANT
@@ -66,7 +74,7 @@ CURRENT_FG = ft.Colors.ON_PRIMARY
 CURRENT_BG = ft.Colors.PRIMARY
 
 #: 禁用 / 省略号：两档更弱的灰，靠透明度拉开层次
-FG_DISABLED = overlay(0.38)
+FG_DISABLED = disabled_layer()
 FG_MUTED = ft.Colors.OUTLINE
 
 #: 标签类文字（"前往""每页""项"）与总数同色
@@ -161,7 +169,7 @@ def _arrow(
         border_radius=BTN_RADIUS,
         alignment=ft.Alignment.CENTER,
         bgcolor=bg,
-        content=ft.Icon(icon, size=ICON_SIZE, color=fg),
+        content=ft.Icon(icon, size=ARROW_ICON_SIZE, color=fg),
         data=data,
         tooltip=tooltip,
         on_click=None if disabled else on_click,
@@ -175,7 +183,7 @@ def _more_dot() -> ft.Control:
         width=BTN,
         height=BTN,
         alignment=ft.Alignment.CENTER,
-        content=ft.Icon(ft.Icons.MORE_HORIZ, size=ICON_SIZE, color=FG_MUTED),
+        content=ft.Icon(ft.Icons.MORE_HORIZ, size=ARROW_ICON_SIZE, color=FG_MUTED),
     )
 
 
@@ -495,7 +503,7 @@ def _custom_unit() -> ft.Control:
     return ft.Column(spacing=14, controls=[Pagination(state), _echo(state)])
 
 
-_BASIC_CODE = '''state = PaginationState(sum_data_nums=1_286)
+_BASIC_CODE = """state = PaginationState(sum_data_nums=1_286)
 
 Column([
     Pagination(state),          # 只负责"第几页"，数据自己取
@@ -507,9 +515,9 @@ state = PaginationState(
     sum_data_nums=1_286,
     on_change_page=load_page,           # (page: int) -> None
     on_change_per_page_nums=load_size,  # (size: int) -> None
-)'''
+)"""
 
-_UNIT_CODE = '''PaginationState(sum_data_nums=268, data_per_page_nums=20, data_unit="条")'''
+_UNIT_CODE = """PaginationState(sum_data_nums=268, data_per_page_nums=20, data_unit="条")"""
 
 
 SPEC = Spec(

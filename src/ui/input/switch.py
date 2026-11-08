@@ -24,13 +24,13 @@ from dataclasses import dataclass
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip
-from ui.core.tokens import FONT_SIZE, SPACE
+from ui.core.tokens import FONT_SIZE, ICON_SIZE, SPACE
 from ui.input.input import Label
 
 __all__ = ["Switch"]
 
-#: 图标尺寸：与正文同级，比标签略小一点，不至于把一行撑高
-ICON_SIZE = 18
+#: 开关内勾/叉：与 subtitle 文字同级，不至于把一行撑高
+SWITCH_ICON_SIZE = ICON_SIZE["lg"]
 
 #: 开启态：主色轨道 + 反白滑块。两处都走角色色 —— 写死 BLUE / WHITE 的开关
 #: 换主题后会和页面主色对不上，深色主题下白滑块也失去对比。
@@ -59,7 +59,7 @@ class Switch(Label):
     value: bool = False
     description: str | None = None
     icon: ft.IconData | str | None = None
-    icon_size: int = ICON_SIZE
+    icon_size: int = SWITCH_ICON_SIZE
     disabled: bool = False
     readonly: bool = False
     on_toggle: Callable[[bool], None] | None = None

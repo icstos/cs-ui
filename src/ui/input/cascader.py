@@ -43,9 +43,11 @@ from typing import Any
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
+from ui.core.empty import empty_line
 from ui.core.float_layer import use_float_layer
 from ui.core.i18n import t, use_t
-from ui.core.tokens import FONT_SIZE
+from ui.core.icons import PANEL_CLOSE, PANEL_OPEN
+from ui.core.tokens import FONT_SIZE, ICON_SIZE
 from ui.input.input import Label
 from ui.input.panel_field import (
     DISABLED_FG,
@@ -678,13 +680,11 @@ class Cascader(PanelField, Label):
 
     # ---- 折叠态 ----
     def _trailing_icon(self) -> ft.Control:
-        """右侧图标：展开向下箭头 / 收起向上箭头（与 el 一致的双态）。"""
+        """右侧图标：面板展开 / 收起。用语义图标，与 SelectBox / ColorPicker 同一形状。"""
         return ft.Icon(
-            ft.Icons.KEYBOARD_ARROW_DOWN
-            if not self.is_open
-            else ft.Icons.KEYBOARD_ARROW_UP,
-            size=18,
-            color=ft.Colors.OUTLINE if self.disabled else ft.Colors.ON_SURFACE_VARIANT,
+            PANEL_CLOSE if self.is_open else PANEL_OPEN,
+            size=ICON_SIZE["lg"],
+            color=DISABLED_FG if self.disabled else ft.Colors.ON_SURFACE_VARIANT,
         )
 
     def _inner_field(self) -> ft.Control:
@@ -724,7 +724,7 @@ class Cascader(PanelField, Label):
         return ft.Text(
             self.placeholder or t("ui.cascader.placeholder"),
             size=ITEM_SIZE,
-            color=ft.Colors.OUTLINE,
+            color=ft.Colors.ON_SURFACE_VARIANT,
             max_lines=1,
             overflow=ft.TextOverflow.ELLIPSIS,
         )
@@ -743,7 +743,7 @@ class Cascader(PanelField, Label):
             color=self._fg,
             content_padding=ft.Padding.symmetric(vertical=6),
             hint_text=self.placeholder or t("ui.cascader.placeholder"),
-            hint_style=ft.TextStyle(size=ITEM_SIZE, color=ft.Colors.OUTLINE),
+            hint_style=ft.TextStyle(size=ITEM_SIZE, color=ft.Colors.ON_SURFACE_VARIANT),
             read_only=self.disabled,
             on_change=None if self.disabled else self._on_query_change,
         )
@@ -759,7 +759,7 @@ class Cascader(PanelField, Label):
         if hidden > 0:
             chips.append(
                 ft.Container(
-                    padding=ft.Padding.symmetric(horizontal=8, vertical=3),
+                    padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                     content=ft.Text(
                         f"+{hidden}", size=12, color=ft.Colors.ON_SURFACE_VARIANT
                     ),
@@ -802,7 +802,7 @@ class Cascader(PanelField, Label):
                             border_radius=ft.BorderRadius.all(3),
                             content=ft.Icon(
                                 ft.Icons.CLOSE,
-                                size=11,
+                                size=ICON_SIZE["sm"],
                                 color=ft.Colors.ON_SURFACE_VARIANT,
                             ),
                         ),
@@ -850,14 +850,8 @@ class Cascader(PanelField, Label):
         return self._panel_shell(width, body)
 
     def _empty(self) -> ft.Control:
-        return ft.Container(
-            width=COL_W,
-            height=ITEM_H * 2,
-            alignment=ft.Alignment.CENTER,
-            content=ft.Text(
-                t("ui.cascader.empty"), size=ITEM_SIZE, color=ft.Colors.OUTLINE
-            ),
-        )
+        # 与选项行同一列宽、两行高 —— 空态不该让面板收缩成一条。
+        return empty_line(t("ui.cascader.empty"), width=COL_W, height=ITEM_H * 2)
 
     def _columns(self, height: float) -> ft.Control:
         """多列面板：每级一列。"""

@@ -91,7 +91,7 @@ def _badge(count: int) -> ft.Control:
         bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
         content=ft.Text(
             str(count),
-            size=10,
+            size=FONT_SIZE["caption"],
             weight=ft.FontWeight.W_600,
             color=ft.Colors.PRIMARY,
         ),

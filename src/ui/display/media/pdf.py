@@ -33,8 +33,9 @@ import flet as ft
 import flet_webview as fwv
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
+from ui.core.empty import empty_block
 from ui.core.i18n import t, use_t
-from ui.core.tokens import FONT_SIZE, RADIUS, SPACE, elevation, overlay
+from ui.core.tokens import FONT_SIZE, ICON_SIZE, RADIUS, SPACE, elevation, overlay
 
 __all__ = ["SPEC", "Pdf", "pdf_url"]
 
@@ -146,7 +147,7 @@ def Pdf(
     if on_open is not None:
         head.append(
             ft.Container(
-                padding=ft.Padding.symmetric(horizontal=10, vertical=5),
+                padding=ft.Padding.symmetric(horizontal=10, vertical=4),
                 border_radius=ft.BorderRadius.all(RADIUS["md"]),
                 bgcolor=overlay(0.06),
                 ink=True,
@@ -158,7 +159,7 @@ def Pdf(
                     controls=[
                         ft.Icon(
                             ft.Icons.FOLDER_OPEN,
-                            size=15,
+                            size=ICON_SIZE["md"],
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
                         ft.Text(t("ui.pdf.open"), size=FONT_SIZE["small"]),
@@ -169,7 +170,7 @@ def Pdf(
     if url:
         head.append(
             ft.Container(
-                padding=ft.Padding.symmetric(horizontal=8, vertical=5),
+                padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                 border_radius=ft.BorderRadius.all(RADIUS["md"]),
                 bgcolor=overlay(0.06),
                 ink=True,
@@ -177,32 +178,18 @@ def Pdf(
                 tooltip=t("ui.pdf.reload"),
                 content=ft.Icon(
                     ft.Icons.REFRESH,
-                    size=15,
+                    size=ICON_SIZE["md"],
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
             )
         )
 
     if not url:
+        # 与全框架的整块空态同一套：图标垫圆底 + 一行说明。
         body: ft.Control = ft.Container(
             expand=True,
             alignment=ft.Alignment.CENTER,
-            content=ft.Column(
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=6,
-                controls=[
-                    ft.Icon(
-                        ft.Icons.PICTURE_AS_PDF,
-                        size=40,
-                        color=ft.Colors.OUTLINE_VARIANT,
-                    ),
-                    ft.Text(
-                        t("ui.pdf.empty"),
-                        size=FONT_SIZE["small"],
-                        color=ft.Colors.ON_SURFACE_VARIANT,
-                    ),
-                ],
-            ),
+            content=empty_block(t("ui.pdf.empty"), icon=ft.Icons.PICTURE_AS_PDF, height=None),
         )
     elif failed:
         body = ft.Container(
@@ -331,7 +318,7 @@ def _urls() -> ft.Control:
                         controls=[
                             ft.Icon(
                                 ft.Icons.SUBDIRECTORY_ARROW_RIGHT,
-                                size=13,
+                                size=ICON_SIZE["sm"],
                                 color=ft.Colors.OUTLINE,
                             ),
                             ft.Text(

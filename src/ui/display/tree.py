@@ -49,8 +49,9 @@ from typing import Any
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip
+from ui.core.empty import EMPTY_HEIGHT, empty_line
 from ui.core.i18n import t, use_t
-from ui.core.tokens import FONT_SIZE, RADIUS, overlay
+from ui.core.tokens import FONT_SIZE, RADIUS, selected_layer, state_layer
 
 __all__ = ["Tree", "TreeNode"]
 
@@ -65,11 +66,10 @@ CHECK_BOX = 16  # 复选框方框边长
 CHECK_HIT = 22  # 复选框的可点区域（比方框大一圈，桌面鼠标才好点）
 TEXT_SIZE = FONT_SIZE["body"]
 TRAILING_SIZE = FONT_SIZE["caption"]
-EMPTY_HEIGHT = 72
 
 # ---- 配色（全部走主题角色，明暗自动跟随）-----------------------------------
-SELECTED_BG = ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY)
-HOVER_BG = overlay(0.06)
+SELECTED_BG = selected_layer()  # 选中行：主色 12%
+HOVER_BG = state_layer("hover")  # 悬停：onsurface 8%（M3 规范值）
 GUIDE_COLOR = ft.Colors.OUTLINE_VARIANT
 
 # 复选框未选中态的边框只有"常态 / 禁用"两种。逐行新建 ``ft.Border`` + ``with_opacity``
@@ -633,7 +633,7 @@ class Tree:
                     content=ft.Text(
                         row.node.trailing,
                         size=TRAILING_SIZE,
-                        color=ft.Colors.OUTLINE,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
                         no_wrap=True,
                     ),
                 )
@@ -839,15 +839,7 @@ class Tree:
         )
 
     def _empty(self) -> ft.Control:
-        return ft.Container(
-            height=EMPTY_HEIGHT,
-            alignment=ft.Alignment.CENTER,
-            content=ft.Text(
-                self.empty_text or t("ui.tree.empty"),
-                size=FONT_SIZE["small"],
-                color=ft.Colors.OUTLINE,
-            ),
-        )
+        return empty_line(self.empty_text or t("ui.tree.empty"), height=EMPTY_HEIGHT)
 
     @ft.component
     def ui(self) -> ft.Control:

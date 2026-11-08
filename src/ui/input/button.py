@@ -22,19 +22,29 @@ import flet as ft
 
 from ui.core.constants import ButtonShape, FeedbackStyle, StyleType
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
-from ui.core.tokens import FONT_SIZE, RADIUS, overlay
+from ui.core.tokens import (
+    CONTROL_HEIGHT,
+    FONT_SIZE,
+    ICON_SIZE,
+    RADIUS,
+    disabled_layer,
+    state_layer,
+)
 
 __all__ = ["Button"]
 
 BORDER_RADIUS = RADIUS["md"]  # 6，与输入框一致
-BUTTON_HEIGHT = 36  # 与输入框同高，一行表单里不会参差
-ICON_SIZE = 18
+BUTTON_HEIGHT = CONTROL_HEIGHT["md"]  # 与输入框同高，一行表单里不会参差
+#: 按钮内图标：与 subtitle 文字（14）同级，比正文略大但不把字挤扁。
+#: 不要再在模块里另开一个 ``ICON_SIZE`` —— 那会盖掉令牌名，让"图标该多大"
+#: 又变成各处自说自话。
+BTN_ICON_SIZE = ICON_SIZE["lg"]
 
 #: 禁用态：统一用 on-surface 的两档透明度。写死 GREY_300 + 白字时，浅色主题下
 #: 白字压在浅灰上几乎看不见；走角色透明度还能自动适配深色主题。
-DISABLED_BG = overlay(0.12)
-DISABLED_FG = overlay(0.38)
-DISABLED_SIDE = overlay(0.12)
+DISABLED_BG = disabled_layer("container")
+DISABLED_FG = disabled_layer()
+DISABLED_SIDE = disabled_layer("container")
 
 
 def _merge_states(value, defaults: dict[ft.ControlState, str]):
@@ -84,7 +94,7 @@ class Button(ft.Button):
             padding=ft.Padding.all(10), alignment=ft.Alignment.CENTER
         )
         if self.style_type == StyleType.DEFAULT:
-            # 文字按钮：无填充、无描边，只在悬停时浮一层 6% 的面色。
+            # 文字按钮：无填充、无描边，只在悬停时浮一层面色（M3 悬停档 8%）。
             # 以前给白色底 + 白色边：浅色页面上像纯文字，深色页面上是一块白砖。
             # DEFAULT + plain 仍是文字按钮 —— 白色描边在页面里本来就看不见。
             self.style.color = self.style.color or {
@@ -92,7 +102,7 @@ class Button(ft.Button):
                 ft.ControlState.DISABLED: DISABLED_FG,
             }
             self.style.overlay_color = self.style.overlay_color or {
-                ft.ControlState.DEFAULT: overlay(0.06)
+                ft.ControlState.DEFAULT: state_layer("hover")
             }
         elif self.plain:
             # 镂空：浅底而非纯白 —— 深色主题下纯白按钮会亮得像一个错误。
@@ -101,7 +111,7 @@ class Button(ft.Button):
             }
             # 水波用主色 8%：白底上的白色水波等于没有反馈
             self.style.overlay_color = self.style.overlay_color or {
-                ft.ControlState.DEFAULT: overlay(0.08, role=self._style.color)
+                ft.ControlState.DEFAULT: state_layer("hover", role=self._style.color)
             }
             self.style.shadow_color = self.style.shadow_color or {
                 ft.ControlState.DEFAULT: ft.Colors.WHITE
@@ -247,7 +257,7 @@ def _icons_sizes() -> ft.Control:
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     Button(
-                        content=ft.Icon(ft.Icons.REFRESH, size=ICON_SIZE),
+                        content=ft.Icon(ft.Icons.REFRESH, size=BTN_ICON_SIZE),
                         width=36,
                         height=36,
                         tooltip="刷新",

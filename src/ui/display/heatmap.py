@@ -50,6 +50,7 @@ from typing import Any
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
+from ui.core.empty import empty_line
 from ui.core.format import first_weekday as locale_first_weekday
 from ui.core.format import format_date, format_number, month_name, weekday_names
 from ui.core.i18n import t, use_t
@@ -640,7 +641,7 @@ class Heatmap:
             width=width,
             bgcolor=ft.Colors.INVERSE_SURFACE,
             border_radius=6,
-            padding=ft.Padding.symmetric(horizontal=TIP_PAD_H, vertical=5),
+            padding=ft.Padding.symmetric(horizontal=TIP_PAD_H, vertical=4),
             left=left,
             content=ft.Text(
                 text,
@@ -715,15 +716,11 @@ class Heatmap:
         self._prepare()
 
         if not self._days:
-            return ft.Container(
+            return empty_line(
+                t("ui.heatmap.empty"),
                 width=self.width,
+                height=None,
                 padding=ft.Padding.symmetric(vertical=24),
-                alignment=ft.Alignment.CENTER,
-                content=ft.Text(
-                    t("ui.heatmap.empty"),
-                    size=FONT_SIZE["small"],
-                    color=ft.Colors.ON_SURFACE_VARIANT,
-                ),
             )
 
         if self._grid is None:

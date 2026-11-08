@@ -24,13 +24,20 @@ from dataclasses import field
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip
-from ui.core.tokens import FONT_SIZE, SPACE, overlay
+from ui.core.tokens import (
+    CONTROL_HEIGHT,
+    FONT_SIZE,
+    ICON_SIZE,
+    SPACE,
+    disabled_layer,
+)
 
 __all__ = ["Rating"]
 
-#: 星标尺寸与可点区域。可点区域比图标大一圈，半星的左右判定才有余量
-ICON_SIZE = 26
-CELL = 34
+#: 星标尺寸与可点区域。可点区域取控件基线高 36：与同排的表单控件等高，
+#: 半星的左右判定也刚好以格子中线为界（图标居中，中线即星心）。
+STAR_ICON_SIZE = ICON_SIZE["2xl"]
+CELL = CONTROL_HEIGHT["md"]
 
 #: 三档图标：整星 / 半星 / 空星
 STAR_FULL = ft.Icons.STAR_ROUNDED
@@ -41,7 +48,7 @@ STAR_EMPTY = ft.Icons.STAR_OUTLINE_ROUNDED
 #: 此前写死的 GREY / BLUE 换主色或切深色主题后整排星都不跟随。
 FILLED = ft.Colors.PRIMARY
 EMPTY = ft.Colors.ON_SURFACE_VARIANT
-DIMMED = overlay(0.38)
+DIMMED = disabled_layer()
 
 MUTED = ft.Colors.ON_SURFACE_VARIANT
 
@@ -102,7 +109,7 @@ class Rating(ft.Row):
     # -- 构建 ---------------------------------------------------------------
     def _build_star(self, index: int) -> ft.Container:
         """一颗星：整块可点，``data`` 记住下标，半星判定靠点击的横向位置。"""
-        icon = ft.Icon(icon=STAR_EMPTY, size=ICON_SIZE, color=EMPTY)
+        icon = ft.Icon(icon=STAR_EMPTY, size=STAR_ICON_SIZE, color=EMPTY)
         self._icons.append(icon)
         return ft.Container(
             width=CELL,
@@ -247,7 +254,7 @@ SPEC = Spec(
         "完整外观，用于商品卡片、评价列表这类「只展示结果」的位置。"
     ),
     anatomy=[
-        ("星标", "每颗星占 34px 的可点区域，整星 / 半星 / 空星三种图标按分数切换。"),
+        ("星标", "每颗星占 36px 的可点区域，整星 / 半星 / 空星三种图标按分数切换。"),
         (
             "填色",
             "已得分走主色，空星走次要文字色；两者都跟随主题，不在代码里写死灰蓝。",
@@ -314,8 +321,9 @@ SPEC = Spec(
     ],
     notes=[
         tip(
-            "每颗星是一整块 34px 的可点区域，而不是裸图标：图标本身只有 26px，半星的"
-            "左右判定需要余量，手指点起来也不至于总差半颗。"
+            "每颗星是一整块 36px 的可点区域，而不是裸图标：图标本身只有 24px，半星的"
+            "左右判定需要余量，手指点起来也不至于总差半颗。可点区域取的是控件基线高"
+            "（CONTROL_HEIGHT 的 md 档），换到别的高度标尺时这里跟着走。"
         ),
         info(
             "``value`` 现在就是分数（1 起），与 ``on_change`` 回传的值一致。此前内部存"

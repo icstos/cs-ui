@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
+from ui.core.empty import empty_line
 from ui.core.i18n import t, use_t
 from ui.core.tokens import FONT_SIZE, RADIUS, SPACE, semantic_text
 
@@ -140,15 +141,14 @@ class LogContainer:
         lines = [_log_text(text) for text in self.logs]
         if not lines:
             # 空面板不能是一块空框：深色主题下它和「加载失败」长得一模一样。
+            # 贴顶而不是居中 —— 日志从顶部开始流，居中会让人等一条永远不会
+            # 从中间出现的输出。
             lines = [
-                ft.Container(
+                empty_line(
+                    t("ui.common.empty"),
+                    height=None,
+                    align=ft.Alignment.TOP_CENTER,
                     padding=ft.Padding.only(top=SPACE["6"]),
-                    alignment=ft.Alignment.TOP_CENTER,
-                    content=ft.Text(
-                        t("ui.common.empty"),
-                        size=FONT_SIZE["small"],
-                        color=MUTED,
-                    ),
                 )
             ]
         return ft.Container(

@@ -89,7 +89,7 @@ class CodeView(ft.Column):
             ft.Text(
                 _language_label(self.language),
                 size=FONT_SIZE["caption"],
-                color=ft.Colors.OUTLINE,
+                color=ft.Colors.ON_SURFACE_VARIANT,
             )
         ]
         if self.copyable and self.code:

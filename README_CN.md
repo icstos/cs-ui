@@ -360,14 +360,20 @@ ft.Colors.PRIMARY, ft.Colors.SURFACE_CONTAINER_LOWEST, ft.Colors.ON_SURFACE_VARI
 **框架解析令牌**（M3 没有的语义角色，由 `ui.core.tokens` 补齐）：
 
 ```python
-from ui import SPACE, RADIUS, FONT_SIZE, GAP, PAD, elevation, overlay, hairline
+from ui import (
+    SPACE, RADIUS, FONT_SIZE, GAP, PAD, elevation, hairline,
+    state_layer, selected_layer, disabled_layer, overlay,
+)
 
-SPACE["4"]          # 16 —— 4pt 阶梯，(0,1,2,3,4,5,6,8,10,12,16,20,24,32,40)
-RADIUS["lg"]        # 8
-FONT_SIZE["body"]   # 13
-elevation(2)        # 五档阴影，阴影色用 'shadow,0.1' 角色名，自动跟随明暗
-overlay(0.06)       # 'onsurface,0.06' —— 半透明遮罩，明暗自适应
-hairline()          # 1px 分隔线
+SPACE["4"]                  # 16 —— 4pt 阶梯，(0,1,2,3,4,5,6,8,10,12,16,20,24,32,40)
+RADIUS["lg"]                # 8
+FONT_SIZE["body"]           # 13
+elevation(2)                # 五档阴影，阴影色用 'shadow' 角色，自动跟随明暗
+state_layer("hover")        # 'onsurface,0.08' —— 悬停层（M3 悬停档）
+selected_layer("normal")    # 'primary,0.12' —— 选中层
+disabled_layer()            # 'onsurface,0.38' —— 禁用文字 / 图标
+disabled_layer("container") # 'onsurface,0.12' —— 禁用控件的底 / 边
+hairline()                  # 1px 分隔线
 ```
 
 **语义色三档**（重要）：一个语义色不能一个值用到底，必须拆成
@@ -559,10 +565,34 @@ python scripts/gen_ui_registry.py           # 新增/删除组件后重新生成
 python scripts/gen_ui_registry.py --check   # 校验是否与源码一致
 ```
 
+### 一次跑完回归
+
+一致性靠"记得跑"是守不住的，所以所有检查都在一个入口里：
+
+```bash
+python scripts/check_all.py                 # 25 项 / 约 50s（静态门禁 + 审计 + 逻辑测试 + 文档）
+python scripts/check_all.py --stage fast    # 只跑静态门禁与令牌审计（改样式时够用）
+python scripts/check_all.py --stage visual  # 真机截图 + 灰块检测（会开窗口，几分钟）
+```
+
+| 检查 | 守住什么 |
+|---|---|
+| `ruff --select F821,F811,F841` | 未定义名 / 重复定义 / 无用局部变量（漏导入的令牌名会在这里暴露） |
+| `audit_consistency.py` | 裸色值、字号 / 图标 / 圆角越界、奇数留白、`OUTLINE` 当文字色、暗色失效色 |
+| `_tokens_logic.py` | 令牌契约：门面一致、刻度单调、状态层递进、兜底不抛、同源引用、交互态同值 |
+| `_*_logic.py` | 各组件纯逻辑（状态推导、取值边界、回调） |
+| `_doc_check.py` | 71 个组件的 SPEC / 示例 / API 完整性 |
+| `gen_ui_registry.py --check` | `ui.__all__` 与注册表不漂移 |
+| `build_docs_i18n.py --check` | 站点三语文案同步 |
+
 ## 设计原则
 
 - 基于 Flet 原生控件继承，`from ui import *` 即可使用
 - 颜色 / 圆角 / 间距 / 字号一律取自设计令牌，不写字面值
+- 交互态只有三层，且都从令牌取值：悬停 `state_layer("hover")`（8%）、
+  选中 `selected_layer("subtle"/"normal")`（8% / 12%）、
+  禁用 `disabled_layer()/disabled_layer("container")`（38% / 12%）——
+  同样的"划过"在菜单、分页、日历、穿梭框里必须是同一个轻重
 - 语义色必须三档（填充 / 填充上的前景 / 页面文字），保证明暗都过 WCAG AA
 - 以包的形式组织代码，一个 `.py` 一般只实现一个控件
 - 包内代码对外尽量无依赖
@@ -573,25 +603,26 @@ python scripts/gen_ui_registry.py --check   # 校验是否与源码一致
 
 ## 示例
 
-运行演示程序查看所有组件效果（11 个分类页 + 404 页）：
+组件文档站本身就是示例库：71 个组件各自带可运行示例与 API 说明，路由即页面。
 
 ```bash
-python examples/demo.py
+python docs/main.py
 ```
 
 | 路由 | 内容 |
 |------|------|
-| `/` | 首页导航（按分类进入各页） |
-| `/general` | 文本 / 按钮 / 图标 / 标签 |
-| `/layout` | 容器 / 列表 / 表格 / 步骤条 |
-| `/navigation` | 面包屑 / 标签页 / 分页 |
-| `/form` | 输入框 / 选择器 / 穿梭框 / 滑块 / 评分 |
-| `/upload` | 文件 / 目录 / 保存 / 图片 |
-| `/feedback` | 消息提示 / 通知 / 对话框 / 进度 |
-| `/display` | 日历 / 轮播 / 热力图 / 日志 / 代码 / 图片 |
-| `/charts` | 折线 / 面积 / 柱状 / 散点图 |
-| `/media` | 音频 / 视频 / PDF |
-| `/about` | 迁移速查与设计说明 |
+| `/` | 首页 |
+| `/docs/quickstart` `/docs/architecture` `/docs/theming` `/docs/i18n` | 指南文章 |
+| `/components` | 组件总览（general / layout / navigation / form / display / feedback / chart / media） |
+| `/components/<分类>/<组件>` | 单个组件页：定义 / 组件构成 / 何时使用 / 示例 / API / 备注 |
+| `/about` | 关于 |
+
+改完样式想确认"窗口里真的画出来了"（灰块 = Flutter 端渲染失败）：
+
+```bash
+python scripts/_visual_check.py              # 13 个代表页，浅色
+python scripts/_visual_check.py --mode dark  # 暗色主题
+```
 
 其他测试文件：
 

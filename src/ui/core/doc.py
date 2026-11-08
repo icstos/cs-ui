@@ -48,6 +48,15 @@ from typing import Any, Literal
 
 import flet as ft
 
+from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, ICON_SIZE, RADIUS, semantic_text
+
+# 代码块配色：**故意不跟随明暗主题**。代码高亮有自己的色板，浅色主题下把
+# 代码块也刷白，行内高亮的对比度会全线崩掉 —— VS Code / GitHub 也一样：
+# 主题变，代码块底色保持深色。命名成常量，是为了让"刻意"和"随手写死"可区分。
+_CODE_BG = "#0E1117"
+_CODE_BG_BAR = "#151A22"
+_CODE_BORDER = "#232A35"
+
 __all__ = [
     "Api",
     "Doc",
@@ -474,7 +483,7 @@ def _marker() -> ft.Control:
         height=15,
         border_radius=2,
         bgcolor=ft.Colors.PRIMARY,
-        margin=ft.Margin.only(top=3),
+        margin=ft.Margin.only(top=4),
     )
 
 
@@ -485,11 +494,11 @@ def _section(anchor: str, title: str, body: Sequence[ft.Control]) -> ft.Control:
         horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
         controls=[
             ft.Row(
-                spacing=9,
+                spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.START,
                 controls=[
                     _marker(),
-                    ft.Text(title, size=17, weight=ft.FontWeight.W_700),
+                    ft.Text(title, size=FONT_SIZE["title"], weight=FONT_WEIGHT["bold"]),
                 ],
             ),
             *body,
@@ -524,14 +533,14 @@ def header(doc: Spec) -> ft.Control:
         controls=[
             ft.Text(
                 f"{_GROUP_LABEL.get(doc.group, doc.group)} / {doc.key}",
-                size=11.5,
+                size=FONT_SIZE["caption"],
                 color=ft.Colors.PRIMARY,
                 weight=ft.FontWeight.W_600,
                 style=ft.TextStyle(letter_spacing=0.6),
             ),
             ft.Text(
                 doc.name,
-                size=38,
+                size=FONT_SIZE["display_lg"],
                 weight=ft.FontWeight.W_800,
                 style=ft.TextStyle(letter_spacing=-0.8, height=1.15),
             ),
@@ -539,7 +548,7 @@ def header(doc: Spec) -> ft.Control:
                 padding=ft.Padding.only(right=40),
                 content=ft.Text(
                     doc.summary,
-                    size=16,
+                    size=FONT_SIZE["title"],
                     color=_MUTED,
                     style=ft.TextStyle(height=1.7),
                 ),
@@ -567,7 +576,7 @@ def _chip(text: str, *, tone: ft.ColorValue | None = None) -> ft.Control:
         bgcolor=ft.Colors.with_opacity(0.07, tone or ft.Colors.PRIMARY),
         content=ft.Text(
             text,
-            size=10.5,
+            size=FONT_SIZE["caption"],
             color=tone or ft.Colors.PRIMARY,
             weight=ft.FontWeight.W_600,
         ),
@@ -607,7 +616,7 @@ def _anatomy(doc: Spec) -> ft.Control:
                         expand=True,
                         content=ft.Text(
                             desc,
-                            size=13.5,
+                            size=FONT_SIZE["subtitle"],
                             color=_MUTED,
                             style=ft.TextStyle(height=1.75),
                         ),
@@ -617,7 +626,7 @@ def _anatomy(doc: Spec) -> ft.Control:
         )
     return ft.Container(
         padding=ft.Padding.only(left=2, top=4),
-        content=ft.Column(spacing=11, controls=rows),
+        content=ft.Column(spacing=12, controls=rows),
     )
 
 
@@ -634,7 +643,7 @@ def _checklist(
             spacing=10,
             vertical_alignment=ft.CrossAxisAlignment.START,
             controls=[
-                ft.Icon(icon, size=15, color=color),
+                ft.Icon(icon, size=ICON_SIZE["md"], color=color),
                 ft.Container(
                     expand=True,
                     content=ft.Text(
@@ -655,7 +664,7 @@ def _checklist(
         bgcolor=ft.Colors.with_opacity(0.04, color),
         border=ft.Border.all(1, ft.Colors.with_opacity(0.16, color)),
         content=ft.Column(
-            spacing=9,
+            spacing=8,
             controls=[
                 ft.Text(
                     title,
@@ -707,7 +716,7 @@ def code_panel(source: str, *, filename: str | None = None) -> ft.Control:
     except ImportError:  # pragma: no cover - 可选依赖
         return ft.Container(
             padding=14,
-            border_radius=10,
+            border_radius=RADIUS["lg"],
             bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
             content=ft.Text(source, size=12, selectable=True),
         )
@@ -723,24 +732,24 @@ def code_panel(source: str, *, filename: str | None = None) -> ft.Control:
         set_copied(False)
 
     return ft.Container(
-        border_radius=10,
-        bgcolor="#0E1117",
-        border=ft.Border.all(1, "#232A35"),
+        border_radius=RADIUS["lg"],
+        bgcolor=_CODE_BG,
+        border=ft.Border.all(1, _CODE_BORDER),
         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
         content=ft.Column(
             spacing=0,
             controls=[
                 ft.Container(
-                    padding=ft.Padding.only(left=13, right=4, top=3, bottom=3),
-                    bgcolor="#151A22",
-                    border=ft.Border(bottom=ft.BorderSide(1, "#232A35")),
+                    padding=ft.Padding.only(left=12, right=4, top=4, bottom=4),
+                    bgcolor=_CODE_BG_BAR,
+                    border=ft.Border(bottom=ft.BorderSide(1, _CODE_BORDER)),
                     content=ft.Row(
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
                             ft.Text(
                                 filename or "python",
-                                size=10.5,
+                                size=FONT_SIZE["caption"],
                                 color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                                 weight=ft.FontWeight.W_500,
                             ),
@@ -783,9 +792,9 @@ def _example_card(item: Example) -> ft.Control:
     head: list[ft.Control] = [
         ft.Column(
             expand=True,
-            spacing=3,
+            spacing=4,
             controls=[
-                ft.Text(item.title, size=13.5, weight=ft.FontWeight.W_700),
+                ft.Text(item.title, size=FONT_SIZE["subtitle"], weight=ft.FontWeight.W_700),
                 *([_muted(item.hint)] if item.hint else []),
             ],
         )
@@ -815,7 +824,7 @@ def _example_card(item: Example) -> ft.Control:
             spacing=0,
             controls=[
                 ft.Container(
-                    padding=ft.Padding.only(left=16, right=10, top=9, bottom=9),
+                    padding=ft.Padding.only(left=16, right=10, top=8, bottom=8),
                     content=ft.Row(
                         spacing=10,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -844,21 +853,21 @@ def _toggle(
     icon: ft.IconData, label: str, *, active: bool, on_click: Callable
 ) -> ft.Control:
     return ft.Container(
-        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
-        border_radius=7,
+        padding=ft.Padding.symmetric(horizontal=8, vertical=4),
+        border_radius=RADIUS["md"],
         bgcolor=ft.Colors.SURFACE_CONTAINER_LOW if active else None,
         border=ft.Border.all(1, _LINE if active else ft.Colors.TRANSPARENT),
         ink=True,
         on_click=on_click,
         content=ft.Row(
-            spacing=5,
+            spacing=4,
             tight=True,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(icon, size=13, color=ft.Colors.ON_SURFACE if active else _MUTED),
+                ft.Icon(icon, size=ICON_SIZE["sm"], color=ft.Colors.ON_SURFACE if active else _MUTED),
                 ft.Text(
                     label,
-                    size=11.5,
+                    size=FONT_SIZE["caption"],
                     color=ft.Colors.ON_SURFACE if active else _MUTED,
                     weight=ft.FontWeight.W_600 if active else None,
                 ),
@@ -877,7 +886,7 @@ _COLS: tuple[tuple[str, int | None], ...] = (
 
 def _api_row(cells: Sequence[ft.Control], *, head: bool = False) -> ft.Control:
     return ft.Container(
-        padding=ft.Padding.symmetric(horizontal=14, vertical=10 if not head else 7),
+        padding=ft.Padding.symmetric(horizontal=14, vertical=10 if not head else 8),
         bgcolor=ft.Colors.SURFACE_CONTAINER_LOW if head else None,
         content=ft.Row(
             spacing=12,
@@ -890,7 +899,7 @@ def _api_row(cells: Sequence[ft.Control], *, head: bool = False) -> ft.Control:
 def _cell(text: str, width: int | None, *, mono: bool = False, muted: bool = False) -> ft.Control:
     control = ft.Text(
         text,
-        size=12.5 if mono else 12,
+        size=FONT_SIZE["small"],
         color=_MUTED if muted else ft.Colors.ON_SURFACE,
         no_wrap=True,
         overflow=ft.TextOverflow.ELLIPSIS,
@@ -925,7 +934,7 @@ def _api_table(rows: Sequence[Api]) -> ft.Control:
                         expand=True,
                         content=ft.Text(
                             item.desc or "—",
-                            size=12.5,
+                            size=FONT_SIZE["small"],
                             color=ft.Colors.ON_SURFACE_VARIANT if item.desc else _MUTED,
                             style=ft.TextStyle(height=1.6),
                         ),
@@ -942,19 +951,43 @@ def _api_table(rows: Sequence[Api]) -> ft.Control:
 
 
 # -- 备注 -------------------------------------------------------------------
-_NOTE_LOOK: dict[str, tuple[ft.IconData, ft.ColorValue]] = {
-    "tip": (ft.Icons.LIGHTBULB_OUTLINE_ROUNDED, ft.Colors.PRIMARY),
-    "info": (ft.Icons.INFO_OUTLINE_ROUNDED, ft.Colors.ON_SURFACE_VARIANT),
-    "warning": (ft.Icons.WARNING_AMBER_ROUNDED, "#B26A00"),
-    "danger": (ft.Icons.ERROR_OUTLINE_ROUNDED, ft.Colors.ERROR),
+#: 备注的图标是固定的，颜色却有两种来源，必须分开：
+#:
+#: * ``tip`` / ``info`` / ``danger`` 用 M3 的**主题角色**（``PRIMARY`` /
+#:   ``ON_SURFACE_VARIANT`` / ``ERROR``），交给 Flutter 按当前色板解析；
+#: * ``warning`` 在 M3 里**没有对应角色**，只能用框架的语义色，而语义色是
+#:   具体十六进制值、随明暗切换 —— 所以它**不能在导入期求值**。
+#:
+#: 曾经把 ``"#B26A00"`` 直接写进这张表：字典在 import 时就固化了，切到深色
+#: 主题后这行备注仍然是浅色的深琥珀，对比度掉到 2:1 出头。
+_NOTE_ICON: dict[str, ft.IconData] = {
+    "tip": ft.Icons.LIGHTBULB_OUTLINE_ROUNDED,
+    "info": ft.Icons.INFO_OUTLINE_ROUNDED,
+    "warning": ft.Icons.WARNING_AMBER_ROUNDED,
+    "danger": ft.Icons.ERROR_OUTLINE_ROUNDED,
+}
+
+_NOTE_ROLE: dict[str, ft.ColorValue] = {
+    "tip": ft.Colors.PRIMARY,
+    "info": ft.Colors.ON_SURFACE_VARIANT,
+    "danger": ft.Colors.ERROR,
 }
 
 
+def _note_color(kind: str) -> ft.ColorValue:
+    """渲染期取备注颜色（``warning`` 走语义色，其余走主题角色）。"""
+    if kind == "warning":
+        return semantic_text("warning")
+    return _NOTE_ROLE.get(kind, ft.Colors.ON_SURFACE_VARIANT)
+
+
 def callout(note: Note) -> ft.Control:
-    icon, color = _NOTE_LOOK.get(note.kind, _NOTE_LOOK["info"])
+    kind = note.kind if note.kind in _NOTE_ICON else "info"
+    icon = _NOTE_ICON[kind]
+    color = _note_color(kind)
     return ft.Container(
-        padding=ft.Padding.symmetric(horizontal=14, vertical=11),
-        border_radius=10,
+        padding=ft.Padding.symmetric(horizontal=14, vertical=12),
+        border_radius=RADIUS["lg"],
         bgcolor=ft.Colors.with_opacity(0.05, color),
         border=ft.Border(
             left=ft.BorderSide(3, color),
@@ -963,7 +996,7 @@ def callout(note: Note) -> ft.Control:
             bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.12, color)),
         ),
         content=ft.Row(
-            spacing=11,
+            spacing=12,
             vertical_alignment=ft.CrossAxisAlignment.START,
             controls=[
                 ft.Icon(icon, size=16, color=color, margin=ft.Margin.only(top=1)),
@@ -971,7 +1004,7 @@ def callout(note: Note) -> ft.Control:
                     expand=True,
                     content=ft.Text(
                         note.text,
-                        size=12.5,
+                        size=FONT_SIZE["small"],
                         color=ft.Colors.ON_SURFACE_VARIANT,
                         style=ft.TextStyle(height=1.7),
                     ),
@@ -1058,18 +1091,18 @@ def _footer(doc: Spec) -> ft.Control:
             wrap=True,
             run_spacing=6,
             controls=[
-                ft.Icon(ft.Icons.TERMINAL, size=13, color=_MUTED),
+                ft.Icon(ft.Icons.TERMINAL, size=ICON_SIZE["sm"], color=_MUTED),
                 ft.Text(
                     "直接运行本文件即可看到这一页",
-                    size=11.5,
+                    size=FONT_SIZE["caption"],
                     color=_MUTED,
                 ),
                 *(
                     [
-                        ft.Text("·", size=11.5, color=_MUTED),
+                        ft.Text("·", size=FONT_SIZE["caption"], color=_MUTED),
                         ft.Text(
                             doc.source,
-                            size=11.5,
+                            size=FONT_SIZE["caption"],
                             color=_MUTED,
                             style=_MONO,
                             selectable=True,
@@ -1153,13 +1186,13 @@ def _host(docs: tuple[Spec, ...]) -> ft.Control:
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 ft.Row(
-                    spacing=9,
+                    spacing=8,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
                         ft.Container(
                             width=6,
                             height=6,
-                            border_radius=3,
+                            border_radius=RADIUS["full"],
                             bgcolor=ft.Colors.PRIMARY,
                         ),
                         ft.Text("cs-ui", size=13, weight=ft.FontWeight.W_800),
@@ -1197,7 +1230,7 @@ def _host(docs: tuple[Spec, ...]) -> ft.Control:
                 run_spacing=6,
                 controls=[
                     ft.Container(
-                        padding=ft.Padding.symmetric(horizontal=11, vertical=5),
+                        padding=ft.Padding.symmetric(horizontal=12, vertical=4),
                         border_radius=999,
                         bgcolor=(
                             ft.Colors.PRIMARY if index == current else ft.Colors.SURFACE

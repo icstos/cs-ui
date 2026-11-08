@@ -18,6 +18,7 @@ from pathlib import Path
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, warn
+from ui.core.tokens import ICON_SIZE
 
 __all__ = ["Image", "ImgView"]
 
@@ -72,7 +73,7 @@ class ImgView(ft.Column):
                 alignment=ft.Alignment.CENTER,
                 width=150,
                 height=150,
-                bgcolor=ft.Colors.GREY_100,
+                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,  # 占位底：明暗自适应
                 border_radius=ft.BorderRadius.all(6),
             ),
             ft.Text(value=Path(self.img_path).name, size=12),
@@ -196,7 +197,7 @@ def _broken() -> ft.Control:
             controls=[
                 ft.Icon(
                     ft.Icons.IMAGE_NOT_SUPPORTED_OUTLINED,
-                    size=22,
+                    size=ICON_SIZE["2xl"],
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 _caption("图还没上传"),
