@@ -234,6 +234,46 @@ check_true("浅色语义色与深色语义色不同（否则明暗切换白做�
                for r in tokens.SEMANTIC_ROLES))
 
 # ---------------------------------------------------------------------------
+section("文字主题：正文 14 必须由令牌说了算，而不是 Flutter 默认值")
+
+from ui.core.theme import text_theme  # noqa: E402
+
+check_true("FONT_SIZE 里没有 subtitle（与 body 同值的档位只会让人纠结选哪个）",
+           "subtitle" not in tokens.FONT_SIZE, str(list(tokens.FONT_SIZE)))
+check("正文基准", tokens.FONT_SIZE["body"], 14)
+check_true("ICON_SIZE['md']（16）比正文大 2px：同行图标才站得稳",
+           tokens.ICON_SIZE["md"] == tokens.FONT_SIZE["body"] + 2)
+
+# TextTheme 每个槽位都必须落在 FONT_SIZE 的值域里 —— 这样"正文 14"是唯一的
+# 事实源，改 tokens 一处，未写 size 的文字与 flet 内置控件（ListTile / Dropdown /
+# Tooltip / DatePicker）一起跟着走。
+_tt = text_theme()
+_slots = {
+    name: getattr(_tt, name)
+    for name in dir(_tt)
+    if name.startswith(("display_", "headline_", "title_", "body_", "label_"))
+    and getattr(_tt, name) is not None
+}
+check_true("text_theme 至少铺满 13 个槽位", len(_slots) >= 13, str(len(_slots)))
+outside = {
+    name: style.size
+    for name, style in _slots.items()
+    if style.size not in tokens.FONT_SIZE.values()
+}
+check("text_theme 无越界字号", outside, {})
+check("body_medium 就是正文档", _slots["body_medium"].size, tokens.FONT_SIZE["body"])
+check("body_small 是次要档", _slots["body_small"].size, tokens.FONT_SIZE["small"])
+check("label_small 是标签档", _slots["label_small"].size, tokens.FONT_SIZE["caption"])
+check("title_medium 是卡片标题档", _slots["title_medium"].size, tokens.FONT_SIZE["title"])
+
+# 颜色不是可有可无：flet 下发 TextStyle 时是**替换**而非合并，只写 size 会把颜色
+# 一并清空 —— 所有没显式给 color 的文字都变成透明。查一遍，别再犯。
+_no_color = [name for name, style in _slots.items() if style.color in (None, "")]
+check("text_theme 每个槽位都带颜色（否则文字透明）", _no_color, [])
+check("text_theme 的前景色是 ON_SURFACE",
+      {style.color for style in _slots.values()}, {ft.Colors.ON_SURFACE})
+
+# ---------------------------------------------------------------------------
 section("阴影：档位单调与越界夹取")
 check("ELEVATION 档位", tokens.ELEVATION, (0, 1, 2, 3, 4))
 blurs = [tokens.elevation(level).blur_radius for level in tokens.ELEVATION]
@@ -247,7 +287,7 @@ check("elevation 负数夹到 0 档", tokens.elevation(-5).blur_radius, 0)
 # ---------------------------------------------------------------------------
 section("同源引用：控件高度只有一个来源")
 from ui.core import constants, styles  # noqa: E402
-from ui.input import panel_field, select_box  # noqa: E402
+from ui.input import cascader, multi_select, panel_field, select_box  # noqa: E402
 
 check("CONTROL_HEIGHT['md']", tokens.CONTROL_HEIGHT["md"], 36)
 check("constants.DEFAULT_FORM_HEIGHT", constants.DEFAULT_FORM_HEIGHT,
@@ -257,6 +297,17 @@ check("panel_field.FIELD_HEIGHT", panel_field.FIELD_HEIGHT, tokens.CONTROL_HEIGH
 check("select_box.INPUT_HEIGHT", select_box.INPUT_HEIGHT, tokens.CONTROL_HEIGHT["md"])
 
 check("styles.INPUT_RADIUS", styles.INPUT_RADIUS, tokens.RADIUS["md"])
+
+# 组件自己的字号常量必须**赋自**令牌而不是抄数字：抄的那天"正文 14"就跟它无关了，
+# 而且这类常量绕过审计（AST 只认 ``Text(size=N)`` 里的字面量）。
+check("cascader.ITEM_SIZE", cascader.ITEM_SIZE, tokens.FONT_SIZE["body"])
+check("multi_select.TEXT_SIZE", multi_select.TEXT_SIZE, tokens.FONT_SIZE["body"])
+check("multi_select.CHIP_TEXT_SIZE", multi_select.CHIP_TEXT_SIZE,
+      tokens.FONT_SIZE["small"])
+check("panel_field 三档",
+      (panel_field.TEXT_SIZE, panel_field.SMALL_SIZE, panel_field.LABEL_SIZE),
+      (tokens.FONT_SIZE["body"], tokens.FONT_SIZE["small"], tokens.FONT_SIZE["caption"]))
+check("select_box.TEXT_SIZE", select_box.TEXT_SIZE, tokens.FONT_SIZE["body"])
 
 # ---------------------------------------------------------------------------
 section("不重复定义：刻度只能在 tokens.py 出现一次")

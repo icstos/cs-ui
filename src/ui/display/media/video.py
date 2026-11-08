@@ -20,7 +20,7 @@ import flet as ft
 import flet_video as fv
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
-from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE
+from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, ICON_SIZE, RADIUS, SPACE
 
 __all__ = ["SPEC", "Video", "VideoMedia", "build_playlist"]
 
@@ -131,7 +131,7 @@ def _playlist_preview() -> ft.Control:
                         ),
                         ft.Icon(
                             ft.Icons.MOVIE_OUTLINED,
-                            size=FONT_SIZE["title"],
+                            size=ICON_SIZE["md"],
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
                         ft.Text(item.resource, size=FONT_SIZE["body"], expand=True),

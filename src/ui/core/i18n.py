@@ -63,7 +63,7 @@ from ui.core.config import logger
 from ui.core.locales import CATALOGS as FRAMEWORK_CATALOGS
 from ui.core.locales import DEFAULT_LOCALE, FALLBACK_LOCALE
 from ui.core.paths import config_dir as _config_dir
-from ui.core.tokens import FONT_SIZE, RADIUS, SPACE
+from ui.core.tokens import FONT_SIZE, ICON_SIZE, RADIUS, SPACE
 
 __all__ = [
     "FileStore",
@@ -1062,11 +1062,11 @@ def LanguageSwitcher(*, compact: bool = False) -> ft.Control:
                         (
                             ft.Icon(
                                 ft.Icons.CHECK,
-                                size=FONT_SIZE["body"],
+                                size=ICON_SIZE["md"],
                                 color=ft.Colors.PRIMARY,
                             )
                             if selected
-                            else ft.Container(width=FONT_SIZE["body"])
+                            else ft.Container(width=ICON_SIZE["md"])
                         ),
                         ft.Text(
                             language.native_name,
@@ -1115,13 +1115,13 @@ def LanguageSwitcher(*, compact: bool = False) -> ft.Control:
                 controls=[
                     ft.Icon(
                         ft.Icons.LANGUAGE,
-                        size=FONT_SIZE["subtitle"],
+                        size=ICON_SIZE["md"],
                         color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                     ft.Text(state.language.native_name, size=FONT_SIZE["body"]),
                     ft.Icon(
                         ft.Icons.ARROW_DROP_DOWN,
-                        size=FONT_SIZE["title"],
+                        size=ICON_SIZE["md"],
                         color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                 ],

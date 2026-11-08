@@ -85,7 +85,11 @@ def _basic() -> ft.Control:
                 *[
                     ft.ListTile(
                         leading=_avatar(initial),
-                        title=ft.Text(title, size=FONT_SIZE["subtitle"]),
+                        title=ft.Text(
+                            title,
+                            size=FONT_SIZE["body"],
+                            weight=FONT_WEIGHT["medium"],
+                        ),
                         subtitle=ft.Text(
                             subtitle, size=FONT_SIZE["small"], color=MUTED
                         ),
@@ -127,7 +131,11 @@ def _trailing() -> ft.Control:
                     leading=ft.Icon(
                         ft.Icons.NOTIFICATIONS_OUTLINED, size=20, color=MUTED
                     ),
-                    title=ft.Text("构建通知", size=FONT_SIZE["subtitle"]),
+                    title=ft.Text(
+                        "构建通知",
+                        size=FONT_SIZE["body"],
+                        weight=FONT_WEIGHT["medium"],
+                    ),
                     subtitle=ft.Text(
                         "失败与恢复时各推一条",
                         size=FONT_SIZE["small"],
@@ -139,7 +147,11 @@ def _trailing() -> ft.Control:
                     leading=ft.Icon(
                         ft.Icons.SYSTEM_UPDATE_ALT_OUTLINED, size=20, color=MUTED
                     ),
-                    title=ft.Text("版本更新", size=FONT_SIZE["subtitle"]),
+                    title=ft.Text(
+                        "版本更新",
+                        size=FONT_SIZE["body"],
+                        weight=FONT_WEIGHT["medium"],
+                    ),
                     subtitle=ft.Text(
                         "0.1.1 · 3 天前发布",
                         size=FONT_SIZE["small"],
@@ -152,7 +164,11 @@ def _trailing() -> ft.Control:
                 ),
                 ft.ListTile(
                     leading=ft.Icon(ft.Icons.STORAGE_OUTLINED, size=20, color=MUTED),
-                    title=ft.Text("存储空间", size=FONT_SIZE["subtitle"]),
+                    title=ft.Text(
+                        "存储空间",
+                        size=FONT_SIZE["body"],
+                        weight=FONT_WEIGHT["medium"],
+                    ),
                     subtitle=ft.Text(
                         "已用 2.4 GB / 10 GB",
                         size=FONT_SIZE["small"],
@@ -188,7 +204,11 @@ def _two_lines() -> ft.Control:
                     leading=ft.Icon(
                         ft.Icons.DESCRIPTION_OUTLINED, size=20, color=MUTED
                     ),
-                    title=ft.Text("对账差异 · 2026-11", size=FONT_SIZE["subtitle"]),
+                    title=ft.Text(
+                        "对账差异 · 2026-11",
+                        size=FONT_SIZE["body"],
+                        weight=FONT_WEIGHT["medium"],
+                    ),
                     subtitle=ft.Text(
                         _LONG,
                         size=FONT_SIZE["small"],
@@ -203,7 +223,11 @@ def _two_lines() -> ft.Control:
                     leading=ft.Icon(
                         ft.Icons.DESCRIPTION_OUTLINED, size=20, color=MUTED
                     ),
-                    title=ft.Text("对账差异 · 2026-10", size=FONT_SIZE["subtitle"]),
+                    title=ft.Text(
+                        "对账差异 · 2026-10",
+                        size=FONT_SIZE["body"],
+                        weight=FONT_WEIGHT["medium"],
+                    ),
                     subtitle=ft.Text(
                         "已处理，差异 0.00 元",
                         size=FONT_SIZE["small"],

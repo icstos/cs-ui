@@ -12,7 +12,7 @@
 档位                 内容                                        大致耗时
 ===================  ==========================================  ==========
 ``static``           ruff：未定义名 / 重复定义 / 无用局部变量      快
-``audit``            设计令牌一致性审计（7 条规则）                快
+``audit``            设计令牌一致性审计（8 条规则）                快
 ``logic``            19 个纯逻辑测试（无需窗口）                   中
 ``docs``             组件文档规格 + 导出注册表                     中
 ``all``（默认）      以上全部                                      中
@@ -91,7 +91,7 @@ def stages() -> list[Stage]:
         ),
         Stage(
             key="audit",
-            title="令牌一致性审计（7 条规则）",
+            title="令牌一致性审计（8 条规则）",
             argv=(sys.executable, str(SCRIPTS / "audit_consistency.py"), "--check"),
             tier="fast",
             timeout=180,

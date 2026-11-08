@@ -88,7 +88,7 @@ DENSITIES: dict[str, dict[str, int]] = {
         "body_y": SPACE["3"],
         "gap": SPACE["2"],
         "chip": 28,
-        "title": FONT_SIZE["subtitle"],
+        "title": FONT_SIZE["body"],
         "sub": FONT_SIZE["small"],
     },
     "comfortable": {

@@ -7,20 +7,11 @@ import flet as ft
 
 from ui.core.config import logger
 from ui.core.i18n import t, use_t
+from ui.core.theme import text_theme
 from ui.core.tokens import FONT_SIZE, RADIUS
 
 FONT_DIR = Path(Path(__file__).parent, "data/fonts").resolve()
 FONTS = {"AlibabaPuHuiTi": str(Path(FONT_DIR, "AlibabaPuHuiTi-3-55-Regular.otf"))}
-
-TEXT_SIZE = 16
-shadow = ft.BoxShadow(
-    spread_radius=0.2,
-    blur_radius=10,
-    color=ft.Colors.GREY_300,
-    offset=ft.Offset(0, 2.5),
-    # blur_style=ft.ShadowBlurStyle.SOLID,
-)
-
 
 @ft.component
 def Home():
@@ -153,8 +144,10 @@ class App:
             color_scheme_seed=ft.Colors.BLUE,  # 基于该颜色推导主题其他颜色
             # color_scheme=ft.ColorScheme(  # 从color_scheme_seed派生的material颜色方案
             # ),
-            text_theme=ft.TextTheme(),  # 与卡片和画布颜色形成对比的文本样式
-            primary_text_theme=ft.TextTheme(),  # 与主色调形成对比的文本主题
+            # 与框架共用同一套文字刻度：正文 14，各档位来自 FONT_SIZE。
+            # primary_text_theme 不跟着改：那套文字压在 primary 实底上，前景该是
+            # ON_PRIMARY，交给 Flutter 由 ColorScheme 推导才对。
+            text_theme=text_theme(),
             scrollbar_theme=ft.ScrollbarTheme(
                 thickness=4,
                 radius=10,

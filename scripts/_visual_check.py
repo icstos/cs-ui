@@ -1,8 +1,12 @@
-"""对各页面做真机截图 + 灰块检测。
+"""对各页面做真机截图 + 灰块 / 溢出检测。
 
-背景：Python 侧 `page.render()` 不抛异常，并不代表 Flutter 侧渲染成功。
-控件树里混入不可渲染的值（例如裸字符串）时，Flutter 会用 ErrorWidget 顶替，
-在 release 构建里表现为一整块灰色（#BDBDBD 附近）——只有截图才能发现。
+两类事故只有截图能发现，Python 侧一律静默：
+
+* **灰块** —— 控件树里混入不可渲染的值（例如裸字符串）时，Flutter 会用
+  ErrorWidget 顶替，release 构建里表现为一整块灰色（``#BDBDBD`` 附近）。
+* **溢出** —— 字号 / 行高 / 内边距一改大，内容就撑破固定高度的盒子，Flutter
+  画黄黑斜纹。它不抛异常、不进日志，``page.render()`` 返回得干干净净。
+  正文从 13 调到 14 这类改动，最典型的副作用就是这个。
 
 为什么用文档站而不是示例页
 --------------------------
@@ -37,6 +41,9 @@ OUT_DIR = ROOT / "output" / "_visual_check"
 #: 探针按窗口标题找窗口，中文标点在命令行里容易失真 —— 统一用 ASCII。
 WINDOW_TITLE = "CSUIDOCS"
 
+#: 滚动前把光标放这里：正文栏中部（逻辑像素）。落在侧栏只会滚侧栏。
+SCROLL_AT = (700, 430)
+
 #: (路由, 说明)。说明只用于报表，文件名取路由的 slug。
 ROUTES: list[tuple[str, str]] = [
     ("/", "首页"),
@@ -53,6 +60,22 @@ ROUTES: list[tuple[str, str]] = [
     ("/components/layout/table", "表格（行悬停 / 斑马纹）"),
     ("/components/display/calendar", "日历（单元格悬停）"),
 ]
+
+
+def normalize_route(route: str) -> str:
+    """把被 shell 改写过的路由还原成 ``/components/form/rating``。
+
+    Git Bash（MSYS）会把命令行里以 ``/`` 开头的参数当成 Unix 绝对路径，改写成
+    ``C:/Program Files/Git/components/form/rating``。截图宿主认得出这种前缀、
+    页面截得没错，但**报表和文件名会带着那串 Windows 路径**——于是同一页每次
+    跑出来的 PNG 名字都不一样，翻历史截图时等于没有。这里先切回真路由。
+    """
+    if "/" in route and (":" in route or "\\" in route):
+        heads = [route.find(p) for p in ("/components/", "/docs/", "/about")]
+        heads = [i for i in heads if i >= 0]
+        if heads:
+            return route[min(heads) :]
+    return route
 
 
 def slug(route: str) -> str:
@@ -84,8 +107,29 @@ def is_grey_block(path: Path) -> tuple[bool, float]:
     return ratio > 0.55, ratio
 
 
+def overflow_pixels(path: Path) -> int:
+    """数一数截图里的 Flutter 溢出提示（黄黑斜纹）有多少像素。
+
+    Flutter 在 debug 模式下把"内容比盒子大"画成一抹纯黄 ``#FFFF00`` 的斜纹。
+    它不抛异常、不进日志，Python 侧的 ``page.render()`` 也一无所知 —— 字号、
+    行高、内边距任何一个改大一点，都可能让某一行悄悄溢出。这个提示色在浅色
+    主题里几乎不可能自然出现（本框架的 warning 是 ``#B45309``，暗色是
+    ``#FBBF24``，绿通道都够不到 0xE0），所以可以放心当硬信号。
+
+    返回原始像素数而不是比例：溢出带往往只有几像素高、被拉得很长，用比例会
+    被稀释到噪声水平。
+    """
+    from PIL import Image
+
+    img = Image.open(path).convert("RGB")
+    w, h = img.size
+    box = img.crop((int(w * 0.2), int(h * 0.1), int(w * 0.98), int(h * 0.95)))
+    fetch = getattr(box, "get_flattened_data", None) or box.getdata
+    return sum(1 for r, g, b in fetch() if r >= 240 and g >= 225 and b <= 80)
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="文档站真机截图 + 灰块检测")
+    parser = argparse.ArgumentParser(description="文档站真机截图 + 灰块 / 溢出检测")
     parser.add_argument(
         "--routes",
         nargs="*",
@@ -94,15 +138,30 @@ def main() -> int:
     )
     parser.add_argument("--mode", choices=("light", "dark"), default="light")
     parser.add_argument("--boot", type=float, default=9.0, help="等首帧的秒数")
+    parser.add_argument(
+        "--scroll",
+        type=int,
+        default=0,
+        metavar="N",
+        help="截图前在内容区向下滚 N 格（负值向上）。不滚只能看到页面上半屏 —— "
+        "定义与徽标在上面，真正会溢出的示例都在下面。",
+    )
     args = parser.parse_args()
 
     notes = dict(ROUTES)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     bad: list[str] = []
 
-    for route in args.routes:
+    for raw in args.routes:
+        route = normalize_route(raw)
         suffix = f"_{args.mode}" if args.mode == "dark" else ""
+        if args.scroll:
+            suffix += f"_s{args.scroll}"
         shot = OUT_DIR / f"{slug(route)}{suffix}.png"
+        wheel_cmd: list[str] = []
+        if args.scroll:
+            # 内容区中部：滚轮要落在可滚动的列表上，落在侧栏只会滚侧栏
+            wheel_cmd = ["--wheel", f"{SCROLL_AT[0]},{SCROLL_AT[1]},{-args.scroll}"]
         probe = subprocess.run(
             [
                 sys.executable,
@@ -116,6 +175,7 @@ def main() -> int:
                 str(args.boot),
                 "--out",
                 str(shot),
+                *wheel_cmd,
             ],
             cwd=str(ROOT),
             capture_output=True,
@@ -134,15 +194,38 @@ def main() -> int:
             print((probe.stdout or "")[-600:])
             bad.append(route)
             continue
-        grey, ratio = is_grey_block(shot)
-        flag = "GREY-BLOCK" if grey else "ok"
-        print(f"{flag:11s} {route:34s} 灰占比={ratio:.3f}  {notes.get(route, '')}  -> {shot.name}")
+
+        # 探针的动作顺序是"先截一张、再滚、再截一张"，第二张才叫 ``<out>_1.png``。
+        # 要检的显然是滚过之后那张 —— 只认 ``<out>`` 的话，检查的会一直是页面顶部，
+        # 真正会溢出的示例区域永远没进过视野。
+        target = shot
+        if args.scroll:
+            scrolled = shot.with_name(f"{shot.stem}_1{shot.suffix}")
+            if not scrolled.exists():
+                print(f"!! {route}: 滚动后没截到图")
+                bad.append(route)
+                continue
+            scrolled.replace(shot)
+            target = shot
+
+        grey, ratio = is_grey_block(target)
+        spill = overflow_pixels(target)
         if grey:
+            flag = "GREY-BLOCK"
+        elif spill > 500:
+            flag = "OVERFLOW"
+        else:
+            flag = "ok"
+        print(
+            f"{flag:11s} {route:34s} 灰占比={ratio:.3f} 溢出={spill:5d}  "
+            f"{notes.get(route, '')}  -> {shot.name}"
+        )
+        if flag != "ok":
             bad.append(route)
 
     print()
     if bad:
-        print(f"!! {len(bad)} 页疑似渲染失败: {', '.join(bad)}")
+        print(f"!! {len(bad)} 页疑似渲染失败或溢出: {', '.join(bad)}")
         return 1
     print(f"全部 {len(args.routes)} 页视觉检查通过（{args.mode}）。")
     return 0

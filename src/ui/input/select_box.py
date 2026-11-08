@@ -24,12 +24,12 @@ import flet as ft
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.i18n import t
 from ui.core.styles import INPUT_RADIUS, outline_input
-from ui.core.tokens import CONTROL_HEIGHT, SPACE
+from ui.core.tokens import CONTROL_HEIGHT, FONT_SIZE, SPACE
 from ui.input.input import Label
 
 __all__ = ["SelectBox", "SelectOption"]
 
-TEXT_SIZE = 14
+TEXT_SIZE = FONT_SIZE["body"]
 PADDING = 10
 #: 与输入框同高 —— 放在同一行表单里不能出现"台阶"。
 #: 曾经写死 42，比 Input 的 36 高出一截。

@@ -194,7 +194,7 @@ def DemoPage() -> ft.Control:
                     controls=[
                         ft.Icon(
                             ft.Icons.TRANSLATE,
-                            size=FONT_SIZE["subtitle"],
+                            size=FONT_SIZE["body"],
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
                         ft.Text(

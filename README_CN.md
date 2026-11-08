@@ -12,6 +12,11 @@
 - **设计令牌 + Material 3 主题** — 组件里不出现裸色值/裸圆角/裸字号；
   一个品牌色种子（`color_scheme_seed`）推导出整套 M3 色板，
   明暗模式与主色切换是**框架级**的，不靠逐组件改颜色
+- **正文 14px 全局一致** — 正文字号由 `FONT_SIZE["body"]` 一处说了算，
+  并铺进 `text_theme` 的十三个槽位：`ft.Text` 不写 `size`、`ListTile`、
+  `TextField`、`Dropdown`、`DatePicker` 默认都是 14，不依赖 Flutter 自带默认值
+  （换 flet 版本也不会悄悄漂成 16）。11 / 12 / 16 / 20 / 24 / 28 / 36 是其余档位，
+  相邻档至少差 2px
 - **继承原生控件** — 静态组件直接继承 Flet 原生控件（如 `Button(ft.Button)`、`Text(ft.Text)`）
 - **智能默认值** — 组件自带合理的样式默认值（颜色、尺寸、圆角等），加速原型开发
 - **模块分类** — 组件按功能分类：chart / display / feedback / input / layout / navigation
@@ -367,7 +372,8 @@ from ui import (
 
 SPACE["4"]                  # 16 —— 4pt 阶梯，(0,1,2,3,4,5,6,8,10,12,16,20,24,32,40)
 RADIUS["lg"]                # 8
-FONT_SIZE["body"]           # 13
+FONT_SIZE["body"]           # 14 —— 正文基准，也是 TextTheme.bodyMedium
+                            #      其余档位：11 / 12 / 16 / 20 / 24 / 28 / 36
 elevation(2)                # 五档阴影，阴影色用 'shadow' 角色，自动跟随明暗
 state_layer("hover")        # 'onsurface,0.08' —— 悬停层（M3 悬停档）
 selected_layer("normal")    # 'primary,0.12' —— 选中层
@@ -617,11 +623,14 @@ python docs/main.py
 | `/components/<分类>/<组件>` | 单个组件页：定义 / 组件构成 / 何时使用 / 示例 / API / 备注 |
 | `/about` | 关于 |
 
-改完样式想确认"窗口里真的画出来了"（灰块 = Flutter 端渲染失败）：
+改完样式想确认"窗口里真的画出来了"（灰块 = Flutter 端渲染失败，
+黄色斜纹 = 文字撑破了固定高度的盒子）：
 
 ```bash
-python scripts/_visual_check.py              # 13 个代表页，浅色
-python scripts/_visual_check.py --mode dark  # 暗色主题
+python scripts/_visual_check.py                      # 13 个代表页，浅色
+python scripts/_visual_check.py --mode dark          # 暗色主题
+python scripts/_visual_check.py --scroll 14 \
+    --routes /components/layout/table                # 滚到示例区再截（示例都在折叠线以下）
 ```
 
 其他测试文件：

@@ -34,7 +34,13 @@ import flet as ft
 
 from ui.core.float_layer import overlay_usable
 from ui.core.i18n import t
-from ui.core.tokens import CONTROL_HEIGHT, RADIUS, disabled_layer, state_layer
+from ui.core.tokens import (
+    CONTROL_HEIGHT,
+    FONT_SIZE,
+    RADIUS,
+    disabled_layer,
+    state_layer,
+)
 
 __all__ = ["PanelField", "panel_shell", "place_panel"]
 
@@ -63,9 +69,9 @@ LINK_RADIUS = 6  # 页脚文字按钮圆角（与月历的 CELL_RADIUS 同值）
 # ---------------------------------------------------------------------------
 # 字号
 # ---------------------------------------------------------------------------
-TEXT_SIZE = 13
-SMALL_SIZE = 12
-LABEL_SIZE = 11
+TEXT_SIZE = FONT_SIZE["body"]  # 面板主体文字 = 正文
+SMALL_SIZE = FONT_SIZE["small"]  # 辅助行
+LABEL_SIZE = FONT_SIZE["caption"]  # 列头 / 单位
 
 SCREEN_MARGIN = 8  # 面板与窗口边缘的最小间距
 

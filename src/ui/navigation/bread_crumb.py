@@ -23,8 +23,9 @@ __all__ = ["BreadCrumb", "Crumb"]
 SEPARATOR_ICON = ft.Icons.CHEVRON_RIGHT
 #: 分隔符：与 body 文字同行的 md 档（16），比文字大一档才不至于显得断开
 SEPARATOR_ICON_SIZE = ICON_SIZE["md"]
-#: 路径导航用 subtitle 一档（14）：比正文略重，又不到标题的量级
-CRUMB_TEXT_SIZE = FONT_SIZE["subtitle"]
+#: 路径导航与正文同档（14）：层级靠颜色（当前项 onSurface、其余次要）
+#: 与字重表达，不靠字号 —— 面包屑不该比页面正文更大
+CRUMB_TEXT_SIZE = FONT_SIZE["body"]
 
 
 @dataclass

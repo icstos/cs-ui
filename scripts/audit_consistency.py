@@ -11,12 +11,13 @@
 （前者是排版错误，后者是图标刻度错误），也分不清 ``bgcolor=Colors.WHITE``
 （深色主题下会瞎）与 ``color=Colors.WHITE``（压在深色实底上，正确）。
 
-七条规则
+八条规则
 --------
 ============  ==========================================================
 裸色值        组件里出现 ``"#RRGGBB"``
 字号           ``Text(size=N)`` 的 N 不在 ``FONT_SIZE`` 里
 图标尺寸       ``Icon(size=N)`` 的 N 不在 ``ICON_SIZE`` 里
+图标借字号     ``Icon(size=FONT_SIZE[...])`` —— 走了令牌但借错刻度
 圆角           ``border_radius=N`` 的 N 不在 ``RADIUS`` 里
 奇数留白       ``spacing`` / ``padding`` / ``height`` 出现奇数
               （框架按 2px 步进排版，奇数不可能是刻意设计）
@@ -31,6 +32,19 @@
     python scripts/audit_consistency.py --check      # 有违规则退出码 1
     python scripts/audit_consistency.py --rule 字号   # 只看一条规则
     python scripts/audit_consistency.py --json out.json
+
+已知盲区（有意留白，不是忘写）
+------------------------------
+只认 ``Text(size=N)`` 里的**字面量**。写成模块级常量就绕过去了::
+
+    TEXT_SIZE = 13        # 审计看不见，但正文早就不是 13 了
+    ...
+    ft.Text(..., size=TEXT_SIZE)
+
+这类常量靠 ``scripts/_tokens_logic.py`` 的「同源引用」一节守：它逐个断言
+``cascader.ITEM_SIZE`` / ``multi_select.TEXT_SIZE`` / ``panel_field`` 三档等都
+**赋自** ``FONT_SIZE``。要新增组件字号常量，就往那张表里加一行 —— 比让审计
+去猜"哪个 SIZE 是字号、哪个是图片边长"可靠得多。
 """
 
 from __future__ import annotations
@@ -77,7 +91,16 @@ _EXTRA_ICON_SIZE: frozenset[int] = frozenset({36, 40, 48})
 _DARK_HOSTILE = ("WHITE", "BLACK", "GREY_")
 
 #: 走 2px 步进时允许的偶数留白（4px 网格以下的紧凑间距）。
-_RULES = ("裸色值", "字号", "图标尺寸", "圆角", "奇数留白", "文字色误用", "暗色隐患")
+_RULES = (
+    "裸色值",
+    "字号",
+    "图标尺寸",
+    "图标借字号",
+    "圆角",
+    "奇数留白",
+    "文字色误用",
+    "暗色隐患",
+)
 
 
 @dataclass(frozen=True)
@@ -126,6 +149,18 @@ def _color_member(node: ast.expr | None) -> str | None:
     if node.value.attr != "Colors":
         return None
     return node.attr
+
+
+def _mentions(node: ast.expr, name: str) -> bool:
+    """表达式里是否**引用**了某个模块级名字（``FONT_SIZE["body"]`` 算，``"FONT_SIZE"`` 不算）。
+
+    用来抓"数字被常量包起来"的违规 —— ``Icon(size=FONT_SIZE["body"])`` 的 size
+    不是字面量，按值比对的那几条规则全都看不见它。
+    """
+    for sub in ast.walk(node):
+        if isinstance(sub, ast.Name) and sub.id == name:
+            return True
+    return False
 
 
 def _padding_ints(node: ast.expr) -> Iterator[int]:
@@ -220,6 +255,16 @@ def _audit_module(path: Path, rel: str, allowed: set[str]) -> list[Violation]:
             v = _int_of(_kwarg(node, "size"))
             if v is not None and v not in icon_values and v not in _EXTRA_ICON_SIZE:
                 add("图标尺寸", node, f"{callee}(size={v}) 不在 ICON_SIZE 刻度内 {sorted(icon_values)}")
+
+        # ---- 图标借字号 ------------------------------------------------
+        # ``Icon(size=FONT_SIZE["body"])`` 看起来"走了令牌"，其实借错了刻度：
+        # 字号一改图标跟着动，两个本来独立的设计维度被绑死。数字被常量包起来时
+        # 上面那条规则看不见，所以这里专门认表达式里的 FONT_SIZE。
+        if callee in ("Icon", "IconButton"):
+            for key in ("size", "icon_size"):
+                arg = _kwarg(node, key)
+                if arg is not None and _mentions(arg, "FONT_SIZE"):
+                    add("图标借字号", node, f"{callee}({key}=FONT_SIZE[...]) 应改用 ICON_SIZE")
 
         # ---- 圆角 ------------------------------------------------------
         v = _int_of(_kwarg(node, "border_radius"))

@@ -256,7 +256,7 @@ class Notification:
             return ft.Container(expand=True, content=self.title)
         return ft.Text(
             self.title,
-            size=FONT_SIZE["subtitle"],
+            size=FONT_SIZE["body"],
             weight=FONT_WEIGHT["semibold"],
             color=ft.Colors.ON_SURFACE,
             expand=True,

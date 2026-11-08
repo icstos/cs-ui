@@ -85,9 +85,11 @@ check("语义别名与阶梯一致",
 check("RADIUS 递增", [tk.RADIUS[k] for k in ("none", "xs", "sm", "md", "lg", "xl", "full")],
       [0, 2, 4, 6, 8, 12, 999])
 check("FONT_SIZE 递增",
-      [tk.FONT_SIZE[k] for k in ("caption", "small", "body", "subtitle", "title",
-                                 "headline", "display")],
-      [11, 12, 13, 14, 16, 20, 28])
+      [tk.FONT_SIZE[k] for k in ("caption", "small", "body", "title",
+                                 "headline", "headline_lg", "display", "display_lg")],
+      [11, 12, 14, 16, 20, 24, 28, 36])
+check("正文是 14（框架默认，也是 TextTheme.bodyMedium 的取值）",
+      tk.FONT_SIZE["body"], 14)
 check("FONT_WEIGHT 四档齐", len(tk.FONT_WEIGHT), 4)
 check("DURATION 递增", [tk.DURATION[k] for k in ("instant", "fast", "normal", "slow")],
       [0, 120, 200, 320])

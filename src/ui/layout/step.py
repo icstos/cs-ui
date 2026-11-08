@@ -58,7 +58,7 @@ DOT = 26  # 圆点直径
 DOT_SMALL = 22  # 简洁模式的序号徽章
 LINE = 2  # 连接线粗细
 
-TITLE_SIZE = FONT_SIZE["subtitle"]  # 14
+TITLE_SIZE = FONT_SIZE["body"]  # 14
 DESC_SIZE = FONT_SIZE["small"]  # 12
 TEXT_GAP = 10  # 圆点行与标题的间距
 DESC_GAP = 3  # 标题与描述的间距
@@ -391,7 +391,7 @@ class Step(ft.Container):
                         self._dot(index, status, side=DOT_SMALL),
                         ft.Text(
                             self._items[index].title,
-                            size=13,
+                            size=TITLE_SIZE,
                             weight=(
                                 ft.FontWeight.W_600
                                 if status in ("process", "finish")

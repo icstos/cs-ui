@@ -169,7 +169,7 @@ d = Descriptions(title="用户信息", extra="全部", items=ITEMS[:1])
 head = d.content.controls[0]
 check("有标题时多一块表头", len(d.content.controls), 2)
 check("表头是三段式 Row", len(head.content.controls), 3)
-check("标题字号", head.content.controls[0].size, FONT_SIZE["subtitle"])
+check("标题字号", head.content.controls[0].size, FONT_SIZE["body"])
 check("操作区按字符串渲染", type(head.content.controls[2]).__name__, "Text")
 check("无标题无操作区不占位", len(Descriptions(items=ITEMS[:1]).content.controls), 1)
 check(

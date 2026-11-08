@@ -135,7 +135,7 @@ def _page_cell(
         ),
         content=ft.Text(
             str(page),
-            size=FONT_SIZE["subtitle"],
+            size=FONT_SIZE["body"],
             weight=FONT_WEIGHT["medium"] if current else None,
             color=CURRENT_FG if current else (PAGE_FG_HOVER if lit else PAGE_FG),
         ),

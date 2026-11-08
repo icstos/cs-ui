@@ -606,7 +606,7 @@ def _anatomy(doc: Spec) -> ft.Control:
                         width=132,
                         content=ft.Text(
                             part,
-                            size=13,
+                            size=FONT_SIZE["body"],
                             weight=ft.FontWeight.W_600,
                             no_wrap=True,
                             overflow=ft.TextOverflow.ELLIPSIS,
@@ -616,7 +616,7 @@ def _anatomy(doc: Spec) -> ft.Control:
                         expand=True,
                         content=ft.Text(
                             desc,
-                            size=FONT_SIZE["subtitle"],
+                            size=FONT_SIZE["body"],
                             color=_MUTED,
                             style=ft.TextStyle(height=1.75),
                         ),
@@ -648,7 +648,7 @@ def _checklist(
                     expand=True,
                     content=ft.Text(
                         text,
-                        size=13,
+                        size=FONT_SIZE["body"],
                         color=ft.Colors.ON_SURFACE_VARIANT,
                         style=ft.TextStyle(height=1.7),
                     ),
@@ -757,7 +757,7 @@ def code_panel(source: str, *, filename: str | None = None) -> ft.Control:
                                 icon=ft.Icons.CHECK_ROUNDED
                                 if copied
                                 else ft.Icons.CONTENT_COPY,
-                                icon_size=13,
+                                icon_size=ICON_SIZE["sm"],
                                 icon_color=(
                                     ft.Colors.GREEN_ACCENT_200
                                     if copied
@@ -794,7 +794,7 @@ def _example_card(item: Example) -> ft.Control:
             expand=True,
             spacing=4,
             controls=[
-                ft.Text(item.title, size=FONT_SIZE["subtitle"], weight=ft.FontWeight.W_700),
+                ft.Text(item.title, size=FONT_SIZE["body"], weight=ft.FontWeight.W_700),
                 *([_muted(item.hint)] if item.hint else []),
             ],
         )
@@ -1195,10 +1195,10 @@ def _host(docs: tuple[Spec, ...]) -> ft.Control:
                             border_radius=RADIUS["full"],
                             bgcolor=ft.Colors.PRIMARY,
                         ),
-                        ft.Text("cs-ui", size=13, weight=ft.FontWeight.W_800),
+                        ft.Text("cs-ui", size=FONT_SIZE["body"], weight=ft.FontWeight.W_800),
                         ft.Text(
                             f"{_GROUP_LABEL.get(doc.group, doc.group)} · {doc.name}",
-                            size=12,
+                            size=FONT_SIZE["small"],
                             color=_MUTED,
                         ),
                     ],

@@ -543,7 +543,7 @@ class Transfer(Label):
         controls.append(
             ft.Text(
                 title,
-                size=FONT_SIZE["subtitle"],
+                size=FONT_SIZE["body"],
                 weight=FONT_WEIGHT["semibold"],
                 color=DISABLED_FG if self.disabled else ft.Colors.ON_SURFACE,
                 max_lines=1,

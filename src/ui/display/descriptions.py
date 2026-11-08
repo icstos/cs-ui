@@ -198,7 +198,7 @@ class Descriptions(ft.Container):
         left: ft.Control = (
             ft.Text(
                 self.title,
-                size=FONT_SIZE["subtitle"],
+                size=FONT_SIZE["body"],
                 weight=ft.FontWeight.W_600,
                 color=ft.Colors.ON_SURFACE,
             )

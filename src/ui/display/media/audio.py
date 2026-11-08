@@ -20,7 +20,7 @@ import flet_audio as fa
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.i18n import t, use_t
-from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE
+from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, ICON_SIZE, RADIUS, SPACE
 
 __all__ = ["SPECS", "Audio", "AudioPlayer"]
 
@@ -137,7 +137,7 @@ def _player_body(
         controls=[
             ft.Text(
                 title,
-                size=FONT_SIZE["subtitle"],
+                size=FONT_SIZE["body"],
                 weight=FONT_WEIGHT["semibold"],
                 max_lines=1,
                 overflow=ft.TextOverflow.ELLIPSIS,
@@ -198,7 +198,7 @@ def _player_body(
         controls=[
             ft.Icon(
                 ft.Icons.VOLUME_UP_ROUNDED,
-                size=FONT_SIZE["title"],
+                size=ICON_SIZE["md"],
                 color=ft.Colors.ON_SURFACE_VARIANT,
             ),
             ft.Slider(

@@ -72,8 +72,8 @@ FIELD_PAD_V = 8
 FOOTER_HEIGHT = 36
 SEARCH_W = 104  # 框内搜索框宽度（展开且 searchable 时占位）
 SEARCH_H = 26  # 框内搜索框高度（比 Chip 略高，撑高 2px 可以接受）
-TEXT_SIZE = 13
-CHIP_TEXT_SIZE = 12
+TEXT_SIZE = FONT_SIZE["body"]  # 选项行 = 正文
+CHIP_TEXT_SIZE = FONT_SIZE["small"]  # 框内 Chip 比正文小一档
 DEFAULT_FIELD_HEIGHT = 40  # 尺寸上报前的兜底值
 SCREEN_MARGIN = 8  # 面板与窗口边缘的最小间距
 

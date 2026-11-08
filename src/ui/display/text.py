@@ -329,7 +329,7 @@ def _text_basic() -> ft.Control:
         spacing=SPACE["3"],
         controls=[
             Text(
-                "正文：13px，段落与表单值的默认档位。",
+                "正文：14px，段落与表单值的默认档位（不写 size 时就是它）。",
                 size=FONT_SIZE["body"],
             ),
             Text(
@@ -821,7 +821,7 @@ def _json_numbers() -> ft.Control:
 # ---------------------------------------------------------------------------
 # 示例源码（“查看代码”面板）
 # ---------------------------------------------------------------------------
-_TEXT_CODE = """Text("正文：默认 13px。")
+_TEXT_CODE = """Text("正文：默认 14px。")
 Text("次要说明。", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
 Text("长文在窄容器里收成省略号。", max_lines=2, overflow=ft.TextOverflow.ELLIPSIS)"""
 
@@ -893,7 +893,7 @@ _TEXT_SPEC = Spec(
         ),
         (
             "字号",
-            "size 留空继承主题正文（13px）；层级取 FONT_SIZE 里的档位，不写裸数字。",
+            "size 留空继承主题正文（14px）；层级取 FONT_SIZE 里的档位，不写裸数字。",
         ),
         (
             "颜色",

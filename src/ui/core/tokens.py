@@ -1,6 +1,6 @@
 """设计令牌 (Design Tokens)。
 
-组件里**不要**再出现裸色值（``"#6B7280"``）、裸圆角（``8``）、裸字号（``13``）——
+组件里**不要**再出现裸色值（``"#6B7280"``）、裸圆角（``8``）、裸字号（``14``）——
 一律走本模块。理由不是洁癖，而是三条硬需求：
 
 1. **明暗主题**：Flet / Flutter 的颜色串支持 ``"<角色名>,<透明度>"``（由
@@ -102,18 +102,39 @@ RADIUS: dict[str, int] = {
 }
 
 # ---------------------------------------------------------------------------
-# 字号：与 Material 3 的 type scale 对齐的桌面端档位
+# 字号：与 Material 3 的 type scale 对齐的桌面端档位。
+#
+# **正文是 14**，这是整个刻度的锚点：``body`` 既是表单值、表格单元格、列表
+# 主行的尺寸，也是 ``ft.Text`` 不写 ``size`` 时由主题给出的默认值（见
+# :func:`ui.core.theme.build_theme` 里的 ``text_theme``）。改这一个数，全框架
+# 正文跟着走；改别的档位只影响局部。
+#
+# 刻度取 M3 的子集而不是等比数列：每档之间至少差 2px —— 1px 的差肉眼分不出，
+# 只会让调用方纠结"这段该用 13 还是 14"，然后随手写个字面量。
+#
+#   caption     11  labelSmall    标签 / 计数 / 单位
+#   small       12  labelMedium   次要说明 / 脚注 / 副行
+#   body        14  bodyMedium    **正文**、表单值、表格单元格、列表主行
+#   title       16  titleMedium   卡片标题 / 大号控件（44 高）内的文字
+#   headline    20  headlineSmall 分区标题
+#   headline_lg 24  页面标题
+#   display     28  空状态 / 结果页
+#   display_lg  36  文档页主标题
+#
+# 这里**故意没有** subtitle：11/12/13/14 每 1px 一档时，"列表主行"比正文大
+# 1px 还算个档位；正文升到 14 之后它与 body 同值，留着只会让人在两个等价
+# 名字之间选。要比正文"重"一档，用 ``body`` + ``FONT_WEIGHT["medium"]``；
+# 要比正文"大"一档，那就是 ``title``。
 # ---------------------------------------------------------------------------
 FONT_SIZE: dict[str, int] = {
-    "caption": 11,  # 标签 / 计数 / 单位
-    "small": 12,  # 次要说明 / 脚注
-    "body": 13,  # 正文、表单值（本框架默认）
-    "subtitle": 14,  # 列表主行
-    "title": 16,  # 卡片标题
-    "headline": 20,  # 分区标题
-    "headline_lg": 24,  # 页面标题（对齐 M3 headlineSmall）
-    "display": 28,  # 空状态 / 结果页
-    "display_lg": 36,  # 文档页主标题（对齐 M3 displaySmall）
+    "caption": 11,
+    "small": 12,
+    "body": 14,
+    "title": 16,
+    "headline": 20,
+    "headline_lg": 24,
+    "display": 28,
+    "display_lg": 36,
 }
 
 FONT_WEIGHT: dict[str, ft.FontWeight] = {
@@ -126,7 +147,7 @@ FONT_WEIGHT: dict[str, ft.FontWeight] = {
 # ---------------------------------------------------------------------------
 # 图标尺寸：**与字号是两套刻度，不要互相借**。
 #
-# 图标必须比同行文字略大才"站得稳"：13px 正文配 16px 图标是桌面端的常态，
+# 图标必须比同行文字略大才"站得稳"：14px 正文配 16px 图标是桌面端的常态，
 # 而按钮内的图标又要比正文小、免得把字挤扁。把图标硬塞进 FONT_SIZE 的键里
 # （``size=FONT_SIZE["body"]``）会得到一个视觉上偏小的图标 —— 这是最容易被
 # 写成"随手一个数字"的地方，实测全框架曾出现 11/12/13/14/15/16/18/20/22/24
@@ -135,11 +156,11 @@ FONT_WEIGHT: dict[str, ft.FontWeight] = {
 # 档位按"和谁同行"来记，不按绝对大小：
 #   xs  与 caption（11）同行的小标识
 #   sm  与 small（12）同行 / 徽标内
-#   md  与 body（13）同行 —— 列表行、字段前缀、按钮内（最常用）
-#   lg  与 subtitle（14）同行 / 工具栏
-#   xl  与 title（16）同行 / 独立图标按钮
-#   2xl 顶栏、强调操作
-#   3xl 空状态、结果页
+#   md  与 body（14）同行 —— 列表行、字段前缀、按钮内（最常用）
+#   lg  与 title（16）同行 / 工具栏
+#   xl  独立图标按钮 / 强调操作
+#   2xl 顶栏、空状态
+#   3xl 结果页
 # ---------------------------------------------------------------------------
 ICON_SIZE: dict[str, int] = {
     "xs": 12,
@@ -349,7 +370,9 @@ def overlay(alpha: float, *, role: str = ft.Colors.ON_SURFACE) -> str:
     return ft.Colors.with_opacity(alpha, role)
 
 
-def state_layer(state: str = "hover", *, role: ft.ColorValue = ft.Colors.ON_SURFACE) -> str:
+def state_layer(
+    state: str = "hover", *, role: ft.ColorValue = ft.Colors.ON_SURFACE
+) -> str:
     """取交互状态覆盖色（悬停 / 聚焦 / 按下 / 拖动中）。
 
     产出 ``"onsurface,0.08"`` 这类**角色名 + 透明度**串，明暗主题下由 Flutter
@@ -367,7 +390,9 @@ def state_layer(state: str = "hover", *, role: ft.ColorValue = ft.Colors.ON_SURF
     return ft.Colors.with_opacity(STATE.get(state, STATE["hover"]), role)
 
 
-def selected_layer(strength: str = "normal", *, role: ft.ColorValue = ft.Colors.PRIMARY) -> str:
+def selected_layer(
+    strength: str = "normal", *, role: ft.ColorValue = ft.Colors.PRIMARY
+) -> str:
     """取选中态底色。
 
     三档语义（见 :data:`SELECTED_OPACITY`）：
@@ -382,10 +407,14 @@ def selected_layer(strength: str = "normal", *, role: ft.ColorValue = ft.Colors.
     """
     if strength == "strong":
         return ft.Colors.PRIMARY_CONTAINER
-    return ft.Colors.with_opacity(SELECTED_OPACITY.get(strength, SELECTED_OPACITY["normal"]), role)
+    return ft.Colors.with_opacity(
+        SELECTED_OPACITY.get(strength, SELECTED_OPACITY["normal"]), role
+    )
 
 
-def disabled_layer(kind: str = "label", *, role: ft.ColorValue = ft.Colors.ON_SURFACE) -> str:
+def disabled_layer(
+    kind: str = "label", *, role: ft.ColorValue = ft.Colors.ON_SURFACE
+) -> str:
     """取禁用态覆盖色（文字/图标用 ``label``，控件底/边线用 ``container``）。
 
     禁用不是"把颜色调浅一点"，而是**整块控件统一退到同一档**。走这个函数，

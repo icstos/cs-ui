@@ -15,6 +15,7 @@ from __future__ import annotations
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, warn
+from ui.core.tokens import FONT_SIZE
 
 __all__ = ["Divider", "VerticalDivider"]
 
@@ -60,11 +61,11 @@ def _vertical() -> ft.Control:
         spacing=16,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
-            ft.Text("09:30", size=13),
+            ft.Text("09:30", size=FONT_SIZE["body"]),
             VerticalDivider(width=24, thickness=1),
-            ft.Text("已同步", size=13),
+            ft.Text("已同步", size=FONT_SIZE["body"]),
             VerticalDivider(width=24, thickness=1),
-            ft.Text("3 条记录", size=13, color=ft.Colors.ON_SURFACE_VARIANT),
+            ft.Text("3 条记录", size=FONT_SIZE["body"], color=ft.Colors.ON_SURFACE_VARIANT),
         ],
     )
 

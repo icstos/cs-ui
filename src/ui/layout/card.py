@@ -201,7 +201,7 @@ def _wall() -> ft.Control:
                             ft.Icon(icon, size=20, color=ft.Colors.PRIMARY),
                             ft.Text(
                                 title,
-                                size=FONT_SIZE["subtitle"],
+                                size=FONT_SIZE["body"],
                                 weight=FONT_WEIGHT["semibold"],
                             ),
                             ft.Text(desc, size=FONT_SIZE["small"], color=_MUTED),
@@ -244,9 +244,13 @@ _BASIC_CODE = """Card(
         content=Column(
             spacing=8,
             controls=[
-                Text("本月账单", size=16, weight=ft.FontWeight.W_600),
-                Text("已出账 12 笔", size=13, color=ft.Colors.ON_SURFACE_VARIANT),
-                Text("¥ 8,420.00", size=28, weight=ft.FontWeight.W_700),
+                Text("本月账单", size=FONT_SIZE["title"], weight=ft.FontWeight.W_600),
+                Text(
+                    "已出账 12 笔",
+                    size=FONT_SIZE["body"],
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ),
+                Text("¥ 8,420.00", size=FONT_SIZE["display"], weight=ft.FontWeight.W_700),
             ],
         ),
     ),

@@ -20,7 +20,7 @@ from __future__ import annotations
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
-from ui.core.tokens import FONT_SIZE, SPACE
+from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, SPACE
 
 __all__ = ["ListView"]
 
@@ -87,7 +87,11 @@ def _basic() -> ft.Control:
         controls=[
             ft.ListTile(
                 leading=_avatar(initial),
-                title=ft.Text(name, size=FONT_SIZE["subtitle"]),
+                title=ft.Text(
+                    name,
+                    size=FONT_SIZE["body"],
+                    weight=FONT_WEIGHT["medium"],
+                ),
                 subtitle=ft.Text(sub, size=FONT_SIZE["small"], color=_MUTED),
                 trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=_MUTED),
                 selected=key == picked,
@@ -117,7 +121,11 @@ def _divided() -> ft.Control:
         controls=[
             ft.ListTile(
                 leading=ft.Icon(icon, size=20, color=ft.Colors.PRIMARY),
-                title=ft.Text(title, size=FONT_SIZE["subtitle"]),
+                title=ft.Text(
+                    title,
+                    size=FONT_SIZE["body"],
+                    weight=FONT_WEIGHT["medium"],
+                ),
                 subtitle=ft.Text(desc, size=FONT_SIZE["small"], color=_MUTED),
                 trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=_MUTED),
             )

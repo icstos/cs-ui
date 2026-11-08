@@ -103,7 +103,7 @@ def _inline() -> ft.Control:
                 ],
             ),
             _caption(
-                "一行文字旁边的转圈用 small：20px 与 13px 正文的行高接近，"
+                "一行文字旁边的转圈用 small：20px 与 14px 正文的行高接近，"
                 "不会把这一行顶高。"
             ),
         ],

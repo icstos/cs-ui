@@ -8,6 +8,10 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 - **Consistent interaction states** — hover / selected / disabled are three token-backed
   levels (`state_layer` / `selected_layer` / `disabled_layer`, 8% / 12% / 38%–12%): the same
   "glide over it" reads the same weight in menus, paging, calendars and transfer lists
+- **Body text is 14px everywhere** — one token (`FONT_SIZE["body"]`) feeds all thirteen
+  `text_theme` slots, so a bare `ft.Text`, `ListTile`, `TextField`, `Dropdown` and
+  `DatePicker` all default to 14 instead of Flutter's own `bodyMedium`. Bumping flet
+  can't silently drift it. Other steps: 11 / 12 / 16 / 20 / 24 / 28 / 36, at least 2px apart
 - **Design tokens + Material 3 theming** — no raw color / radius / font-size literals inside
   components. A single brand seed (`color_scheme_seed`) derives the whole M3 color scheme, so
   light/dark and brand-color switching are **framework-level** operations, not per-widget recoloring
@@ -373,7 +377,8 @@ from ui import (
 
 SPACE["4"]                  # 16 — a 4pt scale: (0,1,2,3,4,5,6,8,10,12,16,20,24,32,40)
 RADIUS["lg"]                # 8
-FONT_SIZE["body"]           # 13
+FONT_SIZE["body"]           # 14 — the body baseline, also TextTheme.bodyMedium
+                            #      other steps: 11 / 12 / 16 / 20 / 24 / 28 / 36
 elevation(2)                # five shadow levels, tinted with the 'shadow' role so it follows light/dark
 state_layer("hover")        # 'onsurface,0.08' — hover surface (M3 hover level)
 selected_layer("normal")    # 'primary,0.12' — selected surface
@@ -488,11 +493,13 @@ python docs/main.py
 | `/about` | About |
 
 When you changed styling and want proof it actually rendered (a grey block means a
-Flutter-side render failure):
+Flutter-side render failure; yellow stripes mean text outgrew its fixed-height box):
 
 ```bash
-python scripts/_visual_check.py              # 13 representative pages, light
-python scripts/_visual_check.py --mode dark  # dark theme
+python scripts/_visual_check.py                      # 13 representative pages, light
+python scripts/_visual_check.py --mode dark          # dark theme
+python scripts/_visual_check.py --scroll 14 \
+    --routes /components/layout/table                # scroll into the examples first
 ```
 
 Additional test files:

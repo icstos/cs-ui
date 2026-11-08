@@ -72,8 +72,8 @@ MIN_ROWS = 5  # 面板最少显示的行数（再少也保持这个高度，避�
 MAX_ROWS = 8  # 面板最多显示的行数（更多的行内滚动）
 CHIP_MAX_W = 120  # 单个 Chip 文本的最大宽度（超出省略）
 
-#: 行文字色
-ITEM_SIZE = 13
+#: 行文字：与正文同档（列表行就是正文）
+ITEM_SIZE = FONT_SIZE["body"]
 
 
 def _clip(text: str, limit: float = CHIP_MAX_W, size: float = 12.0) -> str:

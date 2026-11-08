@@ -212,6 +212,53 @@ def use_theme() -> ThemeState:
     return ft.use_context(theme_context)
 
 
+def text_theme() -> ft.TextTheme:
+    """把 :data:`~ui.core.tokens.FONT_SIZE` 铺到 Material 3 的十三个文字槽位上。
+
+    **为什么必须显式写**：``ft.Text`` 不传 ``size`` 时用的是 Flutter 侧
+    ``TextTheme.bodyMedium`` 的默认值 —— 那是框架外部的一份常量，flet 升级、
+    Flutter 换版本、甚至 ``use_material3`` 开关一变，全局正文就可能从 14 漂到
+    16 或 13。整个框架的正文字号必须由**自己**的令牌说了算，所以这里一次性把
+    每个槽位都钉死到 :data:`FONT_SIZE`，不留给默认值。
+
+    映射关系（左 M3 槽位，右框架档位）::
+
+        display_small    36  display_lg      headline_medium  28  display
+        headline_large   24  headline_lg     headline_small   20  headline
+        title_large      20  headline        title_medium     16  title
+        title_small      14  body            body_large       16  title
+        body_medium      14  body (默认)     body_small       12  small
+        label_large      14  body            label_medium     12  small
+        label_small      11  caption
+
+    ``body_medium`` 就是"正文 14"的落地点：``ft.Text``、``ft.ListTile``、
+    ``ft.TextField``（另有 ``text_field_theme`` 兜底）都从这里取值。
+
+    **每个槽位都必须带 ``color``**，这不是冗余：flet 把 ``TextStyle`` 下发给
+    Flutter 时是**替换**而不是合并，只写 ``size`` 的样式会把颜色字段一并清掉 ——
+    于是框架里所有"没显式指定 color"的文字全部画成透明。这个坑踩过一次：输入框
+    标签、列表标题一片空白，而截图检测（灰块 / 溢出）一声不响，因为它们既没渲染
+    失败也没撑破盒子。所以颜色一律给 M3 的 ``ON_SURFACE``，需要别的颜色时由控件
+    自己覆盖。
+    """
+    _fg = ft.Colors.ON_SURFACE
+    return ft.TextTheme(
+        display_small=ft.TextStyle(size=FONT_SIZE["display_lg"], color=_fg),
+        headline_large=ft.TextStyle(size=FONT_SIZE["headline_lg"], color=_fg),
+        headline_medium=ft.TextStyle(size=FONT_SIZE["display"], color=_fg),
+        headline_small=ft.TextStyle(size=FONT_SIZE["headline"], color=_fg),
+        title_large=ft.TextStyle(size=FONT_SIZE["headline"], color=_fg),
+        title_medium=ft.TextStyle(size=FONT_SIZE["title"], color=_fg),
+        title_small=ft.TextStyle(size=FONT_SIZE["body"], color=_fg),
+        body_large=ft.TextStyle(size=FONT_SIZE["title"], color=_fg),
+        body_medium=ft.TextStyle(size=FONT_SIZE["body"], color=_fg),
+        body_small=ft.TextStyle(size=FONT_SIZE["small"], color=_fg),
+        label_large=ft.TextStyle(size=FONT_SIZE["body"], color=_fg),
+        label_medium=ft.TextStyle(size=FONT_SIZE["small"], color=_fg),
+        label_small=ft.TextStyle(size=FONT_SIZE["caption"], color=_fg),
+    )
+
+
 def build_theme(state: ThemeState) -> ft.Theme:
     """由状态构造 :class:`flet.Theme`。
 
@@ -227,6 +274,9 @@ def build_theme(state: ThemeState) -> ft.Theme:
         color_scheme_seed=state.primary,
         use_material3=True,
         font_family=state.font_family,
+        # 正文 14 的落地点：所有没写 size 的文字、以及 flet 内置控件（ListTile /
+        # Dropdown / Tooltip / DatePicker …）的字号都从这套 text_theme 取。
+        text_theme=text_theme(),
         # Flet 1.1 把默认表面从"带种子色偏的灰"换成了中性灰。这里显式写出来而
         # 不是靠默认值：表面策略是本框架的一个可选项（见 SURFACES），而且下一个
         # 读代码的人该知道"为什么卡片是纯灰而不是淡蓝"。
@@ -247,7 +297,9 @@ def build_theme(state: ThemeState) -> ft.Theme:
                 size=FONT_SIZE["body"], color=ft.Colors.ON_SURFACE_VARIANT
             ),
             label_style=ft.TextStyle(size=FONT_SIZE["body"]),
-            helper_style=ft.TextStyle(size=FONT_SIZE["caption"]),
+            helper_style=ft.TextStyle(
+                size=FONT_SIZE["caption"], color=ft.Colors.ON_SURFACE_VARIANT
+            ),
         ),
         # 编辑中的文字与框架正文同档（Material 默认 16，比正文大一号）
         text_field_theme=ft.TextFieldTheme(
@@ -283,7 +335,9 @@ def build_theme(state: ThemeState) -> ft.Theme:
             # 1.1 新增：菜单项悬停高亮的圆角。不设的话是直角，跟容器圆角打架。
             border_radius=RADIUS["lg"],
             menu_padding=ft.Padding.symmetric(vertical=6),
-            label_text_style=ft.TextStyle(size=13),
+            label_text_style=ft.TextStyle(
+                size=FONT_SIZE["body"], color=ft.Colors.ON_SURFACE
+            ),
         ),
     )
 
@@ -442,12 +496,14 @@ def App() -> ft.Control:
                 spacing=16,
                 controls=[
                     ft.Text(
-                        "设计令牌 + 主题运行时", size=20, weight=ft.FontWeight.W_600
+                        "设计令牌 + 主题运行时",
+                        size=FONT_SIZE["headline"],
+                        weight=ft.FontWeight.W_600,
                     ),
                     ft.Text(
                         "下面的卡片、状态胶囊、按钮全部走 Material 3 角色色，"
                         "切明暗 / 换主色时不需要改任何一行组件代码。",
-                        size=13,
+                        size=FONT_SIZE["body"],
                         color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                     ft.Row(
@@ -478,7 +534,7 @@ def App() -> ft.Control:
                                             ),
                                             ft.Text(
                                                 f"{role:<8} {semantic(role)}",
-                                                size=13,
+                                                size=FONT_SIZE["body"],
                                                 color=semantic_text(role),
                                             ),
                                         ],

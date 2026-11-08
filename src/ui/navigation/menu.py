@@ -98,9 +98,9 @@ ORIENTATIONS: tuple[str, ...] = ("vertical", "horizontal")
 
 ROW_H: dict[str, int] = {"large": 48, "default": 40, "small": 32}
 ROW_TEXT: dict[str, int] = {
-    "large": FONT_SIZE["title"],  # 16
-    "default": FONT_SIZE["subtitle"],  # 14
-    "small": FONT_SIZE["body"],  # 13
+    "large": FONT_SIZE["title"],  # 16  大号导航（48 行高）
+    "default": FONT_SIZE["body"],  # 14  默认菜单项（40 行高）
+    "small": FONT_SIZE["small"],  # 12  紧凑菜单（32 行高）
 }
 ROW_ICON: dict[str, int] = {"large": 20, "default": 18, "small": 16}
 

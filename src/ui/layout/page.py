@@ -197,7 +197,7 @@ def _basic() -> ft.Control:
                 ft.Divider(),
                 ft.Text(
                     "最近登录",
-                    size=FONT_SIZE["subtitle"],
+                    size=FONT_SIZE["body"],
                     weight=FONT_WEIGHT["semibold"],
                 ),
                 ft.ListTile(

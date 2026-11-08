@@ -43,7 +43,7 @@ import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.icons import STEP_DOWN, STEP_UP
-from ui.core.tokens import FONT_SIZE, RADIUS, disabled_layer, state_layer
+from ui.core.tokens import FONT_SIZE, ICON_SIZE, RADIUS, disabled_layer, state_layer
 from ui.input.input import Label
 
 __all__ = ["NumberInput"]
@@ -58,7 +58,7 @@ FIELD_RADIUS = RADIUS["lg"]  # 与 DateInput / DateTimeInput 的输入框同圆�
 SIZE_SPECS: dict[str, dict[str, int]] = {
     "sm": {"height": 28, "text": FONT_SIZE["small"], "button": 26, "icon": 14},
     "md": {"height": 36, "text": FONT_SIZE["body"], "button": 32, "icon": 16},
-    "lg": {"height": 44, "text": FONT_SIZE["subtitle"], "button": 38, "icon": 18},
+    "lg": {"height": 44, "text": FONT_SIZE["title"], "button": 38, "icon": 18},
 }
 
 #: ``controls_position`` 的合法取值
@@ -534,7 +534,7 @@ class NumberInput(Label):
             else lambda e, k=key: self._hover_key(k, _truthy(e.data)),
             content=ft.Icon(
                 icon,
-                size=max(FONT_SIZE["caption"], spec["icon"] - 3),
+                size=max(ICON_SIZE["xs"], spec["icon"] - 3),
                 color=ft.Colors.ON_SURFACE_VARIANT if enabled else DISABLED_FG,
             ),
         )
