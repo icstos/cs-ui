@@ -240,7 +240,7 @@ check("ACCENT_ROLES = M3 三角色 + 五个语义角色", tokens.ACCENT_ROLES,
       ("primary", "secondary", "tertiary") + tokens.SEMANTIC_ROLES)
 
 # primary / secondary / tertiary 必须落到 **M3 角色**上，而不是某个色值：
-# 角色由 Flutter 在渲染时从 color_scheme_seed 解析，换主色不用重建控件。
+# 角色由 Flutter 在渲染时从 ColorScheme 解析，换主色不用重建控件。
 check("primary 的实底是 M3 角色", tokens.accent_fill("primary"), ft.Colors.PRIMARY)
 check("primary 的实底前景是 M3 角色", tokens.accent_on("primary"), ft.Colors.ON_PRIMARY)
 check("primary 的文字色是 M3 角色", tokens.accent_text("primary"), ft.Colors.PRIMARY)
@@ -260,10 +260,14 @@ check("SEMANTIC_TINT 是 12%", tokens.SEMANTIC_TINT, 0.12)
 check("SEMANTIC_WASH 是 8%", tokens.SEMANTIC_WASH, 0.08)
 check_true("淡底比大面积淡底更浓（面积越大越要淡）",
            tokens.SEMANTIC_TINT > tokens.SEMANTIC_WASH)
+# 淡底的底色取自 accent_text，accent_text 又取自 SEMANTIC —— 这里不写死色值，
+# 只断言"两层确实是同一个色串 + 同一个透明度"。写死的话，语义色一改就红。
 check("accent_soft 是 12% 覆盖",
-      tokens.accent_soft("success"), ft.Colors.with_opacity(0.12, "#047857"))
+      tokens.accent_soft("success"),
+      ft.Colors.with_opacity(0.12, tokens.accent_text("success", "light")))
 check("accent_wash 是 8% 覆盖",
-      tokens.accent_wash("success"), ft.Colors.with_opacity(0.08, "#047857"))
+      tokens.accent_wash("success"),
+      ft.Colors.with_opacity(0.08, tokens.accent_text("success", "light")))
 
 for role in tokens.SEMANTIC_ROLES:
     check(f"accent_* 未知角色等同 neutral",

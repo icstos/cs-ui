@@ -7,7 +7,7 @@ import flet as ft
 
 from ui.core.config import logger
 from ui.core.i18n import t, use_t
-from ui.core.theme import build_theme, theme_state
+from ui.core.theme import apply_theme, theme_state
 from ui.core.tokens import FONT_SIZE, RADIUS
 
 FONT_DIR = Path(Path(__file__).parent, "data/fonts").resolve()
@@ -140,16 +140,13 @@ class App:
         # 主题**不再在这里手搓一份**。手搓的那份少了 surfaces / 输入框 / 弹出菜单
         # 的主题，于是同一个应用里"框架按钮"和"flet 按钮"、"框架下拉"和
         # "flet 下拉"各是一套配色 —— 正是"组件与框架不和谐"的来源。
-        # 全部交给 ui.core.theme.build_theme：那里是主题的唯一事实源。
+        # 全部交给 ui.core.theme：那里是主题的唯一事实源。apply_theme 会同时
+        # 写下明暗两套主题 —— 只写 page.theme 的话，深色模式没有为深色准备的
+        # 那棵树，Flutter 会把浅色色板硬套上去。
         st = theme_state()
         if not st.font_family:
             st.font_family = "AlibabaPuHuiTi"
-        page.theme = build_theme(st)
-        page.theme_mode = (
-            ft.ThemeMode.SYSTEM
-            if st.mode == "system"
-            else (ft.ThemeMode.DARK if st.mode == "dark" else ft.ThemeMode.LIGHT)
-        )
+        apply_theme(page, st)
         if self.with_auto_routing:
             self.auto_routing()
         # 用 manage_views=False + page.render（根视图）：

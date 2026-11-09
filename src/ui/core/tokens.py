@@ -7,8 +7,9 @@
    :func:`flet.Colors.with_opacity` 生成，如 ``"onsurface,0.06"``），
    **由 Flutter 在运行时按当前 ``ColorScheme`` 解析**。把 ``ft.Colors.ON_SURFACE``
    交给 Flutter，明暗切换是零成本且必然正确的；把 ``"#6B7280"`` 写死，暗色下必瞎。
-2. **主色可切**：``ft.Theme(color_scheme_seed=...)`` 让 Flutter 从一个品牌色种子
-   推导整套 M3 色板（见 :mod:`ui.core.theme`），组件只引用角色、不引用具体色值。
+2. **主色可切**：一个品牌色由 :func:`ui.core.palette.build_scheme` 算成整套 M3
+   色板（46 个角色，明暗各一套，见 :mod:`ui.core.theme`），组件只引用角色、
+   不引用具体色值。
 3. **一处修改全局生效**：圆角 / 间距 / 字号改一个数，全框架跟着走。
 
 令牌分两类，用途不同，不要混：
@@ -62,6 +63,8 @@
 from __future__ import annotations
 
 import flet as ft
+
+from ui.core import palette
 
 __all__ = [
     "ACCENT_ROLES",
@@ -284,43 +287,44 @@ DISABLED_OPACITY: dict[str, float] = {"label": 0.38, "container": 0.12}
 # 一个色值不可能同时当"填充"和"文字"，实测差得很远：
 #   ``#10B981`` 对白底只有 2.54:1，``#F59E0B`` 只有 2.15:1，
 #   在它们上面压白字同样只有 2.54 / 2.15 —— 徽标上的字是**读不出来**的。
-# 所以：填充色必须深到扛得住白字（>= 4.5:1），文字色另取。
 #
 #   SEMANTIC      填充：徽标实底 / 状态点 / 进度段
 #   SEMANTIC_ON   该填充上的前景（徽标里的文字与图标）
 #   SEMANTIC_TEXT 该角色作为页面文字 / 图标 / 细边框时的颜色
 #
-# 下表所有取值都在浅底 ``#FFFFFF`` 与深底 ``#141414`` 上过了 WCAG 对比度：
-# 填充 >= 4.5:1、on >= 4.5:1、text >= 4.5:1（scripts/_theme_logic.py 有断言守着）。
+# 取值不再手挑，而是由 :func:`ui.core.palette.semantic_scale` **按目标对比度
+# 解出来**：四个角色都解到同一个 5.0:1（深色 7.0:1），于是"成功"与"警告"在
+# 界面上的视觉重量一样。手挑色值时最容易出的问题正是这个 —— 原来四个填充色
+# 的明度分别是 0.51 / 0.56 / 0.58 / 0.50，对比度 5.48 / 5.02 / 4.83 / 5.93，
+# 并排放在一起时"信息"明显比其他三个轻，"危险"反而最淡。
+#
+# 色相是**固定**的（见 :data:`ui.core.palette.SEMANTIC_HUES`）：成功在任何
+# 品牌色下都必须是绿的，否则语义就失效了。
 # ---------------------------------------------------------------------------
+SEMANTIC_ROLES: tuple[str, ...] = ("success", "warning", "danger", "info", "neutral")
+
 SEMANTIC: dict[str, dict[str, str]] = {
-    "success": {"light": "#047857", "dark": "#34D399"},
-    "warning": {"light": "#B45309", "dark": "#FBBF24"},
-    "danger": {"light": "#DC2626", "dark": "#F87171"},
-    "info": {"light": "#0369A1", "dark": "#38BDF8"},
-    "neutral": {"light": "#4B5563", "dark": "#D1D5DB"},
+    role: {
+        mode: palette.semantic_scale(role, mode)[0] for mode in ("light", "dark")
+    }
+    for role in SEMANTIC_ROLES
 }
 
 #: 铺在语义色**实底**上的前景色（徽标 / 状态胶囊里的文字与图标）
 SEMANTIC_ON: dict[str, dict[str, str]] = {
-    "success": {"light": "#FFFFFF", "dark": "#04231A"},
-    "warning": {"light": "#FFFFFF", "dark": "#2B1A03"},
-    "danger": {"light": "#FFFFFF", "dark": "#2E0707"},
-    "info": {"light": "#FFFFFF", "dark": "#032234"},
-    "neutral": {"light": "#FFFFFF", "dark": "#1A1E24"},
+    role: {
+        mode: palette.semantic_scale(role, mode)[1] for mode in ("light", "dark")
+    }
+    for role in SEMANTIC_ROLES
 }
 
 #: 语义色作为**页面上的文字 / 图标 / 细边框**时的取值（不做背景）
 SEMANTIC_TEXT: dict[str, dict[str, str]] = {
-    "success": {"light": "#047857", "dark": "#34D399"},
-    "warning": {"light": "#B45309", "dark": "#FBBF24"},
-    "danger": {"light": "#DC2626", "dark": "#F87171"},
-    "info": {"light": "#0369A1", "dark": "#38BDF8"},
-    # 次要信息在深底上要比填充更收敛一档，否则整屏都在喊
-    "neutral": {"light": "#6B7280", "dark": "#9CA3AF"},
+    role: {
+        mode: palette.semantic_scale(role, mode)[2] for mode in ("light", "dark")
+    }
+    for role in SEMANTIC_ROLES
 }
-
-SEMANTIC_ROLES: tuple[str, ...] = tuple(SEMANTIC)
 
 #: 铺在语义色**实底**上的那一层淡色的透明度（图标底座、徽标、选中胶囊）。
 #:
@@ -336,9 +340,9 @@ SEMANTIC_TINT: float = 0.12
 #: 把"提示"喊成了"警报"。所以按**面积**分两档，不是按重要性。
 SEMANTIC_WASH: float = 0.08
 
-#: M3 自带的强调角色 → (实底, 实底上的前景)。这三个角色由
-#: ``color_scheme_seed`` 推导，**在 Flutter 侧运行时解析**，所以换主色 /
-#: 切明暗时不需要重建任何控件。
+#: M3 自带的强调角色 → (实底, 实底上的前景)。这三个角色的具体色值由
+#: :mod:`ui.core.palette` 算进 ``ColorScheme``，这里只是引用**角色名**，
+#: 所以换主色 / 切明暗时不需要重建任何控件。
 M3_ACCENT: dict[str, tuple[ft.Colors, ft.Colors]] = {
     "primary": (ft.Colors.PRIMARY, ft.Colors.ON_PRIMARY),
     "secondary": (ft.Colors.SECONDARY, ft.Colors.ON_SECONDARY),
@@ -349,8 +353,8 @@ M3_ACCENT: dict[str, tuple[ft.Colors, ft.Colors]] = {
 ACCENT_ROLES: tuple[str, ...] = (*M3_ACCENT, *SEMANTIC_ROLES)
 
 # ---------------------------------------------------------------------------
-# 预设品牌色种子：喂给 ``ft.Theme(color_scheme_seed=...)``，
-# Flutter 会由此推导出整套 M3 色板（primary / secondary / surface / outline …）。
+# 预设品牌色：交给 ``ui.core.palette.build_scheme`` 算出整套 M3 色板
+# （primary / secondary / surface / outline … 全部 46 个角色）。
 # ---------------------------------------------------------------------------
 PRIMARY_SEEDS: dict[str, str] = {
     "blue": "#1F6FEB",
@@ -446,8 +450,7 @@ def accent_fill(role: str = "primary", mode: str | None = None) -> ft.ColorValue
     """强调色的**实底**颜色。
 
     传 ``primary`` / ``secondary`` / ``tertiary`` 得到 M3 角色（运行时解析，
-    永远跟着 ``color_scheme_seed`` 走）；传 ``success`` 这类语义角色得到
-    明暗各一套的具体色值。
+    永远跟着品牌色走）；传 ``success`` 这类语义角色得到明暗各一套的具体色值。
     """
     if role in M3_ACCENT:
         return M3_ACCENT[role][0]

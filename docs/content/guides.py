@@ -94,11 +94,20 @@ def Palette() -> ft.Control:
 
 _SURFACES = """from ui import theme_state
 
-# 默认：中性表面（浅色近白 / 深色 #121212）
+# 默认：灰里掺一丝品牌色相（浅色近白 / 深色深石板）
 theme_state().set_surfaces("neutral")
 
-# Flet 1.0 的着色表面：容器带一点种子色偏
+# 更明显的着色表面：同一组色阶带上更多品牌色相
 theme_state().set_surfaces("tonal")"""
+
+_PALETTE = """from ui.core.palette import build_scheme, tonal
+
+# 46 个角色一次算清（含明暗两套），直接下发给主题
+ft.ColorScheme(**build_scheme("#1F6FEB", "light"))
+
+# 十一档色阶：淡端淡而有色，深端沉而不浊，色相一度不漂
+tonal("#1F6FEB")[600]      # '#3271D7'
+tonal("#1F6FEB")[50]       # '#F4F8FF'"""
 
 _TOKENS = """from ui import ELEVATION, RADIUS, SPACE
 
@@ -196,6 +205,11 @@ THEMING: Doc = (
     h2("theme.semantic.title"),
     p("theme.semantic.desc"),
     split((p("theme.semantic.desc2"),), semantic_palette, ratio=(5, 6)),
+    h2("theme.palette.title"),
+    p("theme.palette.desc"),
+    code(_PALETTE, "core/palette.py"),
+    p("theme.palette.desc2"),
+    ul("theme.palette.point1", "theme.palette.point2", "theme.palette.point3"),
     h2("theme.modes.title"),
     p("theme.modes.desc"),
     code(_THEME, "theme.py"),

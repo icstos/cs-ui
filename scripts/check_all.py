@@ -113,7 +113,7 @@ def stages() -> list[Stage]:
         ),
         Stage(
             key="i18n-catalogs",
-            title="站点三语语言包（651 键 × 3 语言）",
+            title="站点三语语言包（键集与文案同步）",
             argv=(sys.executable, str(SCRIPTS / "build_docs_i18n.py"), "--check"),
             tier="docs",
             timeout=180,

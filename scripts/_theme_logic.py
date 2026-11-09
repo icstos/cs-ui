@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import flet as ft  # noqa: E402
 
+from ui.core import palette as pl  # noqa: E402
 from ui.core import theme as theme_mod  # noqa: E402
 from ui.core import tokens as tk  # noqa: E402
 from ui.core.theme import (  # noqa: E402
@@ -154,13 +155,24 @@ for mode, surface in SURFACE.items():
         check(f"{mode} 的 {role} 文字色对底色 >= 4.5",
               round(_contrast(semantic_text(role, mode), surface), 2) >= 4.5, True)
 
-# 这三个值曾经是"浅色 success/warning"，实测压白字只有 2.54 / 2.15 —— 徽标读不出来
-check("浅色 success 已从 #10B981 提到 #047857（白字 2.54:1 -> 5.48:1）",
-      semantic("success", "light"), "#047857")
-check("浅色 warning 已从 #F59E0B 提到 #B45309（白字 2.15:1 -> 5.02:1）",
-      semantic("warning", "light"), "#B45309")
-check("深色 on_semantic 是深墨（不是白字压在浅色填充上）",
-      on_semantic("success", "dark").lower() in ("#04231a",), True)
+# 语义色是**按目标对比度解出来的**（见 ui.core.palette.semantic_scale），所以这里
+# 断言的是"解出来的结果守住了规则"，而不是几个具体色值 —— 后者换个色相锚点就失效，
+# 前者才是真正要保的性质。
+for mode in ("light", "dark"):
+    ratios = {role: _contrast(semantic(role, mode), SURFACE[mode])
+              for role in tk.SEMANTIC_ROLES if role != "neutral"}
+    spread = max(ratios.values()) - min(ratios.values())
+    check(f"{mode} 四个语义填充的对比度彼此相差 < 0.3（视觉重量一致）",
+          round(spread, 2) < 0.3, True)
+    check(f"{mode} 语义填充都达到了目标对比度",
+          round(min(ratios.values()), 2) >= 4.5, True)
+
+# 深色模式下实底是亮色，前景必须是"同色相的深墨"而不是白字 ——
+# 白字压在浅绿/浅黄上对比度只有 1.7 左右，是一块读不出字的色块。
+for role in ("success", "warning", "danger", "info"):
+    fg, fill = on_semantic(role, "dark"), semantic(role, "dark")
+    check(f"深色 {role} 的前景比实底暗得多（深墨而不是白字）",
+          _lum(fg) < _lum(fill) / 2, True)
 
 
 # ---------------------------------------------------------------------------
@@ -250,7 +262,15 @@ check("默认状态是 system + 蓝种子",
 # 6. build_theme / apply_theme
 # ---------------------------------------------------------------------------
 t = build_theme(fresh("dark", "#7C3AED"))
-check("build_theme 把主色种子交给 color_scheme_seed", t.color_scheme_seed, "#7C3AED")
+check("build_theme 不再交种子给 Flutter（tonalSpot 会改品牌色）",
+      t.color_scheme_seed, None)
+check("build_theme 下发的是 palette 解出的整套色板（暗色档）",
+      t.color_scheme.primary, pl.build_scheme("#7C3AED", "dark")["primary"])
+check("build_theme 的色板与 palette 逐角色一致",
+      t.color_scheme.surface, pl.build_scheme("#7C3AED", "dark")["surface"])
+check("build_theme 明暗两套不同（不是同一棵树涂两遍）",
+      build_theme(fresh("light", "#7C3AED")).color_scheme.primary ==
+      t.color_scheme.primary, False)
 check("build_theme 走 Material 3", t.use_material3, True)
 check("build_theme 装上了滚动条主题（桌面端细滚动条）", t.scrollbar_theme is not None, True)
 check("build_theme 路由切换无动画", t.page_transitions.windows, ft.PageTransitionTheme.NONE)
@@ -272,7 +292,12 @@ class FakePage:
 fp = FakePage()
 s = fresh("dark", "#0D9488")
 apply_theme(fp, s)
-check("apply_theme 写 page.theme", fp.theme.color_scheme_seed, "#0D9488")
+check("apply_theme 写 page.theme（按浅色档算）",
+      fp.theme.color_scheme.primary, pl.build_scheme("#0D9488", "light")["primary"])
+check("apply_theme 也写 page.dark_theme（flet 深色下用的是这棵）",
+      fp.dark_theme.color_scheme.primary, pl.build_scheme("#0D9488", "dark")["primary"])
+check("apply_theme 把页面底色接上表面色（否则页面与控件不是同一个色）",
+      fp.bgcolor, ft.Colors.SURFACE)
 check("apply_theme 写 page.theme_mode=DARK", fp.theme_mode, ft.ThemeMode.DARK)
 check("apply_theme 读到平台亮度并落到状态", s.platform_brightness, "dark")
 check("apply_theme 挂了平台亮度监听",

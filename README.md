@@ -13,13 +13,24 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
   `DatePicker` all default to 14 instead of Flutter's own `bodyMedium`. Bumping flet
   can't silently drift it. Other steps: 11 / 12 / 16 / 20 / 24 / 28 / 36, at least 2px apart
 - **Design tokens + Material 3 theming** — no raw color / radius / font-size literals inside
-  components. A single brand seed (`color_scheme_seed`) derives the whole M3 color scheme, so
-  light/dark and brand-color switching are **framework-level** operations, not per-widget recoloring
+  components. A single brand color is turned into all 46 M3 roles by `ui.core.palette`
+  (one set for light, one for dark; change the brand and the whole set changes) instead of
+  being handed to Flutter's `tonalSpot`, which turns `#1F6FEB` into `#465D91` and strips half
+  the chroma out of the brand blue. Light/dark and brand-color switching are **framework-level**
+  operations, not per-widget recoloring
 - **One palette, five layers** — surface / foreground / interaction / accent / data, each with a
   single means of expression. Buttons, messages, badges and log levels share one accent vocabulary
   (`accent_*`): a success button and a success toast are the same green, and a primary button's fill
   is M3's `PRIMARY`, following the seed. Chart series and heat-map scales are derived from the brand
   seed in OKLCH (equal lightness, evenly spaced hues) instead of eight hand-picked hex values
+- **Colors are computed, not picked** — every hue unrolls into an 11-step scale (lightness on a
+  logarithmic gradient, ~0.075 apart, matching human Weber-law perception) with a bell-shaped
+  chroma envelope: the pale end stays pale *and* tinted, the deep end stays deep *without* turning
+  muddy, and the hue never drifts by a degree. Foregrounds aren't sampled at a fixed step — the
+  lightness is **solved against a contrast ratio** (bisection; body text ≥ 4.5:1, large headings
+  ≥ 3:1), so `success` and `warning` — two hues whose lightness is worlds apart — land on paper at
+  the same visual weight. Neutrals carry a 215° cool-blue cast plus a trace of the brand hue, so
+  they read as slate rather than dead grey with three equal channels
 - **Inheritance-based** — static components subclass Flet native controls (e.g., `Button(ft.Button)`, `Text(ft.Text)`)
 - **Smart defaults** — components come with sensible styling defaults (colors, sizes, border-radius, etc.) for rapid prototyping
 - **Categorized modules** — components organized by function: chart, display, feedback, input, layout, navigation
@@ -361,7 +372,7 @@ def TopBar() -> ft.Control:
 | `toggle_mode()` | always jump to the opposite of what is **currently visible** (for a ☀/🌙 button, so a click always shows a change) |
 | `cycle_mode()` | `system → light → dark → system` (for a dropdown) |
 | `set_mode(name)` | go straight to a mode; `"system"` follows the platform brightness |
-| `set_primary(hex)` | swap the brand seed; the whole M3 scheme is re-derived |
+| `set_primary(hex)` | swap the brand color: all 46 roles are recomputed and both light and dark are handed down |
 
 ### Tokens
 
@@ -396,13 +407,17 @@ hairline()                  # 1px divider
 
 | Function | Use | Light | Dark |
 |----------|-----|-------|------|
-| `semantic("success")` | solid fill (badge background, status dot, progress segment) | `#047857` | `#34D399` |
-| `on_semantic("success")` | foreground on that fill | `#FFFFFF` | `#04231A` |
-| `semantic_text("success")` | text / icons / hairlines on the page | `#047857` | `#34D399` |
+| `semantic("success")` | solid fill (badge background, status dot, progress segment) | `#007F5B` | `#38B98B` |
+| `on_semantic("success")` | foreground on that fill | `#FFFFFF` | `#002014` |
+| `semantic_text("success")` | text / icons / hairlines on the page | `#007F5B` | `#38B98B` |
 
-Why: measured WCAG contrast, the previous `#10B981` is only **2.54:1** on white and `#F59E0B`
-only **2.15:1** — white text on them is equally unreadable at 2.54 / 2.15. Each tier now clears
-4.5:1, guarded by assertions in `scripts/_theme_logic.py`.
+Why: measured WCAG contrast, the hand-picked `#10B981` of earlier days is only **2.54:1** on
+white and `#F59E0B` only **2.15:1** — white text on them is equally unreadable at 2.54 / 2.15.
+These values are no longer hand-picked: `ui.core.palette` **solves each semantic color to the
+same contrast target** (5.0:1 against white in light mode, 7.0:1 against the dark surface), so all
+four fills land at the same visual weight (lightness spread < 0.02) and "info" never reads lighter
+than "warning". In dark mode the foreground is **dark ink**, not white — `#F28948` under white is
+2.0:1, under dark ink it is 7.0:1, and the dark page stops glaring.
 
 **Available roles**: `success` / `warning` / `danger` / `info` / `neutral`.
 
@@ -424,6 +439,32 @@ dialogs and log levels all go through this one vocabulary — a success button a
 success toast are literally the same green, and a primary button's fill is M3's
 `PRIMARY` (it follows the seed instead of hard-coding `Colors.BLUE`). The tint comes in
 two levels by **area**: at equal opacity, a larger patch reads heavier.
+
+**Where the palette comes from.** `ui.core.palette` turns one brand color into all 46 M3 roles;
+`build_theme(state, mode)` hands them down via `ft.ColorScheme(**build_scheme(...))`, one set per
+mode, computed once at startup. It deliberately does not use `color_scheme_seed`, because Flutter's
+`tonalSpot` maps the brand color onto tone 40 and drops its chroma — `#1F6FEB` comes back as
+`#465D91`, half the blue gone. A design asset should not be edited like that.
+
+```python
+from ui.core.palette import build_scheme, tonal, neutral, semantic_scale
+
+build_scheme("#1F6FEB", "light")   # all 46 roles in one call
+tonal("#1F6FEB")[50]               # '#F4F8FF' — the 11-step scale (50…950)
+tonal("#1F6FEB")[600]              # '#3271D7'
+```
+
+Three rules hold it up. Lightness is laid out on a **logarithmic gradient** across eleven steps
+(~0.075 apart, matching Weber's law), so "one step lighter" means the same thing on every hue.
+Chroma follows a **bell envelope** (0.10 at step 50 → 1.00 at 500 → 0.50 at 950): the pale end
+stays pale *and* tinted, the deep end stays deep *without* going muddy. Foregrounds are
+**solved against a contrast ratio** (16 bisection steps) rather than sampled at a fixed step —
+yellow and blue at the same tone differ in relative luminance by 3×, so equal tone has never
+meant equal readability.
+
+Neutrals are not dead grey with three equal channels: a 215° cool-blue cast plus a trace of the
+brand hue (what the `SURFACES` switch controls). Slate looks refined precisely because it leans
+slightly, and the whole ramp re-harmonizes when the brand color changes.
 
 **Color is layered, not a palette.** Five layers, one means of expression each — do not
 borrow across layers:
@@ -502,7 +543,7 @@ python scripts/gen_ui_registry.py --check   # verify it hasn't drifted
 Consistency does not survive "remember to run it", so all checks live behind one entry point:
 
 ```bash
-python scripts/check_all.py                 # 25 checks / ~50 s (static gate + audit + logic + docs)
+python scripts/check_all.py                 # 27 checks / ~51 s (static gate + audit + logic + docs)
 python scripts/check_all.py --stage fast    # static gate + token audit only (enough when restyling)
 python scripts/check_all.py --stage visual  # real-window screenshots + grey-block detection (minutes)
 ```
@@ -512,6 +553,7 @@ python scripts/check_all.py --stage visual  # real-window screenshots + grey-blo
 | `ruff --select F821,F811,F841` | undefined names / redefinitions / unused locals (a missing token import surfaces here) |
 | `audit_consistency.py` | raw colors, off-scale font / icon / radius, odd spacing, `OUTLINE` as text color, dark-hostile fills, Material's static palette names (`Colors.GREEN`, `RED_500`) |
 | `_tokens_logic.py` | token contract: facade parity, monotonic scales, state-layer progression, safe fallbacks, single-source constants, interaction values, the accent quartet staying in sync with `SEMANTIC` |
+| `_palette_logic.py` | palette contract: all 46 roles present, 11 steps at even lightness with a stable hue, 17 foreground/background pairs clearing their contrast target (across 8 seeds × 2 modes), structural ramp moving one way, four semantic fills at the same weight, bad seeds falling back instead of raising |
 | `_color_logic.py` | color engine: OKLCH round-trip, equal-lightness series, hue spacing, monotonic scales, safe fallbacks |
 | `_*_logic.py` | per-component logic (state derivation, clamping, callbacks) |
 | `_doc_check.py` | SPEC / examples / API completeness for all 71 components |
