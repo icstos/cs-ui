@@ -163,8 +163,15 @@ class Quote(ft.Container):
 
         # 竖条用子控件而不是 border-left：Flutter 不允许「非均匀边框 + 圆角」，
         # 而引用块恰恰要圆角。竖条随 Row 的 STRETCH 自动占满块高。
+        #
+        # intrinsic_height 不能省：STRETCH 会给竖条一个「等于 Row 高度」的紧约束，
+        # 而 Row 在 Column 里高度是无界的 —— Flutter 侧因 infinite height 断言失败，
+        # 整棵渲染树退回错误态，页面上所有控件缩成 0 高、全叠在左上角（文档站的
+        # Quote 页曾整页重叠）。这是 Descriptions / Steps 踩过的同一个坑，解法
+        # 也只有这一个：先按内容量出固有高度，再把竖条拉满。
         self.content = ft.Row(
             spacing=SPACE["3"],
+            intrinsic_height=True,
             vertical_alignment=ft.CrossAxisAlignment.STRETCH,
             controls=[
                 ft.Container(
@@ -1128,7 +1135,9 @@ _QUOTE_SPEC = Spec(
     notes=[
         tip(
             "竖向分割线用子控件画，而不是 border-left：Flutter 不允许「非均匀边框」"
-            "配圆角，写了会在渲染期抛断言。"
+            "配圆角，写了会在渲染期抛断言。竖条靠 Row 的 STRETCH 拉满，所以那个 "
+            "Row 必须开 intrinsic_height —— 少了它，父级高度无界时会给竖条一个"
+            "「无限高」的紧约束，整块连同整页一起塌成一行。"
         ),
         info(
             '位置参数仍然可用（Quote("一句话")）；但它已是容器，引文样式由组件'
