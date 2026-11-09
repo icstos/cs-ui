@@ -28,7 +28,7 @@ from __future__ import annotations
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, warn
-from ui.core.tokens import FONT_SIZE, RADIUS
+from ui.core.tokens import FONT_SIZE, RADIUS, accent_soft
 
 __all__ = ["Tab", "TabBar", "TabBarView", "Tabs"]
 
@@ -88,7 +88,7 @@ def _badge(count: int) -> ft.Control:
     return ft.Container(
         padding=ft.Padding.symmetric(horizontal=6, vertical=1),
         border_radius=RADIUS["full"],
-        bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
+        bgcolor=accent_soft("primary"),
         content=ft.Text(
             str(count),
             size=FONT_SIZE["caption"],

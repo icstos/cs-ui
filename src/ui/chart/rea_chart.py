@@ -22,7 +22,10 @@ import flet as ft
 import flet_charts as ftc
 
 from ui.chart._data import (
-    CHART_COLORS,
+    TOOLTIP_BG,
+    TOOLTIP_PAD,
+    TOOLTIP_RADIUS,
+    chart_palette,
     DataInput,
     parse_data,
     resolve_colors,
@@ -159,9 +162,9 @@ class AreaChart(ftc.LineChart):
             vertical_grid_lines=self._grid_lines(show_grid),
             tooltip=(
                 ftc.LineChartTooltip(
-                    bgcolor=ft.Colors.with_opacity(0.9, ft.Colors.GREY_900),
-                    border_radius=8,
-                    padding=10,
+                    bgcolor=TOOLTIP_BG,
+                    border_radius=TOOLTIP_RADIUS,
+                    padding=TOOLTIP_PAD,
                 )
                 if tooltip
                 else None
@@ -280,7 +283,7 @@ def _solid() -> ft.Control:
         x="日期",
         y="会话量",
         height=240,
-        color=CHART_COLORS[2],
+        color=chart_palette()[2],
         gradient=False,
         opacity=0.35,
     )

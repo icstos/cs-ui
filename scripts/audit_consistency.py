@@ -11,7 +11,7 @@
 （前者是排版错误，后者是图标刻度错误），也分不清 ``bgcolor=Colors.WHITE``
 （深色主题下会瞎）与 ``color=Colors.WHITE``（压在深色实底上，正确）。
 
-八条规则
+九条规则
 --------
 ============  ==========================================================
 裸色值        组件里出现 ``"#RRGGBB"``
@@ -24,7 +24,14 @@
 文字色误用     ``Text(color=Colors.OUTLINE)`` —— outline 是边框角色，
               次要文字应为 ``ON_SURFACE_VARIANT``
 暗色隐患       ``bgcolor=Colors.WHITE / BLACK / GREY_*``
+静态调色板     ``Colors.GREEN`` / ``RED_500`` / ``LIGHT_BLUE_800`` ——
+              Material 的静态色名，不随主色与明暗变化
 ============  ==========================================================
+
+「裸色值」与「静态调色板」都留了同一道口子：**写进全大写模块常量就放行**。
+不是网开一面，而是这两类规则的靶子是"匿名的、随手抄的色值"，不是"用色"本身。
+一个 ``TOOLTIP_BG = with_opacity(0.9, GREY_900)`` 说明作者想清楚了"这里就该
+固定深色"，评审看得见，也只有一处。
 
 用法::
 
@@ -90,6 +97,42 @@ _EXTRA_ICON_SIZE: frozenset[int] = frozenset({36, 40, 48})
 #: 暗色主题下会失效的硬编码底色。
 _DARK_HOSTILE = ("WHITE", "BLACK", "GREY_")
 
+#: Material **静态调色板**的色名根（``GREEN`` / ``RED_500`` / ``LIGHT_BLUE_800`` …）。
+#:
+#: 它们的取值是 Flutter 里写死的常量，**不随主题变**：深色主题下仍是那个亮绿，
+#: 压在深底上刺眼、压在浅底上又不够深；换主色时更是一动不动。真正会跟随的是
+#: 角色色（``PRIMARY`` / ``ON_SURFACE`` / ``SURFACE_CONTAINER_HIGH`` …），由
+#: ``ColorScheme`` 在渲染时解析。
+#:
+#: 这条规则要挡的正是"看起来能用、其实不跟主题"的那些色名 —— 它们最容易
+#: 出现在"我就想要个绿"的瞬间，然后和语义色里的绿各走一路。
+_PALETTE_ROOTS = (
+    "RED",
+    "PINK",
+    "PURPLE",
+    "DEEP_PURPLE",
+    "INDIGO",
+    "BLUE",
+    "LIGHT_BLUE",
+    "CYAN",
+    "TEAL",
+    "GREEN",
+    "LIGHT_GREEN",
+    "LIME",
+    "YELLOW",
+    "AMBER",
+    "ORANGE",
+    "DEEP_ORANGE",
+    "BROWN",
+    "GREY",
+    "BLUE_GREY",
+)
+
+#: 绝对黑 / 白是唯一两个**不算调色板**的具名色：它们压在图片、遮罩、恒深色的
+#: 代码块上，跟着主题变反而会把内容糊掉。这类用法由「暗色隐患」规则单独管
+#: ``bgcolor``，不在这里一刀切。
+_ABSOLUTE_COLORS = ("BLACK", "WHITE")
+
 #: 走 2px 步进时允许的偶数留白（4px 网格以下的紧凑间距）。
 _RULES = (
     "裸色值",
@@ -100,7 +143,15 @@ _RULES = (
     "奇数留白",
     "文字色误用",
     "暗色隐患",
+    "静态调色板",
 )
+
+
+def _palette_member(member: str) -> bool:
+    """``GREEN`` / ``RED_500`` / ``GREEN_ACCENT_200`` → True；``PRIMARY`` → False。"""
+    if member in _ABSOLUTE_COLORS:
+        return False
+    return any(member == root or member.startswith(root + "_") for root in _PALETTE_ROOTS)
 
 
 @dataclass(frozen=True)
@@ -182,7 +233,7 @@ def _padding_ints(node: ast.expr) -> Iterator[int]:
 # ---------------------------------------------------------------------------
 # 规则实现：每个函数产出一批 Violation
 # ---------------------------------------------------------------------------
-def _named_color_constants(tree: ast.Module) -> set[int]:
+def _named_color_nodes(tree: ast.Module) -> set[int]:
     """收集「具名色板」里的色值节点 id。
 
     规则不是"禁止十六进制"，而是**禁止匿名的十六进制**。给色值起个名字写进
@@ -191,6 +242,10 @@ def _named_color_constants(tree: ast.Module) -> set[int]:
     次出现时会被再抄一遍，改的时候只改一处。
 
     判定条件：模块级 ``NAME = "..."``，且名字全大写（含数字/下划线）。
+
+    这个豁免对 :data:`_PALETTE_ROOTS` 那类色名同样成立：``ft.Colors.GREY_900``
+    写在 ``TOOLTIP_BG = ...`` 里是"想清楚了要固定深色"，散落在四个图表的
+    参数里则是四份互不相干的复制品。所以属性节点也一并收集。
     """
     allowed: set[int] = set()
     for node in tree.body:
@@ -205,10 +260,13 @@ def _named_color_constants(tree: ast.Module) -> set[int]:
         if not names or not all(n.isupper() or n.replace("_", "").isalnum() for n in names):
             continue
         for sub in ast.walk(node):
-            if (
-                isinstance(sub, ast.Constant)
-                and isinstance(sub.value, str)
-                and sub.value.startswith("#")
+            if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+                if sub.value.startswith("#"):
+                    allowed.add(id(sub))
+            elif (
+                isinstance(sub, ast.Attribute)
+                and isinstance(sub.value, ast.Attribute)
+                and sub.value.attr == "Colors"
             ):
                 allowed.add(id(sub))
     return allowed
@@ -221,7 +279,7 @@ def _audit_module(path: Path, rel: str, allowed: set[str]) -> list[Violation]:
         return []
 
     out: list[Violation] = []
-    named_colors = _named_color_constants(tree)
+    named_colors = _named_color_nodes(tree)
 
     def add(rule: str, node: ast.AST, message: str) -> None:
         if rule in allowed:
@@ -238,6 +296,23 @@ def _audit_module(path: Path, rel: str, allowed: set[str]) -> list[Violation]:
             s = node.value
             if len(s) in (4, 5, 7, 9) and s.startswith("#") and id(node) not in named_colors:
                 add("裸色值", node, f'"{s}" 应改用令牌、ft.Colors 角色，或提取为具名常量')
+
+        # ---- 静态调色板 ------------------------------------------------
+        # 注意位置：这一条要在 ``isinstance(node, ast.Call)`` 的过滤**之前**，
+        # 因为它看的是属性节点本身（``ft.Colors.GREEN``），不是某次调用的实参。
+        if (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Attribute)
+            and node.value.attr == "Colors"
+            and _palette_member(node.attr)
+            and id(node) not in named_colors
+        ):
+            add(
+                "静态调色板",
+                node,
+                f"Colors.{node.attr} 不随主题变，请改用角色色或语义令牌"
+                "（accent_text / semantic_text）",
+            )
 
         if not isinstance(node, ast.Call):
             continue

@@ -53,6 +53,7 @@ from ui.core.tokens import (
     FONT_SIZE,
     ICON_SIZE,
     disabled_layer,
+    elevation,
     selected_layer,
     state_layer,
 )
@@ -592,11 +593,9 @@ class MultiSelect(Label):
             border_radius=ft.BorderRadius.all(BORDER_RADIUS),
             padding=ft.Padding.symmetric(vertical=PANEL_PAD),
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
-            shadow=ft.BoxShadow(
-                blur_radius=12,
-                color=ft.Colors.with_opacity(0.10, ft.Colors.BLACK),
-                offset=ft.Offset(0, 3),
-            ),
+            # 浮层阴影走 elevation()：颜色取自 SHADOW 角色而不是纯黑 10%，
+            # 深色主题下才不会像糊了一块脏东西。
+            shadow=elevation(3),
             content=ft.Column(controls=blocks, spacing=0),
         )
 

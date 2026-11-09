@@ -17,7 +17,7 @@ import flet as ft
 import flet_code_editor as fce
 
 from docs.blocks import CalloutKind, Demo, Tone
-from ui import Code, semantic, semantic_text, use_i18n, use_t
+from ui import Code, accent_text, use_i18n, use_t
 from ui.core.theme import use_theme
 
 # ---------------------------------------------------------------------------
@@ -38,27 +38,20 @@ _CODE_BG = "#0E1117"
 _CODE_HEAD_BG = "#151A22"
 _CODE_BORDER = "#232A35"
 
-_TONE_FALLBACK: dict[str, str] = {
-    "primary": "info",
-    "success": "success",
-    "warning": "warning",
-    "danger": "danger",
-    "info": "info",
-    "neutral": "neutral",
-}
-
 
 def tone_color(tone: Tone) -> ft.ColorValue:
-    """把语气映射成颜色：``primary`` 用主题主色，其余落语义色。"""
-    if tone == "primary":
-        return ft.Colors.PRIMARY
-    return semantic(_TONE_FALLBACK.get(tone, "info"))
+    """把语气映射成"压在表面上的强调色"。
+
+    走 :func:`ui.core.tokens.accent_text` —— ``primary`` 得到主题角色（换主色
+    自动跟随），其余得到语义色的文字档。以前这里自己写 ``if tone == "primary"``，
+    和组件里同名的判断重复了五处；现在全框架只有 tokens 一处知道这件事。
+    """
+    return accent_text(tone)
 
 
 def tone_text(tone: Tone) -> ft.ColorValue:
-    if tone == "primary":
-        return ft.Colors.PRIMARY
-    return semantic_text(_TONE_FALLBACK.get(tone, "info"))
+    """语气色作为文字时的取值（与 :func:`tone_color` 同源）。"""
+    return accent_text(tone)
 
 
 def tint(tone: Tone, opacity: float = 0.10) -> ft.ColorValue:

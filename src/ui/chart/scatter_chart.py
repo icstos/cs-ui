@@ -23,7 +23,10 @@ import flet as ft
 import flet_charts as ftc
 
 from ui.chart._data import (
-    CHART_COLORS,
+    TOOLTIP_BG,
+    TOOLTIP_PAD,
+    TOOLTIP_RADIUS,
+    chart_palette,
     DataInput,
     parse_data,
     resolve_colors,
@@ -146,9 +149,9 @@ class ScatterChart(ftc.ScatterChart):
             vertical_grid_lines=self._grid_lines(show_grid),
             tooltip=(
                 ftc.ScatterChartTooltip(
-                    bgcolor=ft.Colors.with_opacity(0.9, ft.Colors.GREY_900),
-                    border_radius=8,
-                    padding=10,
+                    bgcolor=TOOLTIP_BG,
+                    border_radius=TOOLTIP_RADIUS,
+                    padding=TOOLTIP_PAD,
                 )
                 if tooltip
                 else None
@@ -208,7 +211,7 @@ def _bubbles() -> ft.Control:
     return ft.Column(
         spacing=8,
         controls=[
-            _legend(["新客", "老客"], CHART_COLORS[:2]),
+            _legend(["新客", "老客"], chart_palette()[:2]),
             ScatterChart(
                 data={
                     "客单价": [120, 138, 151, 166, 174, 189, 203, 218, 236, 251],
@@ -243,7 +246,7 @@ def _quadrant() -> ft.Control:
         ],
         height=260,
         radius=5,
-        color=CHART_COLORS[4],
+        color=chart_palette()[4],
         show_grid=False,
     )
 

@@ -40,6 +40,7 @@ import flet as ft
 
 from ui.core.format import calendar_title, first_weekday, month_cell, weekday_names
 from ui.core.i18n import t
+from ui.core.tokens import accent_soft
 
 # 通用外壳（尺寸 / 配色 / 定位 / 混入）全部来自 panel_field。
 # 这里原样重导出，保持 `from ui.input.calendar_panel import PANEL_PAD` 这类
@@ -95,9 +96,9 @@ PANEL_H = PANEL_PAD * 2 + 2 + HEADER_H + CAL_GRID_H + 1 + FOOTER_H  # 面板高
 # ---------------------------------------------------------------------------
 # 配色（月历独有；通用的 HOVER_BG / DISABLED_FG 在 panel_field）
 # ---------------------------------------------------------------------------
-TODAY_BG = ft.Colors.with_opacity(0.10, ft.Colors.PRIMARY)  # "今天"淡色底
+TODAY_BG = accent_soft("primary")  # "今天"淡色底（12% 主色，与其它选中态同档）
 SELECTED_BG = ft.Colors.PRIMARY  # 选中填色
-BAND_BG = ft.Colors.with_opacity(0.10, ft.Colors.PRIMARY)  # 区间 / 整周连条
+BAND_BG = accent_soft("primary")  # 区间 / 整周连条
 
 #: 星期标签的**中文字形兜底**，索引与 ``datetime.date.weekday()`` 一致：
 #: 0 = 周一 … 6 = 周日。真正的标签来自语言包（``ui.calendar.weekdays``），

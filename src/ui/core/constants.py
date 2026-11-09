@@ -41,12 +41,31 @@ class FormValueType(Enum):
     BOOL = "bool"
 
 
-@dataclass
+@dataclass(frozen=True)
 class FeedbackStyle:
+    """一个 :class:`StyleType` 解析后的整套视觉。
+
+    四个色字段对应 :mod:`ui.core.tokens` 的「强调角色四联」
+    （``accent_fill`` / ``accent_on`` / ``accent_text`` / ``accent_soft``），
+    含义见那里的说明。
+
+    **唯一的构造方是** :func:`ui.feedback._look.feedback_style` ——
+    组件不要自己填这几个字段，否则又回到"每处各配一套色"的老路。
+    曾经这个类是 ``(icon, color, color_light, color_accent)`` 四元组的包装，
+    色值直接来自枚举，而枚举里写的是 ``ft.Colors.GREEN`` / ``YELLOW_600``
+    这类**不随主题变**的静态色板：于是消息条的成功色是 ``#047857``、按钮的
+    成功色是 ``#4CAF50``，深色主题下按钮的浅色描边会亮得像贴了块白纸。
+    """
+
     icon: ft.IconData
-    color: str
-    color_light: str
-    color_accent: str
+    role: str  # "primary" / "success" / …，可回传给 accent_* 系列再取色
+    #: 下面四个是 ``ft.ColorValue`` 而不是 ``str``：``primary`` 这类角色拿到的是
+    #: ``ft.Colors`` 枚举成员，语义角色拿到的是 ``"#RRGGBB"`` 字符串。flet 两者
+    #: 都认，但把类型写窄成 ``str`` 会让人误以为"这里一定是十六进制"。
+    fill: ft.ColorValue  # 实底
+    on: ft.ColorValue  # 实底上的前景
+    text: ft.ColorValue  # 压在表面色上的文字 / 图标
+    soft: ft.ColorValue  # 12% 淡底
 
 
 class ButtonShape(Enum):
@@ -57,24 +76,18 @@ class ButtonShape(Enum):
 
 @unique
 class StyleType(Enum):
-    DEFAULT = (ft.Icons.MESSAGE, ft.Colors.WHITE, ft.Colors.WHITE, ft.Colors.GREY_100)
-    PRIMARY = (
-        ft.Icons.MESSAGE,
-        ft.Colors.BLUE,
-        ft.Colors.BLUE_100,
-        ft.Colors.BLUE_800,
-    )
-    INFO = (
-        ft.Icons.INFO,
-        ft.Colors.LIGHT_BLUE,
-        ft.Colors.LIGHT_BLUE_100,
-        ft.Colors.LIGHT_BLUE_800,
-    )
-    SUCCESS = (ft.Icons.DONE, ft.Colors.GREEN, ft.Colors.GREEN_100, ft.Colors.GREEN_800)
-    WARNING = (
-        ft.Icons.WARNING_ROUNDED,
-        ft.Colors.YELLOW_600,
-        ft.Colors.YELLOW_100,
-        ft.Colors.YELLOW_900,
-    )
-    ERROR = (ft.Icons.CLOSE, ft.Colors.RED, ft.Colors.RED_100, ft.Colors.RED_800)
+    """视觉类型的**名字**。
+
+    只回答"这是哪一类提示"，不携带任何色值或图标 —— 色值由
+    :mod:`ui.core.tokens` 的语义角色决定，图标由 :mod:`ui.feedback._look` 决定。
+    把颜色塞进枚举的代价是**它只能是死色**：枚举在 import 时就固化了，而主题
+    可以在运行时切换（见 :mod:`ui.core.theme` 里那条"字典在 import 时就固化"
+    的教训）。
+    """
+
+    DEFAULT = "default"
+    PRIMARY = "primary"
+    INFO = "info"
+    SUCCESS = "success"
+    WARNING = "warning"
+    ERROR = "error"

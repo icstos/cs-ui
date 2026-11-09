@@ -49,15 +49,16 @@ from typing import Any
 
 import flet as ft
 
+from ui.core.color import ramp
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.empty import empty_line
 from ui.core.format import first_weekday as locale_first_weekday
 from ui.core.format import format_date, format_number, month_name, weekday_names
 from ui.core.i18n import t, use_t
 from ui.core.theme import theme_state, use_theme
-from ui.core.tokens import FONT_SIZE, SPACE, overlay
+from ui.core.tokens import FONT_SIZE, PRIMARY_SEEDS, SPACE, overlay
 
-__all__ = ["COLOR_THEMES", "Heatmap", "HeatmapItem"]
+__all__ = ["COLOR_THEMES", "SCALE_ANCHORS", "Heatmap", "HeatmapItem"]
 
 # ---------------------------------------------------------------------------
 # 视觉常量
@@ -79,30 +80,34 @@ TIP_MIN_W = 72
 TIP_MAX_W = 260
 TIP_ROOM_UP = 40  # 单元格顶边小于这个值就往下弹气泡
 SEVEN = 7
+#: 色阶级数：GitHub 贡献墙那种"四档深色 + 一档空白"的档数。
+#: 三档分不出"很忙"和"爆炸"，五档又会出现两格肉眼分不清。
+SCALE_STEPS = 4
 
-#: 顺序色阶：``light`` / ``dark`` 各一套，由浅到深。
-#: 为什么写死：M3 没有"第 3 级绿"这种角色，只能由主题给出具体值。
+#: 每条色阶的**锚色**：取自已发布的品牌色板，不再另开一份手写十六进制。
+#:
+#: 以前这里躺着 5 个主题 × 2 种模式 × 4 级 = 40 个手填色值，绿那一条最深一级
+#: 是 ``#216E39``，而语义色里的"成功绿"是 ``#047857``、品牌色板里的绿又是
+#: ``#16A34A`` —— 三个绿互不相干，谁也说不清那个才是框架的绿。
+#: 现在只有"锚色"是数据，四级色阶由 :func:`ui.core.color.ramp` 在固定色相上
+#: 走明度推出来，色阶必然同族、必然单调。
+SCALE_ANCHORS: dict[str, str] = {
+    "green": PRIMARY_SEEDS["green"],
+    "blue": PRIMARY_SEEDS["blue"],
+    "orange": PRIMARY_SEEDS["orange"],
+    "purple": PRIMARY_SEEDS["violet"],
+    "red": PRIMARY_SEEDS["red"],
+}
+
+#: 顺序色阶：``light`` / ``dark`` 各一套，由弱到强（索引 0 最弱）。
+#:
+#: 为什么仍然要预先算好两套：M3 的 ``ColorScheme`` 是"语义角色"，推不出
+#: "由浅到深的 4 级绿"；而色值一旦是具体十六进制，就必须自己按模式各备一份。
 COLOR_THEMES: dict[str, dict[str, tuple[str, ...]]] = {
-    "green": {
-        "light": ("#9BE9A8", "#40C463", "#30A14E", "#216E39"),
-        "dark": ("#0E4429", "#006D32", "#26A641", "#39D353"),
-    },
-    "blue": {
-        "light": ("#BAE0FF", "#69B1FF", "#1677FF", "#0958D9"),
-        "dark": ("#102A43", "#0C4A8A", "#1677FF", "#69B1FF"),
-    },
-    "orange": {
-        "light": ("#FFE0B2", "#FFC069", "#FA8C16", "#D46B08"),
-        "dark": ("#3B2308", "#7C4A0B", "#FA8C16", "#FFC069"),
-    },
-    "purple": {
-        "light": ("#E9D8FD", "#C4A0F5", "#8B5CF6", "#6B21A8"),
-        "dark": ("#2A1840", "#4C2A80", "#8B5CF6", "#C4A0F5"),
-    },
-    "red": {
-        "light": ("#FFD8D6", "#FFA39E", "#F5222D", "#A8071A"),
-        "dark": ("#3D0F12", "#7A1218", "#F5222D", "#FFA39E"),
-    },
+    name: {
+        mode: ramp(base, SCALE_STEPS, mode) for mode in ("light", "dark")
+    }
+    for name, base in SCALE_ANCHORS.items()
 }
 
 DEFAULT_THEME = "green"

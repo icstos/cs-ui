@@ -38,7 +38,7 @@ from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE
 from ui.input.button import Button
 
 from ._look import accent as _accent
-from ._look import icon_chip
+from ._look import icon_chip, wash
 
 __all__ = ["AlertDialog", "show_alert_dialog"]
 
@@ -98,7 +98,12 @@ class AlertDialog(ft.AlertDialog):
     # ------------------------------------------------------------------
 
     def build_title(self, title: str) -> None:
-        """标题条：语义色 8% 的底 + 正文色标题，上沿圆角跟着对话框走。"""
+        """标题条：语义色 8% 的底（``wash``）+ 正文色标题，上沿圆角跟着对话框走。
+
+        用 8% 而不是图标底座那档 12%：铺满一整条比铺 26px 的小方块重得多，
+        同一透明度在横带上会从"轻轻提示"变成"整块警报"。见 tokens 的
+        ``SEMANTIC_WASH`` / ``SEMANTIC_TINT``。
+        """
         self.title = ft.Container(
             content=ft.Text(
                 title,
@@ -106,7 +111,7 @@ class AlertDialog(ft.AlertDialog):
                 weight=FONT_WEIGHT["semibold"],
                 color=ft.Colors.ON_SURFACE,
             ),
-            bgcolor=ft.Colors.with_opacity(0.08, _accent(self.style_type)),
+            bgcolor=wash(self.style_type),
             padding=ft.Padding.symmetric(
                 horizontal=SPACE["4"], vertical=SPACE["2"] + 2
             ),

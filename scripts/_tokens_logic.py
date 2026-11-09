@@ -234,6 +234,67 @@ check_true("浅色语义色与深色语义色不同（否则明暗切换白做�
                for r in tokens.SEMANTIC_ROLES))
 
 # ---------------------------------------------------------------------------
+section("强调角色四联：主色与语义色走同一个入口")
+# ---------------------------------------------------------------------------
+check("ACCENT_ROLES = M3 三角色 + 五个语义角色", tokens.ACCENT_ROLES,
+      ("primary", "secondary", "tertiary") + tokens.SEMANTIC_ROLES)
+
+# primary / secondary / tertiary 必须落到 **M3 角色**上，而不是某个色值：
+# 角色由 Flutter 在渲染时从 color_scheme_seed 解析，换主色不用重建控件。
+check("primary 的实底是 M3 角色", tokens.accent_fill("primary"), ft.Colors.PRIMARY)
+check("primary 的实底前景是 M3 角色", tokens.accent_on("primary"), ft.Colors.ON_PRIMARY)
+check("primary 的文字色是 M3 角色", tokens.accent_text("primary"), ft.Colors.PRIMARY)
+check("tertiary 的实底是 M3 角色", tokens.accent_fill("tertiary"), ft.Colors.TERTIARY)
+
+# 语义角色必须落到 SEMANTIC 系列上 —— 这是"按钮的绿 == 提示条的绿"的同源保证。
+for role in tokens.SEMANTIC_ROLES:
+    check(f"{role} 的实底取自 SEMANTIC", tokens.accent_fill(role), tokens.semantic(role))
+    check(f"{role} 的实底前景取自 SEMANTIC_ON",
+          tokens.accent_on(role), tokens.on_semantic(role))
+    check(f"{role} 的文字色取自 SEMANTIC_TEXT",
+          tokens.accent_text(role), tokens.semantic_text(role))
+
+# 淡底两档：小面积 12%，大面积 8%。两档都必须真的"很淡"——
+# 压过 20% 就不再是淡底，而是一块彩色面板。
+check("SEMANTIC_TINT 是 12%", tokens.SEMANTIC_TINT, 0.12)
+check("SEMANTIC_WASH 是 8%", tokens.SEMANTIC_WASH, 0.08)
+check_true("淡底比大面积淡底更浓（面积越大越要淡）",
+           tokens.SEMANTIC_TINT > tokens.SEMANTIC_WASH)
+check("accent_soft 是 12% 覆盖",
+      tokens.accent_soft("success"), ft.Colors.with_opacity(0.12, "#047857"))
+check("accent_wash 是 8% 覆盖",
+      tokens.accent_wash("success"), ft.Colors.with_opacity(0.08, "#047857"))
+
+for role in tokens.SEMANTIC_ROLES:
+    check(f"accent_* 未知角色等同 neutral",
+          (tokens.accent_fill("nope"), tokens.accent_on("nope"), tokens.accent_text("nope")),
+          (tokens.accent_fill("neutral"), tokens.accent_on("neutral"),
+           tokens.accent_text("neutral")))
+
+# 实底必须扛得住它自己的前景：这是"按钮上的字读不读得出来"的硬指标。
+# 走 tokens 而不是 ft.Colors，因为后者的取值只在 Flutter 里。
+def _luminance(hex_color: str) -> float:
+    def lin(c: float) -> float:
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+    r, g, b = (lin(int(hex_color[i : i + 2], 16) / 255) for i in (1, 3, 5))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _contrast(a: str, b: str) -> float:
+    la, lb = _luminance(a), _luminance(b)
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+for role in tokens.SEMANTIC_ROLES:
+    for mode in ("light", "dark"):
+        check_true(f"{mode} 的 {role}：实底上的前景 >= 4.5:1",
+                   _contrast(tokens.accent_fill(role, mode),
+                             tokens.accent_on(role, mode)) >= 4.5,
+                   f"{tokens.accent_fill(role, mode)} / {tokens.accent_on(role, mode)}")
+
+# ---------------------------------------------------------------------------
 section("文字主题：正文 14 必须由令牌说了算，而不是 Flutter 默认值")
 
 from ui.core.theme import text_theme  # noqa: E402

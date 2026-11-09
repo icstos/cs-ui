@@ -23,7 +23,10 @@ import flet as ft
 import flet_charts as ftc
 
 from ui.chart._data import (
-    CHART_COLORS,
+    TOOLTIP_BG,
+    TOOLTIP_PAD,
+    TOOLTIP_RADIUS,
+    chart_palette,
     DataInput,
     Series,
     parse_data,
@@ -34,9 +37,6 @@ from ui.chart._data import (
     y_axis_label_size,
 )
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
-
-# 内置美观配色方案（与其他图表共享同一套配色）
-LINE_COLORS = CHART_COLORS
 
 type SeriesData = list[Series]
 
@@ -270,9 +270,9 @@ class LineChart(ftc.LineChart):
         """构建悬停提示配置。"""
         return (
             ftc.LineChartTooltip(
-                bgcolor=ft.Colors.with_opacity(0.9, ft.Colors.GREY_900),
-                border_radius=8,
-                padding=10,
+                bgcolor=TOOLTIP_BG,
+                border_radius=TOOLTIP_RADIUS,
+                padding=TOOLTIP_PAD,
                 max_width=180,
             )
             if tooltip
@@ -357,7 +357,7 @@ def _points() -> ft.Control:
             (12, 119),
         ],
         height=260,
-        color=CHART_COLORS[4],
+        color=chart_palette()[4],
         curved=True,
         show_points=True,
         stroke_width=2.5,

@@ -758,8 +758,11 @@ def code_panel(source: str, *, filename: str | None = None) -> ft.Control:
                                 if copied
                                 else ft.Icons.CONTENT_COPY,
                                 icon_size=ICON_SIZE["sm"],
+                                # 代码块是一块**恒为深色**的面板（见 _CODE_BG），
+                                # 所以要取"深色模式下的成功色"，不能取当前模式的：
+                                # 浅色主题下的 #047857 压在这块深底上几乎看不见。
                                 icon_color=(
-                                    ft.Colors.GREEN_ACCENT_200
+                                    semantic_text("success", "dark")
                                     if copied
                                     else ft.Colors.with_opacity(0.55, ft.Colors.WHITE)
                                 ),

@@ -42,6 +42,7 @@ from ui.core.tokens import (
     FONT_SIZE,
     FONT_WEIGHT,
     RADIUS,
+    SEMANTIC_TINT,
     SPACE,
     elevation,
     overlay,
@@ -261,7 +262,7 @@ class Message:
             weight=FONT_WEIGHT["semibold"],
         )
         self._badge_box = ft.Container(
-            bgcolor=ft.Colors.with_opacity(0.12, accent),
+            bgcolor=ft.Colors.with_opacity(SEMANTIC_TINT, accent),
             border_radius=RADIUS["full"],
             padding=ft.Padding.symmetric(horizontal=SPACE["1"] + 2, vertical=0),
             content=self._badge,

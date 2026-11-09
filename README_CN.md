@@ -17,6 +17,11 @@
   `TextField`、`Dropdown`、`DatePicker` 默认都是 14，不依赖 Flutter 自带默认值
   （换 flet 版本也不会悄悄漂成 16）。11 / 12 / 16 / 20 / 24 / 28 / 36 是其余档位，
   相邻档至少差 2px
+- **一套配色，五个分层** — 表面 / 前景 / 交互 / 强调 / 数据各用一种表达手段，
+  不跨层借用。按钮、消息条、徽标、日志级别共用同一套强调角色（`accent_*`），
+  "成功"按钮与"成功"提示条是同一个绿，主按钮实底就是 M3 的 `PRIMARY`（换种子
+  跟着走）；图表分类色与热力图色阶由品牌色按 OKLCH 派生（等亮度、色相环等间隔），
+  不再是手挑的八个十六进制
 - **继承原生控件** — 静态组件直接继承 Flet 原生控件（如 `Button(ft.Button)`、`Text(ft.Text)`）
 - **智能默认值** — 组件自带合理的样式默认值（颜色、尺寸、圆角等），加速原型开发
 - **模块分类** — 组件按功能分类：chart / display / feedback / input / layout / navigation
@@ -396,6 +401,38 @@ hairline()                  # 1px 分隔线
 
 **可用语义角色**：`success` / `warning` / `danger` / `info` / `neutral`。
 
+**强调角色四联**（组件该用的入口）：同一个强调色有四种用法，四个取值不可能一样。
+
+| 函数 | 用途 |
+|------|------|
+| `accent_fill(role)` | 实底（主按钮、徽标、进度段）—— 深到扛得住 `on` 上的字 |
+| `accent_on(role)` | 实底上的前景（按钮文字、徽标图标） |
+| `accent_text(role)` | 压在**表面色**上的文字 / 图标（镂空按钮、提示条标题） |
+| `accent_soft(role)` | 12% **小面积**淡底（图标底座、计数徽标） |
+| `accent_wash(role)` | 8% **大面积**淡底（对话框标题带、提示条整行） |
+
+`role` 取 `primary` / `secondary` / `tertiary`（M3 角色，Flutter 运行时解析，
+换主色与切明暗都不重建控件）或 `success` / `warning` / `danger` / `info` / `neutral`
+（框架语义色）。按钮、消息条、通知、对话框、日志级别全部走这一套 —— 于是
+"成功"按钮与"成功"提示条是**同一个绿**，主按钮的实底就是 M3 的 `PRIMARY`
+（换种子时跟着走，不再写死 `Colors.BLUE`）。淡底按**面积**分两档：同一个
+透明度，面积越大看着越重。
+
+**配色分层**：颜色不是一个色板，是五层，每层只有一种表达手段，**不要跨层借用**：
+
+| 层 | 用什么 | 谁解析 |
+|----|--------|--------|
+| 表面 | `SURFACE` / `SURFACE_CONTAINER_LOWEST..HIGHEST` | Flutter |
+| 前景 | `ON_SURFACE` / `ON_SURFACE_VARIANT` / `OUTLINE` / `OUTLINE_VARIANT` | Flutter |
+| 交互 | `state_layer()` / `selected_layer()` / `disabled_layer()` | Flutter |
+| 强调 | `accent_fill/on/text/soft/wash()`（主色 + 五个语义角色） | 混合 |
+| 数据 | `chart_palette()`、热力图色阶（`ui.core.color` 派生） | Python |
+
+数据层的分类色由品牌色**按 OKLCH 派生**：首色与品牌同色相、整张表等亮度
+（避免某条曲线"显得更重要"）、色相环等间隔 45°（相邻可分辨）。换主色时
+图表跟着换，而不是另有一份手挑的八个十六进制。热力图同理：四级色阶只走明度，
+末级正好落在品牌色板的锚色上，所以"最热的那格"和徽标里的绿是同一个绿。
+
 ### 四、一个重要陷阱
 
 在 flet 1.x 里，**读取 observable 对象的字段并不会订阅它**。
@@ -584,8 +621,9 @@ python scripts/check_all.py --stage visual  # 真机截图 + 灰块检测（会�
 | 检查 | 守住什么 |
 |---|---|
 | `ruff --select F821,F811,F841` | 未定义名 / 重复定义 / 无用局部变量（漏导入的令牌名会在这里暴露） |
-| `audit_consistency.py` | 裸色值、字号 / 图标 / 圆角越界、奇数留白、`OUTLINE` 当文字色、暗色失效色 |
-| `_tokens_logic.py` | 令牌契约：门面一致、刻度单调、状态层递进、兜底不抛、同源引用、交互态同值 |
+| `audit_consistency.py` | 裸色值、字号 / 图标 / 圆角越界、奇数留白、`OUTLINE` 当文字色、暗色失效色、Material 静态色名（`Colors.GREEN` / `RED_500`） |
+| `_tokens_logic.py` | 令牌契约：门面一致、刻度单调、状态层递进、兜底不抛、同源引用、交互态同值、强调四联与 `SEMANTIC` 同源 |
+| `_color_logic.py` | 配色引擎：OKLCH 往返无损、分类色等亮度、色相间距、色阶单调、兜底不抛 |
 | `_*_logic.py` | 各组件纯逻辑（状态推导、取值边界、回调） |
 | `_doc_check.py` | 71 个组件的 SPEC / 示例 / API 完整性 |
 | `gen_ui_registry.py --check` | `ui.__all__` 与注册表不漂移 |

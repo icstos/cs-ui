@@ -12,6 +12,7 @@ from __future__ import annotations
 
 #: 名字 → 子模块；``getattr(importlib.import_module(模块), 名字)`` 即为该导出
 COMPONENT_MODULES: dict[str, str] = {
+    "ACCENT_ROLES": "ui.core",
     "AlertDialog": "ui.feedback",
     "AppBar": "ui.navigation",
     "AreaChart": "ui.chart",
@@ -87,6 +88,7 @@ COMPONENT_MODULES: dict[str, str] = {
     "Loading": "ui.feedback",
     "LocaleStore": "ui.core",
     "LogContainer": "ui.display",
+    "M3_ACCENT": "ui.core",
     "MODES": "ui.core",
     "Markdown": "ui.display",
     "MemoryStore": "ui.core",
@@ -120,6 +122,8 @@ COMPONENT_MODULES: dict[str, str] = {
     "SEMANTIC_ON": "ui.core",
     "SEMANTIC_ROLES": "ui.core",
     "SEMANTIC_TEXT": "ui.core",
+    "SEMANTIC_TINT": "ui.core",
+    "SEMANTIC_WASH": "ui.core",
     "SPACE": "ui.core",
     "SPACE_STEPS": "ui.core",
     "STATE": "ui.core",
@@ -158,6 +162,11 @@ COMPONENT_MODULES: dict[str, str] = {
     "Video": "ui.display",
     "VideoMedia": "ui.display",
     "View": "ui.layout",
+    "accent_fill": "ui.core",
+    "accent_on": "ui.core",
+    "accent_soft": "ui.core",
+    "accent_text": "ui.core",
+    "accent_wash": "ui.core",
     "apply_theme": "ui.core",
     "available_languages": "ui.core",
     "build_playlist": "ui.display",

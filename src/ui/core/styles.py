@@ -108,7 +108,7 @@ def outline_input(
 
     直接赋给输入类控件的 ``border``::
 
-        ft.TextField(border=outline_input(color=ft.Colors.GREY_300))
+        ft.TextField(border=outline_input(color=ft.Colors.OUTLINE_VARIANT))
 
     Args:
         radius: 圆角半径，默认 :data:`INPUT_RADIUS`。

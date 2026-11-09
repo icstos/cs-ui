@@ -20,22 +20,24 @@ from dataclasses import field
 
 import flet as ft
 
-from ui.core.constants import ButtonShape, FeedbackStyle, StyleType
+from ui.core.constants import ButtonShape, StyleType
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.tokens import (
     CONTROL_HEIGHT,
     FONT_SIZE,
     ICON_SIZE,
     RADIUS,
+    STATE,
     disabled_layer,
     state_layer,
 )
+from ui.feedback._look import feedback_style
 
 __all__ = ["Button"]
 
 BORDER_RADIUS = RADIUS["md"]  # 6，与输入框一致
 BUTTON_HEIGHT = CONTROL_HEIGHT["md"]  # 与输入框同高，一行表单里不会参差
-#: 按钮内图标：与 subtitle 文字（14）同级，比正文略大但不把字挤扁。
+#: 按钮内图标：比正文（14）大一档，与字排在一起时不会显得"缩"。
 #: 不要再在模块里另开一个 ``ICON_SIZE`` —— 那会盖掉令牌名，让"图标该多大"
 #: 又变成各处自说自话。
 BTN_ICON_SIZE = ICON_SIZE["lg"]
@@ -89,10 +91,14 @@ class Button(ft.Button):
     def init(self):
         if self.is_primary:
             self.style_type = StyleType.PRIMARY
-        self._style = FeedbackStyle(*self.style_type.value)
+        # 四色一次解析好：实底 / 实底前景 / 表面上的文字 / 淡底。
+        # 唯一来源是 ui.feedback._look —— 与 Message / Notification / AlertDialog
+        # 共用同一套语义色，于是"成功"按钮和"成功"提示条是同一个绿。
+        self._style = feedback_style(self.style_type)
         self.style = self.style or ft.ButtonStyle(
             padding=ft.Padding.all(10), alignment=ft.Alignment.CENTER
         )
+        accent = self._style.text
         if self.style_type == StyleType.DEFAULT:
             # 文字按钮：无填充、无描边，只在悬停时浮一层面色（M3 悬停档 8%）。
             # 以前给白色底 + 白色边：浅色页面上像纯文字，深色页面上是一块白砖。
@@ -105,29 +111,24 @@ class Button(ft.Button):
                 ft.ControlState.DEFAULT: state_layer("hover")
             }
         elif self.plain:
-            # 镂空：浅底而非纯白 —— 深色主题下纯白按钮会亮得像一个错误。
+            # 镂空：表面底 + 强调色描边与文字（而不是纯白底）——
+            # 深色主题下纯白按钮会亮得像一个错误。
             self.style.bgcolor = self.style.bgcolor or {
                 ft.ControlState.DEFAULT: ft.Colors.SURFACE
             }
-            # 水波用主色 8%：白底上的白色水波等于没有反馈
+            # 水波用强调色 8%：白底上的白色水波等于没有反馈
             self.style.overlay_color = self.style.overlay_color or {
-                ft.ControlState.DEFAULT: state_layer("hover", role=self._style.color)
+                ft.ControlState.DEFAULT: state_layer("hover", role=accent)
             }
-            self.style.shadow_color = self.style.shadow_color or {
-                ft.ControlState.DEFAULT: ft.Colors.WHITE
-            }
+            # 悬停只加一层极淡的底色，**不动描边**：以前悬停会把描边换成
+            # 更浅的一档（GREEN_100 之类的淡彩），线在鼠标下变虚，像"禁用"。
             self.style.side = self.style.side or {
-                ft.ControlState.DEFAULT: ft.BorderSide(1, self._style.color),
-                # 悬停只加深描边，别把边框整个拿掉 —— 线消失比变色更突兀
-                ft.ControlState.HOVERED: ft.BorderSide(1, self._style.color_accent),
+                ft.ControlState.DEFAULT: ft.BorderSide(1, accent),
                 ft.ControlState.DISABLED: ft.BorderSide(1, DISABLED_SIDE),
-                ft.ControlState.PRESSED: ft.BorderSide(1, self._style.color_accent),
             }
             self.style.color = self.style.color or {
-                ft.ControlState.DEFAULT: self._style.color,
-                ft.ControlState.HOVERED: self._style.color_accent,
+                ft.ControlState.DEFAULT: accent,
                 ft.ControlState.DISABLED: DISABLED_FG,
-                ft.ControlState.PRESSED: self._style.color,
             }
             self.style.elevation = self.style.elevation or {
                 ft.ControlState.DEFAULT: 0,
@@ -135,43 +136,38 @@ class Button(ft.Button):
                 ft.ControlState.HOVERED: 0,
             }
         else:
+            # 实心：实底 + 反白（或深墨）字。
+            #
+            # 悬停**不换底色**，而是压一层前景色：M3 对实心控件的做法就是
+            # "底色不动，叠 8% 的前景色"。以前是换成深一档的同色系
+            # （BLUE -> BLUE_800），两档之间的跳变在深色主题下看不出来，
+            # 反倒把"按下"和"悬停"画成了同一个颜色。
             self.style.color = self.style.color or {
-                ft.ControlState.DEFAULT: ft.Colors.WHITE,
+                ft.ControlState.DEFAULT: self._style.on,
                 ft.ControlState.DISABLED: DISABLED_FG,
             }
             self.style.bgcolor = _merge_states(
                 self.style.bgcolor,
                 {
-                    ft.ControlState.DEFAULT: self._style.color,
-                    ft.ControlState.HOVERED: self._style.color_accent,
+                    ft.ControlState.DEFAULT: self._style.fill,
                     ft.ControlState.DISABLED: DISABLED_BG,
-                    ft.ControlState.PRESSED: self._style.color_accent,
                 },
             )
             self.style.overlay_color = self.style.overlay_color or {
-                ft.ControlState.DEFAULT: self._style.color,
-                ft.ControlState.HOVERED: self._style.color_accent,
-                ft.ControlState.DISABLED: DISABLED_BG,
-                ft.ControlState.PRESSED: self._style.color_accent,
+                ft.ControlState.DEFAULT: ft.Colors.with_opacity(
+                    STATE["hover"], self._style.on
+                ),
+                ft.ControlState.PRESSED: ft.Colors.with_opacity(
+                    STATE["pressed"], self._style.on
+                ),
             }
-
-            self.style.shadow_color = self.style.shadow_color or {
-                ft.ControlState.DEFAULT: self._style.color,
-                ft.ControlState.HOVERED: self._style.color_accent,
-                ft.ControlState.DISABLED: DISABLED_BG,
-                ft.ControlState.PRESSED: self._style.color_accent,
-            }
-
             self.style.elevation = self.style.elevation or {
                 ft.ControlState.DEFAULT: 0,
                 ft.ControlState.PRESSED: 0,
                 ft.ControlState.HOVERED: 0,
             }
             self.style.side = self.style.side or {
-                ft.ControlState.DEFAULT: ft.BorderSide(1, self._style.color),
-                ft.ControlState.HOVERED: ft.BorderSide(1, self._style.color_light),
                 ft.ControlState.DISABLED: ft.BorderSide(1, DISABLED_SIDE),
-                ft.ControlState.PRESSED: ft.BorderSide(1, self._style.color_accent),
             }
 
         if self.style is not None and self.style.shape is None:
@@ -347,7 +343,9 @@ SPEC = Spec(
         (
             "状态",
             (
-                "悬停与按下都往深一档走：反白字压在浅色底上会直接读不出来。"
+                "实心按钮悬停时**底色不动**，盖一层 8% 的前景色，按下 12% —— "
+                "这是 M3 对实心控件的做法，也是唯一能同时保证「有反馈」与「字始终"
+                "读得出来」的做法（换一档底色就会在某一档上把反差压到 3:1 以下）。"
                 "禁用态用 on-surface 的 12% / 38% 两档透明度。"
             ),
         ),

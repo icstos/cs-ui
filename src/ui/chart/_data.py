@@ -19,17 +19,49 @@ import math
 from collections.abc import Sequence
 from typing import cast
 
-# 内置美观配色方案，供所有图表按序取用
-CHART_COLORS = [
-    "#1f6feb",  # 蓝色
-    "#10b981",  # 绿色
-    "#f59e0b",  # 橙色
-    "#ef4444",  # 红色
-    "#8b5cf6",  # 紫色
-    "#ec4899",  # 粉色
-    "#06b6d4",  # 青色
-    "#f97316",  # 深橙
-]
+import flet as ft
+
+from ui.core.color import categorical
+from ui.core.theme import current_mode, theme_state
+from ui.core.tokens import RADIUS, SPACE
+
+#: 默认最多几条系列色。超过 8 条时色相环每段只有 40° 不到，两条曲线并排就
+#: 分不出来了 —— 那时该换图表类型（分面 / 小倍数），而不是继续加颜色。
+SERIES_MAX = 8
+
+
+#: 悬停气泡的底色：**固定深色，不跟主题**。
+#:
+#: 与代码块同理，属于"刻意的主题无关色"：``flet_charts`` 的气泡不给改文字
+#: 颜色（白色写死在库里的），底色一旦跟着深色主题变浅，白字就压在浅底上了。
+#: 四个图表以前各写一遍 ``with_opacity(0.9, GREY_900)`` —— 值一样但分散在四处，
+#: 改一次要改四次，所以收到这里。
+TOOLTIP_BG = ft.Colors.with_opacity(0.9, ft.Colors.GREY_900)
+TOOLTIP_RADIUS = RADIUS["lg"]
+TOOLTIP_PAD = SPACE["2"] + 2
+
+
+def chart_palette(count: int = SERIES_MAX, mode: str | None = None) -> list[str]:
+    """当前品牌主色派生的分类色，第 0 条就是主色本身。
+
+    **不要把它存成模块级常量**：``CHART_COLORS = [...]`` 那种写法在 import 时
+    就固化了，用户换主色、切明暗之后图表还是老配色（框架里踩过一次同样的坑，
+    见 :mod:`ui.core.theme` 里关于字典在 import 时固化的注释）。渲染时现取。
+
+    色相的推导规则、以及"为什么八条曲线亮度必须一样"见
+    :func:`ui.core.color.categorical`。
+
+    Args:
+        count: 需要几条，默认 :data:`SERIES_MAX`。
+        mode: ``"light"`` / ``"dark"``；``None`` 表示跟随当前主题。
+    """
+    return list(
+        categorical(
+            theme_state().primary,
+            max(int(count), 1),
+            mode or current_mode(),
+        )
+    )
 
 type Number = int | float
 type DataRow = dict[str, Number] | tuple | list
@@ -217,16 +249,27 @@ def _parse_value_list_data(data: Sequence[Number]) -> tuple[list[Series], list[s
 
 
 def resolve_colors(color: str | list[str] | None, count: int) -> list[str]:
-    """解析并分配颜色，长度始终不小于 ``count``。"""
+    """解析并分配颜色，长度始终不小于 ``count``。
+
+    调用方只给了一部分颜色时，**补的是它没用过的那几条**，而不是按位置硬接：
+    以前从调色板末尾往前取，于是"传了两个自定义色 + 需要四个"会拿到末尾两条，
+    与自定义色撞色。现在按"跳过已用"补齐，撞不上。
+    """
     match color:
         case str():
             return [color] * count
         case list():
-            if len(color) >= count:
-                return list(color[:count])
-            return list(color) + CHART_COLORS[count - len(color) :]
+            used = list(color[:count])
+            if len(used) >= count:
+                return used
+            palette = chart_palette(max(count, SERIES_MAX))
+            spare = [c for c in palette if c not in used]
+            out = used + spare
+            while len(out) < count:  # 自定义色比调色板还多时只能循环
+                out.append(palette[len(out) % len(palette)])
+            return out[:count]
         case _:
-            return list(CHART_COLORS[:count])
+            return chart_palette(count)
 
 
 def data_bounds(

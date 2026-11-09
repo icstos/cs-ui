@@ -292,6 +292,29 @@ check("invalidate 清掉指纹", hm._stamp, None)
 hm._prepare()
 check("重建后指纹回到同一个值", hm._stamp, kept)
 
+# ---------------------------------------------------------------------------
+print("-- 色阶：由配色引擎派生，不再是一张手写色表 --")
+# ---------------------------------------------------------------------------
+from ui.core.color import luminance  # noqa: E402
+from ui.core.tokens import PRIMARY_SEEDS  # noqa: E402
+from ui.display.heatmap import SCALE_ANCHORS, SCALE_STEPS  # noqa: E402
+
+check("色阶级数是 4", SCALE_STEPS, 4)
+check("主题数与锚色数一致", sorted(COLOR_THEMES), sorted(SCALE_ANCHORS))
+check("锚色全部来自品牌色板",
+      all(v in PRIMARY_SEEDS.values() for v in SCALE_ANCHORS.values()), True)
+for name, scale in SCALE_ANCHORS.items():
+    modes = COLOR_THEMES[name]
+    check(f"{name} 明暗两套齐全", sorted(modes), ["dark", "light"])
+    for mode in ("light", "dark"):
+        values = modes[mode]
+        check(f"{name}/{mode} 四级", len(values), 4)
+        check(f"{name}/{mode} 末级即锚色", values[-1], scale)
+        lums = [luminance(c) for c in values]
+        strictly = all(a < b for a, b in pairwise(lums)) if mode == "dark" \
+            else all(a > b for a, b in pairwise(lums))
+        check(f"{name}/{mode} 明度单调（量级不会被读反）", strictly, True)
+
 print()
 print(f"{_passes} passed, {_fails} failed")
 print("RESULT:", "ALL PASS" if _fails == 0 else "FAILED")

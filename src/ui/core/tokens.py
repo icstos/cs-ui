@@ -19,16 +19,44 @@
   ``warning`` / ``info`` / ``neutral`` 这几个语义角色，而桌面端的状态提示离不开它们。
   它们由本模块按当前模式给出一对具体色值（见 :func:`semantic`）。
 
+配色分层
+--------
+
+颜色不是一个"色板"，是五层，每层只有一种表达手段 —— **不要跨层借用**，
+跨层就是"同一种绿在五个地方长得不一样"的来源：
+
+=========  ===============================================  ==============
+层        角色                                              谁来解析
+=========  ===============================================  ==============
+表面      ``SURFACE`` / ``SURFACE_CONTAINER_LOWEST..HIGHEST``  Flutter
+前景      ``ON_SURFACE`` / ``ON_SURFACE_VARIANT`` /           Flutter
+          ``OUTLINE`` / ``OUTLINE_VARIANT``
+交互      ``state_layer()`` / ``selected_layer()`` /           Flutter
+          ``disabled_layer()``（角色 + 透明度）
+强调      ``accent_fill/on/text/soft()``（主色 + 五个语义角色） 混合
+数据      图表分类色 / 热力图色阶（:mod:`ui.core.color` 派生）    Python
+=========  ===============================================  ==============
+
+第 1、2、3 层直接用 M3 角色：**换主色、切明暗都不需要重建控件**，Flutter 在
+渲染时解析。第 4 层里 ``primary`` 也走角色；``success`` / ``warning`` / ``info``
+这三个 M3 没有的角色只能在 Python 侧按当前模式拍定色值（见 :data:`SEMANTIC`），
+所以组件必须"渲染时现取"，不要把结果存进模块级常量。第 5 层同理，见
+:func:`ui.core.color.categorical` / :func:`~ui.core.color.ramp`。
+
+固定的、与主题无关的只有两类地方，各有各的理由，都写了注释：
+媒体上压字（图片上的白字、遮罩）与代码块的深底 —— 它们压在**图片或代码**上，
+不压在表面色上，跟着主题变反而会糊掉。
+
 用法::
 
-    from ui.core.tokens import SPACE, RADIUS, overlay, semantic
+    from ui.core.tokens import SPACE, RADIUS, accent_fill, accent_soft, overlay
 
     ft.Container(
         bgcolor=ft.Colors.SURFACE_CONTAINER,
         border_radius=RADIUS["lg"],
         padding=SPACE["3"],
     )
-    ft.Text("已保存", color=semantic("success"))
+    ft.Text("已保存", color=accent_text("success"))
 """
 
 from __future__ import annotations
@@ -36,6 +64,7 @@ from __future__ import annotations
 import flet as ft
 
 __all__ = [
+    "ACCENT_ROLES",
     "CONTROL_HEIGHT",
     "DISABLED_OPACITY",
     "DURATION",
@@ -46,6 +75,7 @@ __all__ = [
     "GAP_LOOSE",
     "GAP_TIGHT",
     "ICON_SIZE",
+    "M3_ACCENT",
     "PAD",
     "PAD_LOOSE",
     "PRIMARY_SEEDS",
@@ -55,9 +85,16 @@ __all__ = [
     "SEMANTIC_ON",
     "SEMANTIC_ROLES",
     "SEMANTIC_TEXT",
+    "SEMANTIC_TINT",
+    "SEMANTIC_WASH",
     "SPACE",
     "SPACE_STEPS",
     "STATE",
+    "accent_fill",
+    "accent_on",
+    "accent_soft",
+    "accent_text",
+    "accent_wash",
     "disabled_layer",
     "elevation",
     "focus_border",
@@ -285,6 +322,32 @@ SEMANTIC_TEXT: dict[str, dict[str, str]] = {
 
 SEMANTIC_ROLES: tuple[str, ...] = tuple(SEMANTIC)
 
+#: 铺在语义色**实底**上的那一层淡色的透明度（图标底座、徽标、选中胶囊）。
+#:
+#: 以前这个数字散在九个组件里各写一遍（0.10 / 0.12 / 0.15 / 0.18 都有），
+#: 于是"轻轻染一点色"在不同控件上是深浅不同的四种红。取 12% 与 M3 的
+#: "selected state layer" 同值 —— 这是唯一一个 flet 内置控件也在用的档位。
+SEMANTIC_TINT: float = 0.12
+
+#: 大面积淡底（对话框标题带、提示条整行）的透明度。
+#:
+#: 为什么比 :data:`SEMANTIC_TINT` 低一档：同一个透明度，面积越大看着越重。
+#: 12% 放在 22×22 的图标底座上正好，铺满一整条标题栏就成了一块彩色横带，
+#: 把"提示"喊成了"警报"。所以按**面积**分两档，不是按重要性。
+SEMANTIC_WASH: float = 0.08
+
+#: M3 自带的强调角色 → (实底, 实底上的前景)。这三个角色由
+#: ``color_scheme_seed`` 推导，**在 Flutter 侧运行时解析**，所以换主色 /
+#: 切明暗时不需要重建任何控件。
+M3_ACCENT: dict[str, tuple[ft.Colors, ft.Colors]] = {
+    "primary": (ft.Colors.PRIMARY, ft.Colors.ON_PRIMARY),
+    "secondary": (ft.Colors.SECONDARY, ft.Colors.ON_SECONDARY),
+    "tertiary": (ft.Colors.TERTIARY, ft.Colors.ON_TERTIARY),
+}
+
+#: 全部可用的强调角色：M3 的三个 + 框架补的五个语义角色。
+ACCENT_ROLES: tuple[str, ...] = (*M3_ACCENT, *SEMANTIC_ROLES)
+
 # ---------------------------------------------------------------------------
 # 预设品牌色种子：喂给 ``ft.Theme(color_scheme_seed=...)``，
 # Flutter 会由此推导出整套 M3 色板（primary / secondary / surface / outline …）。
@@ -359,6 +422,73 @@ def on_semantic(role: str, mode: str | None = None) -> str:
 def semantic_text(role: str, mode: str | None = None) -> str:
     """取语义色作为**页面文字 / 图标 / 细边框**时的取值（不做背景）。"""
     return SEMANTIC_TEXT.get(role, SEMANTIC_TEXT["neutral"])[_opt_mode(mode)]
+
+
+# ---------------------------------------------------------------------------
+# 强调角色四联（实底 / 前景 / 文字 / 淡底）
+#
+# 一个"强调色"在界面上有四种用法，四个取值**不可能一样**：
+#
+#   fill  实底（主按钮、徽标、进度段）—— 要深到扛得住 on 上的字
+#   on    fill 上的前景（按钮文字、徽标图标）
+#   text  压在**表面色**上的文字 / 图标（镂空按钮的字、提示条标题）
+#   soft  12% 淡底（图标底座、选中胶囊、提示条底）
+#
+# 以前每个组件自己拼这四样，于是同一个"成功"在消息条里是 ``#047857``、
+# 在按钮里是 ``ft.Colors.GREEN``、淡底是一处 0.10 一处 0.12。下面四个函数
+# 是唯一入口：组件只说"我要 success 的实底"，不再关心它是角色还是色值。
+#
+# 为什么 primary / secondary / tertiary 走 M3 角色：它们是**运行时**解析的，
+# 换主色和切明暗都不用重建控件；而 success / warning 这类 M3 没有的角色只能
+# 在 Python 侧按当前模式拍定一个色值。
+# ---------------------------------------------------------------------------
+def accent_fill(role: str = "primary", mode: str | None = None) -> ft.ColorValue:
+    """强调色的**实底**颜色。
+
+    传 ``primary`` / ``secondary`` / ``tertiary`` 得到 M3 角色（运行时解析，
+    永远跟着 ``color_scheme_seed`` 走）；传 ``success`` 这类语义角色得到
+    明暗各一套的具体色值。
+    """
+    if role in M3_ACCENT:
+        return M3_ACCENT[role][0]
+    return semantic(role, mode)
+
+
+def accent_on(role: str = "primary", mode: str | None = None) -> ft.ColorValue:
+    """强调色**实底上**的前景（文字与图标）。"""
+    if role in M3_ACCENT:
+        return M3_ACCENT[role][1]
+    return on_semantic(role, mode)
+
+
+def accent_text(role: str = "primary", mode: str | None = None) -> ft.ColorValue:
+    """强调色压在**表面色**上时（镂空按钮的字、提示条标题）的取值。
+
+    与 :func:`accent_fill` 刻意不同：实底要够深扛白字，压在白底上的字要够深
+    扛白底 —— 两者在浅色主题下恰好同档，在深色主题下必须分开（实底变亮、
+    文字也得变亮，但亮的幅度不一样）。
+    """
+    if role in M3_ACCENT:
+        return M3_ACCENT[role][0]
+    return semantic_text(role, mode)
+
+
+def accent_soft(role: str = "primary", mode: str | None = None) -> str:
+    """强调色的**小面积**淡底（12%，见 :data:`SEMANTIC_TINT`）。
+
+    图标底座、状态胶囊、计数徽标这类 20~30px 的小块用它。
+    铺满一整行的底请改 :func:`accent_wash`。
+    """
+    return ft.Colors.with_opacity(SEMANTIC_TINT, accent_text(role, mode))
+
+
+def accent_wash(role: str = "primary", mode: str | None = None) -> str:
+    """强调色的**大面积**淡底（8%，见 :data:`SEMANTIC_WASH`）。
+
+    对话框标题带、提示条整行这类铺满宽度的地方用它 —— 同一透明度下面积越大
+    看着越重，所以大块要比小块淡一档。
+    """
+    return ft.Colors.with_opacity(SEMANTIC_WASH, accent_text(role, mode))
 
 
 def overlay(alpha: float, *, role: str = ft.Colors.ON_SURFACE) -> str:

@@ -15,6 +15,11 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
 - **Design tokens + Material 3 theming** — no raw color / radius / font-size literals inside
   components. A single brand seed (`color_scheme_seed`) derives the whole M3 color scheme, so
   light/dark and brand-color switching are **framework-level** operations, not per-widget recoloring
+- **One palette, five layers** — surface / foreground / interaction / accent / data, each with a
+  single means of expression. Buttons, messages, badges and log levels share one accent vocabulary
+  (`accent_*`): a success button and a success toast are the same green, and a primary button's fill
+  is M3's `PRIMARY`, following the seed. Chart series and heat-map scales are derived from the brand
+  seed in OKLCH (equal lightness, evenly spaced hues) instead of eight hand-picked hex values
 - **Inheritance-based** — static components subclass Flet native controls (e.g., `Button(ft.Button)`, `Text(ft.Text)`)
 - **Smart defaults** — components come with sensible styling defaults (colors, sizes, border-radius, etc.) for rapid prototyping
 - **Categorized modules** — components organized by function: chart, display, feedback, input, layout, navigation
@@ -401,6 +406,43 @@ only **2.15:1** — white text on them is equally unreadable at 2.54 / 2.15. Eac
 
 **Available roles**: `success` / `warning` / `danger` / `info` / `neutral`.
 
+**The accent quartet** is the entry point components should use. One accent has four
+uses, and the four values cannot be the same:
+
+| Function | Use |
+|----------|-----|
+| `accent_fill(role)` | solid fill (primary button, badge, progress segment) — deep enough to carry `on` |
+| `accent_on(role)` | foreground on that fill (button label, badge icon) |
+| `accent_text(role)` | text / icons sitting on a **surface** (outlined button, banner title) |
+| `accent_soft(role)` | 12% tint for **small** areas (icon chips, count badges) |
+| `accent_wash(role)` | 8% tint for **large** areas (dialog title band, full-width banner) |
+
+`role` is `primary` / `secondary` / `tertiary` (M3 roles, resolved by Flutter at paint
+time, so brand/theme switches cost no rebuild) or `success` / `warning` / `danger` /
+`info` / `neutral` (framework semantic roles). Buttons, messages, notifications,
+dialogs and log levels all go through this one vocabulary — a success button and a
+success toast are literally the same green, and a primary button's fill is M3's
+`PRIMARY` (it follows the seed instead of hard-coding `Colors.BLUE`). The tint comes in
+two levels by **area**: at equal opacity, a larger patch reads heavier.
+
+**Color is layered, not a palette.** Five layers, one means of expression each — do not
+borrow across layers:
+
+| Layer | What to use | Resolved by |
+|-------|-------------|-------------|
+| Surface | `SURFACE` / `SURFACE_CONTAINER_LOWEST..HIGHEST` | Flutter |
+| Foreground | `ON_SURFACE` / `ON_SURFACE_VARIANT` / `OUTLINE` / `OUTLINE_VARIANT` | Flutter |
+| Interaction | `state_layer()` / `selected_layer()` / `disabled_layer()` | Flutter |
+| Accent | `accent_fill/on/text/soft/wash()` (primary + five semantic roles) | mixed |
+| Data | `chart_palette()`, heat-map scales (derived by `ui.core.color`) | Python |
+
+Categorical chart colors are derived from the brand seed in **OKLCH**: series 1 shares the
+brand hue, the whole table has equal lightness (so no series looks more important), and
+hues are 45° apart (adjacent lines stay distinguishable). Change the seed and the charts
+change with it — there is no second, hand-picked set of eight hex values. Heat maps work
+the same way: four levels move only in lightness and the top level lands exactly on the
+brand palette's anchor, so the hottest cell is the same green as a success badge.
+
 ### One important trap
 
 In flet 1.x, **reading a field of an observable does not subscribe to it**. Subscription only
@@ -468,8 +510,9 @@ python scripts/check_all.py --stage visual  # real-window screenshots + grey-blo
 | Check | What it protects |
 |---|---|
 | `ruff --select F821,F811,F841` | undefined names / redefinitions / unused locals (a missing token import surfaces here) |
-| `audit_consistency.py` | raw colors, off-scale font / icon / radius, odd spacing, `OUTLINE` as text color, dark-hostile fills |
-| `_tokens_logic.py` | token contract: facade parity, monotonic scales, state-layer progression, safe fallbacks, single-source constants, interaction values |
+| `audit_consistency.py` | raw colors, off-scale font / icon / radius, odd spacing, `OUTLINE` as text color, dark-hostile fills, Material's static palette names (`Colors.GREEN`, `RED_500`) |
+| `_tokens_logic.py` | token contract: facade parity, monotonic scales, state-layer progression, safe fallbacks, single-source constants, interaction values, the accent quartet staying in sync with `SEMANTIC` |
+| `_color_logic.py` | color engine: OKLCH round-trip, equal-lightness series, hue spacing, monotonic scales, safe fallbacks |
 | `_*_logic.py` | per-component logic (state derivation, clamping, callbacks) |
 | `_doc_check.py` | SPEC / examples / API completeness for all 71 components |
 | `gen_ui_registry.py --check` | `ui.__all__` vs registry drift |

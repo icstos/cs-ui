@@ -47,7 +47,7 @@ from typing import Any
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip
-from ui.core.tokens import FONT_SIZE
+from ui.core.tokens import FONT_SIZE, accent_soft
 
 __all__ = ["Step", "StepItem"]
 
@@ -201,7 +201,7 @@ class Step(ft.Container):
             return ft.Container(
                 **common,
                 border=ft.Border.all(LINE, ft.Colors.PRIMARY),
-                bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.PRIMARY),
+                bgcolor=accent_soft("primary"),
                 alignment=ft.Alignment.CENTER,
                 content=_glyph(icon, size, index, ft.Colors.PRIMARY),
             )

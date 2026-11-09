@@ -7,7 +7,7 @@ import flet as ft
 
 from ui.core.config import logger
 from ui.core.i18n import t, use_t
-from ui.core.theme import text_theme
+from ui.core.theme import build_theme, theme_state
 from ui.core.tokens import FONT_SIZE, RADIUS
 
 FONT_DIR = Path(Path(__file__).parent, "data/fonts").resolve()
@@ -65,7 +65,7 @@ def NotFoundView():
                     height=40,
                     on_click=lambda _: ft.context.page.navigate("/"),
                     style=ft.ButtonStyle(
-                        bgcolor=ft.Colors.RED_900, color=ft.Colors.WHITE
+                        bgcolor=ft.Colors.PRIMARY, color=ft.Colors.ON_PRIMARY
                     ),
                 ),
             ],
@@ -80,7 +80,6 @@ def NotFoundView():
 
 def set_app():
     page = ft.context.page
-    # page.bgcolor = ft.Colors.GREY_400
 
     # page.scroll = ft.ScrollMode.AUTO
     # page.spacing = 0
@@ -134,43 +133,22 @@ class App:
     @ft.component
     def _app(self):
         # page.vertical_alignment = ft.MainAxisAlignment.CENTER
-        # page.bgcolor = ft.Colors.GREY_400
         # page = ft.context.page
         page = ft.context.page
         page.title = self.name
         page.fonts = FONTS
-        page.theme_mode = ft.ThemeMode.LIGHT
-        page.theme = ft.Theme(
-            color_scheme_seed=ft.Colors.BLUE,  # 基于该颜色推导主题其他颜色
-            # color_scheme=ft.ColorScheme(  # 从color_scheme_seed派生的material颜色方案
-            # ),
-            # 与框架共用同一套文字刻度：正文 14，各档位来自 FONT_SIZE。
-            # primary_text_theme 不跟着改：那套文字压在 primary 实底上，前景该是
-            # ON_PRIMARY，交给 Flutter 由 ColorScheme 推导才对。
-            text_theme=text_theme(),
-            scrollbar_theme=ft.ScrollbarTheme(
-                thickness=4,
-                radius=10,
-                main_axis_margin=5,
-                cross_axis_margin=-10,
-                track_visibility=False,
-                thumb_visibility=False,
-                track_color={ft.ControlState.DEFAULT: ft.Colors.TRANSPARENT},
-                thumb_color={
-                    ft.ControlState.HOVERED: ft.Colors.TRANSPARENT,
-                    ft.ControlState.DEFAULT: ft.Colors.TRANSPARENT,
-                },
-            ),
-            # tabs_theme=ft.TabsTheme(),
-            font_family="AlibabaPuHuiTi",
-            use_material3=True,  # use material 2: this setting is mainly for the app-bar's elevation
-            page_transitions=ft.PageTransitionsTheme(  # Removing animation on route change.
-                android=ft.PageTransitionTheme.NONE,
-                ios=ft.PageTransitionTheme.NONE,
-                macos=ft.PageTransitionTheme.NONE,
-                windows=ft.PageTransitionTheme.NONE,
-                linux=ft.PageTransitionTheme.NONE,
-            ),
+        # 主题**不再在这里手搓一份**。手搓的那份少了 surfaces / 输入框 / 弹出菜单
+        # 的主题，于是同一个应用里"框架按钮"和"flet 按钮"、"框架下拉"和
+        # "flet 下拉"各是一套配色 —— 正是"组件与框架不和谐"的来源。
+        # 全部交给 ui.core.theme.build_theme：那里是主题的唯一事实源。
+        st = theme_state()
+        if not st.font_family:
+            st.font_family = "AlibabaPuHuiTi"
+        page.theme = build_theme(st)
+        page.theme_mode = (
+            ft.ThemeMode.SYSTEM
+            if st.mode == "system"
+            else (ft.ThemeMode.DARK if st.mode == "dark" else ft.ThemeMode.LIGHT)
         )
         if self.with_auto_routing:
             self.auto_routing()

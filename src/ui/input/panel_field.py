@@ -39,6 +39,7 @@ from ui.core.tokens import (
     FONT_SIZE,
     RADIUS,
     disabled_layer,
+    elevation,
     state_layer,
 )
 
@@ -139,11 +140,9 @@ def panel_shell(
         border_radius=ft.BorderRadius.all(FIELD_RADIUS),
         padding=ft.Padding.symmetric(vertical=pad, horizontal=pad),
         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
-        shadow=ft.BoxShadow(
-            blur_radius=12,
-            color=ft.Colors.with_opacity(0.10, ft.Colors.BLACK),
-            offset=ft.Offset(0, 3),
-        ),
+        # 浮层阴影走 elevation()：颜色取自 SHADOW 角色而不是纯黑 10%，
+        # 深色主题下才不会像糊了一块脏东西。
+        shadow=elevation(3),
         content=body,
     )
 

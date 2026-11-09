@@ -60,8 +60,9 @@ from ui.core.tokens import (
     FONT_SIZE,
     FONT_WEIGHT,
     RADIUS,
+    SEMANTIC_TINT,
     SPACE,
-    semantic_text,
+    accent_text,
 )
 
 __all__ = ["DENSITIES", "VARIANTS", "Expander"]
@@ -226,14 +227,14 @@ class Expander(ft.Container):
     # 标题行
     # ------------------------------------------------------------------
     def _accent_color(self) -> ft.ColorValue:
-        """强调色。``primary`` 走主题角色（换主色自动跟随），
-        其余语义色走 :func:`ui.core.tokens.semantic_text`。"""
+        """强调色。走 :func:`ui.core.tokens.accent_text` —— ``primary``
+        得到主题角色（换主色自动跟随），其余得到语义色的文字档。"""
         role = self.accent or "primary"
-        if role == "primary":
-            return ft.Colors.PRIMARY
         if role == "neutral":
+            # 中性档要的是**结构性**的灰（描边色），不是语义上的"无状态"灰：
+            # 前者由主题解析、深色下自动变浅，后者是固定 hex。
             return ft.Colors.OUTLINE
-        return semantic_text(role)
+        return accent_text(role)
 
     def _build_leading(
         self, d: dict[str, int], *, muted: bool = False
@@ -253,7 +254,7 @@ class Expander(ft.Container):
             width=chip,
             height=chip,
             border_radius=ft.BorderRadius.all(RADIUS["md"]),
-            bgcolor=ft.Colors.with_opacity(0.10, color),
+            bgcolor=ft.Colors.with_opacity(SEMANTIC_TINT, color),
             alignment=ft.Alignment.CENTER,
             content=ft.Icon(lead, size=round(chip * 0.62), color=color),
         )

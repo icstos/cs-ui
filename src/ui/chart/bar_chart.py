@@ -24,7 +24,10 @@ import flet as ft
 import flet_charts as ftc
 
 from ui.chart._data import (
-    CHART_COLORS,
+    TOOLTIP_BG,
+    TOOLTIP_PAD,
+    TOOLTIP_RADIUS,
+    chart_palette,
     DataInput,
     Series,
     parse_data,
@@ -183,9 +186,9 @@ class BarChart(ftc.BarChart):
             ),
             tooltip=(
                 ftc.BarChartTooltip(
-                    bgcolor=ft.Colors.with_opacity(0.9, ft.Colors.GREY_900),
-                    border_radius=8,
-                    padding=10,
+                    bgcolor=TOOLTIP_BG,
+                    border_radius=TOOLTIP_RADIUS,
+                    padding=TOOLTIP_PAD,
                 )
                 if tooltip
                 else None
@@ -295,7 +298,7 @@ def _negative() -> ft.Control:
         x="月份",
         y="净现金流",
         height=260,
-        color=CHART_COLORS[1],
+        color=chart_palette()[1],
     )
 
 
