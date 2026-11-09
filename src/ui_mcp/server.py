@@ -13,7 +13,7 @@ guide（经验条款）          UI_MCP_ENABLE_GUIDE        on
 ======================  =========================  ======
 
 分组的理由是**上下文预算**：每个工具的 schema 都要进系统提示词。默认全开是因为
-cs-ui 只有 12 个工具（flet-mcp 是 9 个），装得下；真要瘦身就关掉 icons/docs。
+cs-ui 只有 12 个工具（flet-mcp 1.1 是 11 个），装得下；真要瘦身就关掉 icons/docs。
 
 大小预算：单次响应控制在 ~2 万字符内。超长的示例/文档段会截断并给下钻提示 ——
 工具输出会进对话历史，每次调用都要重付 token。
@@ -66,16 +66,18 @@ mcp = FastMCP(
     instructions=(
         "cs-ui（Python 包名 `ui`，基于 flet 1.x）的组件库 API 服务，"
         f"索引版本 ui {_META.get('version', '?')} / flet {_META.get('flet', '?')}"
-        f"（{_COUNTS.get('components', 0)} 个组件、{_COUNTS.get('functions', 0)} 个函数）。"
+        f"（{_COUNTS.get('components', 0)} 个组件、{_COUNTS.get('functions', 0)} 个函数、"
+        f"{_COUNTS.get('constants', 0)} 个令牌常量）。"
         f"本次启用的工具组：{', '.join(_GROUPS)}。\n"
         "工作方式：\n"
         "1. 心里有类名就先 get_api(name) —— 这是最便宜的验证，'not found' 是确定结论；\n"
         "2. 每条的 `pattern:` 行决定怎么写：static=直接构造，"
         "observable=数据对象，**必须调用 .ui()** 且用 state()/use_ref 固定实例，"
         "function=函数组件直接当控件用；\n"
-        "3. 继承来的属性用 get_api(name, query='on_') 或 get_api('flet.Button') 查；\n"
-        "4. 写代码前先 get_guidelines('overview')：frozen 树、page.render、颜色串格式"
-        "这些坑查 API 查不出来，写错必炸；\n"
+        "3. 继承来的属性用 get_api(name, query='on_') 或 get_api('flet.Button') 查；"
+        "设计令牌也一样查：get_api('SPACE') / get_api('BREAKPOINT')；\n"
+        "4. 写代码前先 get_guidelines('overview')：frozen 树、page.render、"
+        "STRETCH+intrinsic_height、响应式、颜色串格式这些坑查 API 查不出来，写错必炸；\n"
         "5. 想看真实写法用 search_examples(query) → get_example(id)。\n"
         "所有组件都能 `from ui import X` 导入。"
     ),
@@ -99,7 +101,7 @@ if _API_ON:
         query: Optional[str] = None,
         format: str = "text",
     ) -> Union[str, dict]:
-        """查 cs-ui 任一符号：组件、数据类、函数组件、hook、枚举、外部祖先类。
+        """查 cs-ui 任一符号：组件、数据类、函数组件、hook、枚举、令牌常量、外部祖先类。
 
         默认返回紧凑文本，一行一个成员：
 
@@ -119,7 +121,7 @@ if _API_ON:
         * `on_x(SomeEvent)` —— 回调收到的参数类型；
         * `inherited from ...` 只给数量：要具体成员用 `query=` 下钻，或
           `get_api("flet.Button")` 看基类全表；
-        * `real usage —` —— 从 examples/demo.py 里抠出来的**能跑的调用**，
+        * `real usage —` —— 从 examples/ 里抠出来的**能跑的调用**，
           比任何文档都可信。
 
         下钻 / 过滤：
@@ -128,9 +130,16 @@ if _API_ON:
         * `get_api("flet.Button")` —— 外部基类（`包名.类名`）；
         * `format="json"` —— 结构化 dict，供程序消费。
 
+        常量（模块 `__all__` 登记过的公共令牌表）也在这里查，值直接给出：
+
+            SPACE (constant)
+            module: ui.core.tokens
+            import: from ui import SPACE
+            value: {"0": 0, "1": 4, "2": 8, "3": 12, ...}
+
         Args:
             name: 符号名，如 "Button"、"SelectBox"、"Table"、"TableState"、
-                "semantic"、"StyleType"、"flet.Button"。
+                "semantic"、"StyleType"、"flet.Button"、"SPACE"、"BREAKPOINT"。
             member: 可选，取单个成员全文。
             query: 可选，按成员名子串过滤（含继承）。
             format: "text"（默认）或 "json"。
@@ -140,6 +149,7 @@ if _API_ON:
             return {
                 "error": f"'{name}' 不存在于 cs-ui 索引里",
                 "hint": "名字拼错？先 search_components(query) 找一找；"
+                "令牌常量（SPACE / RADIUS / FONT_SIZE / BREAKPOINT）也在这里查；"
                 "外部 flet 组件请加包名，如 'flet.Button'。",
             }
         if "error" in result or format == "json":
@@ -171,9 +181,9 @@ if _API_ON:
 
     @mcp.tool()
     def search_components(query: str, limit: int = 8) -> list[dict]:
-        """按自然语言/关键词搜组件（名字、摘要、文档、属性名、真实用法一起评分）。
+        """按自然语言/关键词搜组件、函数与令牌常量（名字、摘要、文档、属性名、真实用法一起评分）。
 
-        适合"要一个能翻页的表格"、"颜色选择器"、"想显示日志"这种模糊需求。
+        适合"要一个能翻页的表格"、"颜色选择器"、"想显示日志"、"间距怎么定"这种模糊需求。
 
         Args:
             query: 关键词，中英文都行。
@@ -295,75 +305,100 @@ _ICON_SYNONYMS: dict[str, str] = {
     "退出": "logout exit_to_app",
 }
 
-_icon_cache: list[str] | None = None
+_icon_cache: dict[str, list[str]] = {}
+
+#: 图标家族 → flet 枚举属性名。顺序即默认返回顺序（Material 在前）。
+_ICON_FAMILIES: dict[str, str] = {"material": "Icons", "cupertino": "CupertinoIcons"}
 
 
-def _icon_names() -> list[str]:
-    global _icon_cache
-    if _icon_cache is None:
+def _icon_names(family: str) -> list[str]:
+    if family not in _icon_cache:
         try:
             import flet as ft
 
-            _icon_cache = [m.name for m in ft.Icons]
+            _icon_cache[family] = [
+                m.name for m in getattr(ft, _ICON_FAMILIES[family], ())
+            ]
         except Exception:
-            _icon_cache = []
-    return _icon_cache
+            _icon_cache[family] = []
+    return _icon_cache[family]
+
+
+def _search_icons(family: str, query: str, limit: int) -> list[str]:
+    """在一个家族里按关键词找图标，返回 ``Icons.XXX`` 形式的短名。"""
+    names = _icon_names(family)
+    if not names:
+        return []
+    lowered = query.lower().strip()
+    terms = [lowered] + [t for t in lowered.split() if t]
+    for cjk, mapped in _ICON_SYNONYMS.items():
+        if cjk in query:
+            terms.extend(mapped.split())
+    prefixes = {t.upper() for t in terms if t}
+    matched = [
+        name
+        for name in names
+        if any(name.upper() == p or p in name.upper() for p in prefixes)
+    ]
+
+    def tier(name: str) -> tuple[int, int, int, str]:
+        upper = name.upper()
+        rank_ = 0 if upper in prefixes else 1 if any(
+            upper.startswith(p + "_") for p in prefixes
+        ) else 2
+        # 同时命中更多关键词的更相关：查 "arrow back" 时 ARROW_BACK
+        # 应该排在只命中 back 的 BACK_HAND 前面。
+        hits = sum(1 for p in prefixes if p in upper)
+        return (rank_, -hits, len(name), name)
+
+    matched.sort(key=tier)
+    # Material 的 _OUTLINED/_ROUNDED/_SHARP 只是样式变体：基础名已经命中时
+    # 折叠掉，否则 10 个结果位会被同一个图标占满。
+    present = set(matched)
+    collapsed = []
+    for name in matched:
+        base = next(
+            (name[: -len(s)] for s in ("_OUTLINED", "_ROUNDED", "_SHARP") if name.endswith(s)),
+            None,
+        )
+        if base and base in present:
+            continue
+        collapsed.append(name)
+    enum = _ICON_FAMILIES[family]
+    return [f"{enum}.{name}" for name in collapsed[:limit]]
 
 
 if _ICONS_ON:
 
     @mcp.tool()
-    def find_icon(query: str, limit: int = 10) -> dict:
-        """按概念搜 flet 的 Material 图标名（返回 `ft.Icons.XXX` 的 XXX 部分）。
+    def find_icon(
+        query: str, family: Optional[str] = None, limit: int = 10
+    ) -> dict:
+        """按概念搜图标名（返回可直接用的 ``ft.Icons.XXX`` 形式）。
 
-        支持中文关键词（内置常见概念的映射，如"删除"→ DELETE）。
+        支持中文关键词（内置常见概念的映射，如"删除"→ DELETE/delete）。
+        Material 的 ``_OUTLINED/_ROUNDED/_SHARP`` 样式变体会折叠成基础名。
 
         Args:
             query: 概念词，如 "删除"、"user"、"arrow back"、"file"。
-            limit: 最多返回条数。
+            family: 可选，``"material"``（默认，两种都搜）或 ``"cupertino"``。
+            limit: 每个家族最多返回条数。
         """
-        names = _icon_names()
-        if not names:
-            return {"error": "当前环境没装 flet，无法列出图标"}
-        lowered = query.lower().strip()
-        terms = [lowered] + [t for t in (lowered.split()) if t]
-        for cjk, mapped in _ICON_SYNONYMS.items():
-            if cjk in query:
-                terms.extend(mapped.split())
-        prefixes = {t.upper() for t in terms if t}
-        matched = [
+        families = (
+            [family.lower()] if family and family.lower() in _ICON_FAMILIES else list(_ICON_FAMILIES)
+        )
+        icons = [
             name
-            for name in names
-            if any(name.upper() == p or p in name.upper() for p in prefixes)
+            for group in (_search_icons(fam, query, limit) for fam in families)
+            for name in group
         ]
-
-        def tier(name: str) -> tuple[int, int, int, str]:
-            upper = name.upper()
-            rank_ = 0 if upper in prefixes else 1 if any(
-                upper.startswith(p + "_") for p in prefixes
-            ) else 2
-            # 同时命中更多关键词的更相关：查 "arrow back" 时 ARROW_BACK
-            # 应该排在只命中 back 的 BACK_HAND 前面。
-            hits = sum(1 for p in prefixes if p in upper)
-            return (rank_, -hits, len(name), name)
-
-        matched.sort(key=tier)
-        # Material 的 _OUTLINED/_ROUNDED/_SHARP 只是样式变体：基础名已经命中时
-        # 折叠掉，否则 10 个结果位会被同一个图标占满。
-        present = set(matched)
-        collapsed = []
-        for name in matched:
-            base = next(
-                (name[: -len(s)] for s in ("_OUTLINED", "_ROUNDED", "_SHARP") if name.endswith(s)),
-                None,
-            )
-            if base and base in present:
-                continue
-            collapsed.append(name)
+        if not icons:
+            return {"error": "当前环境没装 flet，或该关键词没有匹配的图标"}
         return {
             "query": query,
-            "icons": [f"Icons.{name}" for name in collapsed[:limit]],
-            "note": "用法：ft.Icon(icon=ft.Icons.XXX, size=18)；样式变体加 _OUTLINED/_ROUNDED/_SHARP。",
+            "icons": icons,
+            "note": "用法：ft.Icon(icon=ft.Icons.XXX, size=18)；"
+            "Cupertino 图标用 ft.CupertinoIcons.XXX。",
         }
 
 
@@ -458,9 +493,11 @@ if _GUIDE_ON:
         ``get_guidelines("overview")``。
 
         现有 topic：overview、rendering（page.render / Router / View 不能当控件）、
-        frozen（禁止 update()）、state-components（.ui() 与 state()）、
-        selectors（PanelField 家族）、table、layout（expand 陷阱）、
-        colors（#AARRGGBB）、tokens、theme、verify（改完跑哪些脚本）。
+        frozen（禁止 update() + 结构补丁不上屏）、state-components（.ui() 与 state()）、
+        selectors（PanelField 家族）、table、layout（expand / STRETCH / 限宽陷阱）、
+        responsive（三档 / 跨档通知 / 量自己）、colors（#AARRGGBB）、tokens（SPACE /
+        RADIUS / 语义色三档）、theme（品牌色 → 46 角色，不用 color_scheme_seed）、
+        i18n（use_t）、overlay（浮层点击穿透）、verify（改完跑哪些脚本）。
 
         Args:
             topic: 条款名；不给则列出全部。

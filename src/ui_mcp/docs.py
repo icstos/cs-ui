@@ -1,7 +1,7 @@
 """文档索引：把仓库里的 Markdown 拆成可检索的段落。
 
-为什么不用 FTS/向量库：cs-ui 的文档体量是"几份 Markdown + 一份 demo 模块
-docstring"，几百个段落；内存里按标题/正文打分就够快，而且不用在包里塞
+为什么不用 FTS/向量库：cs-ui 的文档体量是"几份 Markdown + 示例模块 docstring"，
+几百个段落；内存里按标题/正文打分就够快，而且不用在包里塞
 SQLite 文件。
 
 段落的 ``location`` 采用 ``文件#一级#二级`` 的形式（如
@@ -98,25 +98,28 @@ def build(root: Path) -> dict[str, Any]:
             files.append(relpath)
             sections.extend(split_markdown(path.read_text(encoding="utf-8"), relpath))
 
-    # demo 的模块 docstring 是"两个必须知道的坑 + 两类组件"的原始出处，
-    # 但它不在任何 Markdown 里 —— 单独收一段。
-    demo = root / "examples" / "demo.py"
-    if demo.exists():
+    # 示例文件的模块 docstring 是"这个例子在演示什么"的原始出处，
+    # 但它不在任何 Markdown 里 —— 单独收一段（demo.py 已按主题拆成多个文件）。
+    for demo in sorted((root / "examples").glob("*.py")):
+        relpath = demo.relative_to(root).as_posix()
+        if relpath in files:
+            continue
         doc = _module_docstring(demo.read_text(encoding="utf-8"))
-        if doc:
-            files.append("examples/demo.py")
-            sections.append(
-                {
-                    "location": "examples/demo.py#模块 docstring",
-                    "file": "examples/demo.py",
-                    "title": "demo 模块 docstring",
-                    "path": ["demo 模块 docstring"],
-                    "level": 1,
-                    "content": doc,
-                    "chars": len(doc),
-                    "lines": doc.count("\n") + 1,
-                }
-            )
+        if not doc:
+            continue
+        files.append(relpath)
+        sections.append(
+            {
+                "location": f"{relpath}#模块 docstring",
+                "file": relpath,
+                "title": f"{demo.stem} 模块 docstring",
+                "path": ["模块 docstring"],
+                "level": 1,
+                "content": doc,
+                "chars": len(doc),
+                "lines": doc.count("\n") + 1,
+            }
+        )
 
     return {
         "meta": {"generated_by": "ui-mcp", "files": files, "sections": len(sections)},

@@ -67,6 +67,18 @@ _PLUMBING = {
     "adaptive",
 }
 
+# 常量只从"框架底座"这几个模块收。其余模块的 __all__ 常量是组件外观参数
+# （PAD / DOT_SIZE）、文档模板（SPECS）或语言表（CATALOGS）—— 它们对自己有用，
+# 对"照着写应用代码"的人只是噪音，而且语言表动辄上万字符。
+_CONST_MODULES = (
+    "ui.core.tokens",
+    "ui.core.responsive",
+    "ui.core.theme",
+    "ui.core.palette",
+    "ui.core.styles",
+    "ui.version",
+)
+
 SUMMARY_CHARS = 150
 
 
@@ -268,6 +280,64 @@ def _instance_entries(cls: type) -> list[dict[str, Any]]:
     """dataclass 字段（控件/数据对象的主参数表）。"""
     comments = _inline_comments(cls)
     return [_field_entry(f, comments) for f in _own_dataclass_fields(cls)]
+
+
+def _const_value(value: Any, limit: int = 240) -> str:
+    """常量值 → 单行摘要。字典/元组只列前若干项，避免把整张语言表塞进索引。"""
+    def short(item: Any, width: int = 28) -> str:
+        if isinstance(item, enum.Enum):
+            return f"{type(item).__name__}.{item.name}"
+        if callable(item):
+            return "λ"
+        if isinstance(item, dict):
+            return "{…}" if item else "{}"
+        if isinstance(item, (list, tuple)):
+            return "[…]" if item else "[]"
+        text = repr(item)
+        return text if len(text) <= width else text[: width - 1] + "…"
+
+    if isinstance(value, dict):
+        pairs = [f"{k}: {short(v)}" for k, v in list(value.items())[:12]]
+        text = "{" + ", ".join(pairs) + (", …" if len(value) > 12 else "") + "}"
+    elif isinstance(value, (list, tuple)):
+        items = [short(v) for v in list(value)[:12]]
+        body = ", ".join(items) + (", …" if len(value) > 12 else "")
+        text = f"({body})" if isinstance(value, tuple) else f"[{body}]"
+    else:
+        text = repr(value)
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _const_entry(
+    name: str, value: Any, *, module: str, exported: bool, category: list[str]
+) -> dict[str, Any] | None:
+    """模块级常量（``SPACE`` / ``BREAKPOINT`` / ``PRIMARY_SEEDS`` …）。
+
+    只收模块 ``__all__`` 里登记过的名字：那是模块**自己**宣布的公共面。
+    全仓库有 700+ 个大写常量，绝大多数是组件内部的 ``PAD`` / ``GAP`` 之类，
+    照单全收只会把索引变成噪音；``__all__`` 里的二十来个才是"该照着写代码"的。
+    """
+    if isinstance(value, type) or inspect.ismodule(value) or callable(value):
+        return None
+    if isinstance(value, enum.Enum):
+        return None  # 图标常量（PANEL_OPEN = Icons.…）不是数据表，查枚举即可
+    if not isinstance(value, (dict, tuple, list, str, int, float, bool)):
+        return None
+    return {
+        "name": name,
+        "module": module,
+        "kind": "constant",
+        "pattern": "constant",
+        "type": type(value).__name__,
+        "value": _const_value(value),
+        "summary": "",
+        "exported": exported,
+        "categories": category,
+        "bases": [],
+        "properties": [],
+        "events": [],
+        "methods": [],
+    }
 
 
 def _namedtuple_entries(cls: type) -> list[dict[str, Any]]:
@@ -574,6 +644,7 @@ def scan() -> dict[str, Any]:
     types_: list[dict[str, Any]] = []
     functions: list[dict[str, Any]] = []
     enums: list[dict[str, Any]] = []
+    constants: list[dict[str, Any]] = []
     seen_objects: dict[int, dict[str, Any]] = {}
     ancestor_classes: dict[str, type] = {}
 
@@ -653,6 +724,24 @@ def scan() -> dict[str, Any]:
                 functions.append(entry)
                 seen_objects[id(obj)] = entry
 
+        # 常量：只认框架底座模块 __all__ 里登记过的（见 _const_entry 的理由）
+        if mod.__name__ not in _CONST_MODULES:
+            continue
+        for name in getattr(mod, "__all__", ()) or ():
+            if name.startswith("_") or name not in vars(mod):
+                continue
+            value = vars(mod)[name]
+            const = _const_entry(
+                name,
+                value,
+                module=mod.__name__,
+                exported=name in exported_names,
+                category=category,
+            )
+            if const is None or not is_public_module:
+                continue
+            constants.append(const)
+
     ancestors = []
     for key, cls in sorted(ancestor_classes.items()):
         ancestors.append(_describe_ancestor(key, cls))
@@ -682,15 +771,17 @@ def scan() -> dict[str, Any]:
         "types": len(types_),
         "functions": len(functions),
         "enums": len(enums),
+        "constants": len(constants),
         "ancestors": len(ancestors),
     }
     return {
         "meta": build_meta(len(modules), counts),
-        "categories": _category_counts(components + types_ + functions + enums),
+        "categories": _category_counts(components + types_ + functions + enums + constants),
         "components": components,
         "types": types_,
         "functions": functions,
         "enums": enums,
+        "constants": constants,
         "ancestors": ancestors,
     }
 

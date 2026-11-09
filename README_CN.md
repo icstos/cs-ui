@@ -656,7 +656,7 @@ python scripts/gen_ui_registry.py --check   # 校验是否与源码一致
 一致性靠"记得跑"是守不住的，所以所有检查都在一个入口里：
 
 ```bash
-python scripts/check_all.py                 # 28 项 / 约 51s（静态门禁 + 审计 + 逻辑测试 + 文档）
+python scripts/check_all.py                 # 29 项 / 约 52s（静态门禁 + 审计 + 逻辑测试 + 文档）
 python scripts/check_all.py --stage fast    # 只跑静态门禁与令牌审计（改样式时够用）
 python scripts/check_all.py --stage visual  # 真机截图 + 灰块检测（会开窗口，几分钟）
 ```
@@ -670,6 +670,7 @@ python scripts/check_all.py --stage visual  # 真机截图 + 灰块检测（会�
 | `_color_logic.py` | 配色引擎：OKLCH 往返无损、分类色等亮度、色相间距、色阶单调、兜底不抛 |
 | `_responsive_logic.py` | 响应式契约：断点表与 `ResponsiveRow` 逐项相同、档位单调且边界左闭右开、**同档内不重绘**、栅格列数恒在 `[1, max_cols]`、`PageLayout` 用 `min()` 限宽并量化到 8px、私有字段不得漏进序列化树 |
 | `_*_logic.py` | 各组件纯逻辑（状态推导、取值边界、回调） |
+| `_ui_mcp_logic.py` | MCP 索引契约：范式与代码一致、常量只收底座 `__all__`、`Viewport`/`viewport` 同名可分辨、中文别名不指向已删符号、条款覆盖响应式与色板（87 条） |
 | `_doc_check.py` | 71 个组件的 SPEC / 示例 / API 完整性 |
 | `gen_ui_registry.py --check` | `ui.__all__` 与注册表不漂移 |
 | `build_docs_i18n.py --check` | 站点三语文案同步 |
@@ -738,29 +739,29 @@ python scripts/_visual_check.py --scroll 14 \
 
 | 产物 | 内容 |
 |------|------|
-| `data/api.json` | 92 个组件、17 个数据类、108 个函数、8 个枚举，外加组件继承到的 45 个外部类成员表 |
-| `data/examples.json` | `examples/demo.py` 拆页 + **每个组件的真实调用片段** |
+| `data/api.json` | 95 个组件、27 个数据类、177 个函数、8 个枚举、40 个令牌常量，外加组件继承到的 45 个外部类成员表 |
+| `data/examples.json` | `examples/` 拆页 + **每个组件的真实调用片段** |
 | `data/docs.json` | README / TODO / 项目记忆切段，可检索 |
 
 工具（12 个，可用 `UI_MCP_ENABLE_{API,ICONS,EXAMPLES,DOCS,GUIDE}=0` 关掉整组）：
 
 | 工具 | 用途 |
 |------|------|
-| `get_api(name, member=, query=, format=)` | 主验证器。查组件/数据类/函数/枚举/外部基类；`query` 能搜继承链 |
+| `get_api(name, member=, query=, format=)` | 主验证器。查组件/数据类/函数/枚举/**令牌常量**/外部基类；`query` 能搜继承链 |
 | `list_components(category=, pattern=, kind=)` | 按分类 / 范式（static / observable / function）浏览 |
-| `search_components(query)` | 中英文语义检索（"翻页表格" → Table） |
+| `search_components(query)` | 中英文语义检索（"翻页表格" → Table，"间距" → SPACE） |
 | `get_enum` / `search_enum_members` / `enum_has_member` | 枚举查证 |
-| `find_icon(query)` | 按概念找 Material 图标（内置中文映射） |
-| `search_examples` / `get_example` | 找 demo 页、读真实源码（支持分段） |
+| `find_icon(query, family=)` | 按概念找图标（Material + Cupertino，内置中文映射） |
+| `search_examples` / `get_example` | 找示例页、读真实源码（支持分段） |
 | `search_docs` / `get_doc` | 搜文档段落 |
-| `get_guidelines(topic)` | **经验条款**：frozen 树、`page.render`、颜色串顺序、令牌… |
+| `get_guidelines(topic)` | **经验条款**：frozen 树、STRETCH 陷阱、响应式、色板、令牌、验证脚本… |
 
 ```bash
 pip install -e ".[mcp]"      # 装 fastmcp 依赖
 ui-mcp                        # stdio 服务（默认子命令）
 ui-mcp build                  # 改了 src/ui 之后重建索引
-ui-mcp check                  # 索引是否落后于源码
-ui-mcp guide frozen           # 终端里直接看经验条款
+ui-mcp check                  # 索引是否落后：源码 mtime + ui/flet 版本漂移
+ui-mcp guide responsive       # 终端里直接看经验条款
 ```
 
 MCP 客户端配置（Claude Desktop / Cursor / WorkBuddy…）：

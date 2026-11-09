@@ -83,6 +83,7 @@ def _build(args: argparse.Namespace) -> int:
         print(f"✓ 索引已生成 → {paths.data_dir()}")
         print(f"  组件 {counts.get('components', 0)} / 数据类 {counts.get('types', 0)}"
               f" / 函数 {counts.get('functions', 0)} / 枚举 {counts.get('enums', 0)}"
+              f" / 常量 {counts.get('constants', 0)}"
               f" / 外部祖先 {counts.get('ancestors', 0)}")
         if "examples" in summary:
             print(f"  示例 {summary['examples']} 段（{summary['usage_components']} 个组件有真实用法）")
@@ -106,6 +107,17 @@ def _check(args: argparse.Namespace) -> int:
     print(f"{__pkg_name__} {__version__} | ui {meta.get('version')} | flet {meta.get('flet')}")
     print(f"索引时间：{meta.get('generated_at')}　模块 {meta.get('modules')} 个")
     print(f"条目：{counts}")
+    versions = status.get("versions") or {}
+    if versions:
+        runtime = versions.get("runtime") or {}
+        print(
+            "版本：索引 ui {0} / flet {1}　运行 ui {2} / flet {3}".format(
+                (versions.get("index") or {}).get("ui", "?"),
+                (versions.get("index") or {}).get("flet", "?"),
+                runtime.get("ui") or "?",
+                runtime.get("flet") or "?",
+            )
+        )
     print(f"新鲜度：{'✓ ' if status['ok'] else '✗ '}{status['reason']}")
     if not status["ok"] and status.get("stale_sources"):
         for name in status["stale_sources"]:

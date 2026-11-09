@@ -21,6 +21,10 @@ from ui_mcp.search import score
 _MEMBER_SECTIONS = ("properties", "events", "methods")
 _MEMBER_KIND = {"properties": "property", "events": "event", "methods": "method"}
 
+#: api.json 里的条目分桶。constants 是模块 ``__all__`` 里登记的公共常量
+#: （``SPACE`` / ``BREAKPOINT`` / ``PRIMARY_SEEDS``），它们和函数一样能 ``get_api``。
+_BUCKETS = ("components", "types", "functions", "enums", "constants")
+
 _SUMMARY_CHARS = 130
 
 _SEARCH_WEIGHTS = {
@@ -145,7 +149,14 @@ def render_text(hit: dict[str, Any]) -> str:
 
     # 函数 / 函数组件：签名里的默认值已经足够，不再重复列一遍 args
     if hit.get("kind") in ("function", "component", "hook") and hit.get("signature"):
-        lines.append(f"signature: {hit['signature']}")
+        prefix = "async " if hit.get("async") else ""
+        lines.append(f"signature: {prefix}{hit['signature']}")
+
+    # 常量：值就是全部信息（SPACE / BREAKPOINT / PRIMARY_SEEDS …）
+    if hit.get("kind") == "constant":
+        lines.append(f"value: {hit.get('value')}")
+        if hit.get("type") and hit["type"] not in ("dict", "tuple", "list"):
+            lines.append(f"type: {hit['type']}")
 
     # 枚举
     members = hit.get("members")
@@ -223,6 +234,7 @@ class ApiStore:
                     "types": [],
                     "functions": [],
                     "enums": [],
+                    "constants": [],
                     "ancestors": [],
                     "categories": {},
                 }
@@ -230,12 +242,12 @@ class ApiStore:
                 self._data = json.loads(path.read_text(encoding="utf-8"))
         if self._by_name is None:
             by_name: dict[str, list[tuple[str, dict[str, Any]]]] = {}
-            for bucket in ("components", "types", "functions", "enums"):
+            for bucket in _BUCKETS:
                 for entry in self._data.get(bucket, []):
                     by_name.setdefault(entry["name"].lower(), []).append((bucket, entry))
             # 别名（`Title` → Header_1、`单选` → Radio）追加在真名之后：
             # 真名永远优先命中，别名只在没撞车时生效。
-            for bucket in ("components", "types", "functions", "enums"):
+            for bucket in _BUCKETS:
                 for entry in self._data.get(bucket, []):
                     for alias in entry.get("aliases") or []:
                         bucket_list = by_name.setdefault(alias.lower(), [])
@@ -306,7 +318,7 @@ class ApiStore:
 
     def search(self, query: str, limit: int = 8) -> list[dict[str, Any]]:
         items = []
-        for bucket in ("components", "types", "functions", "enums"):
+        for bucket in _BUCKETS:
             for entry in self.entries(bucket):
                 item = dict(entry)
                 item["_bucket"] = bucket
@@ -359,9 +371,16 @@ class ApiStore:
     def _candidates(self, name: str) -> list[tuple[str, dict[str, Any]]]:
         self._load()
         assert self._by_name is not None and self._ancestors is not None
-        lowered = name.strip().lower()
+        wanted = name.strip()
+        lowered = wanted.lower()
         if lowered in self._by_name:
-            return self._by_name[lowered]
+            # 命中列表按桶序排（types 在 functions 前），而库里存在**只差大小写**
+            # 的一对名字：`Viewport`（数据类）与 `viewport()`（取快照的函数）。
+            # 调用者写 `viewport` 想要的是函数，写 `Viewport` 才是类 —— 逐字符
+            # 相同的那个排到最前，剩下的仍可通过模块限定名取到。
+            candidates = self._by_name[lowered]
+            exact = [c for c in candidates if c[1].get("name") == wanted]
+            return exact + [c for c in candidates if c not in exact]
         if lowered in self._ancestors:
             return [("ancestors", self._ancestors[lowered])]
         # 模块限定名：ui.input.button.Button / flet.Button

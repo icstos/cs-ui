@@ -624,7 +624,7 @@ the real signatures) and shipped as JSON; the server never imports `ui`.
 pip install -e ".[mcp]"
 ui-mcp            # stdio server (default subcommand)
 ui-mcp build      # rebuild the index after changing src/ui
-ui-mcp check      # is the index older than the sources?
+ui-mcp check      # stale sources + ui/flet version drift
 ui-mcp guide      # list the curated "gotchas" topics
 ```
 
@@ -635,11 +635,13 @@ Client config:
 ```
 
 12 tools in five groups (`UI_MCP_ENABLE_{API,ICONS,EXAMPLES,DOCS,GUIDE}`):
-`get_api` (primary verifier, walks base classes), `list_components`,
-`search_components` (Chinese + English), enum tools, `find_icon`,
-`search_examples` / `get_example` (real demo code, with per-component call sites),
-`search_docs` / `get_doc`, and `get_guidelines` — the paradigm rules that no API
-lookup can tell you (frozen trees, `page.render`, `#AARRGGBB` colors, design tokens).
+`get_api` (primary verifier — controls, dataclasses, functions, enums, **design-token
+constants** like `SPACE` / `BREAKPOINT`, and base-class members), `list_components`,
+`search_components` (Chinese + English), enum tools, `find_icon` (Material +
+Cupertino), `search_examples` / `get_example` (real demo code, with per-component call
+sites), `search_docs` / `get_doc`, and `get_guidelines` — the paradigm rules that no
+API lookup can tell you (frozen trees, the `STRETCH`/`intrinsic_height` trap,
+responsive tiers, the brand-color palette pipeline, `#AARRGGBB` colors, tokens).
 
 > Adding a component? Add one line to `src/ui_mcp/aliases.py` so Chinese queries find
 > it, then run `ui-mcp build`.

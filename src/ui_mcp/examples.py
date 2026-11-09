@@ -1,8 +1,10 @@
-"""示例索引：把 ``examples/demo.py`` 拆成可检索的示例，并回填每个组件的真实用法。
+"""示例索引：把 ``examples/*.py`` 拆成可检索的示例，并回填每个组件的真实用法。
 
 对 AI agent 来说，**一段能跑的调用**比十条属性说明都值钱。所以这里做两件事：
 
-1. 按顶层函数把 demo 切页（``demo/FormPage`` 等），保留源码、路由、用到的组件；
+1. 按顶层函数/类把示例文件切段（``test_form/App`` 等），保留源码与用到的组件；
+   文件名不再假定是 ``demo.py`` —— 示例早已按主题拆成 ``test_*.py`` 与
+   ``my_control.py``；只有在文件里写了 ``ROUTES = [ft.Route(...)]`` 时才解析路由。
 2. 反向扫一遍所有示例文件里的构造调用，给每个组件挂上
    ``usage_sites``（示例 id + 行号 + 调用片段），让 ``get_api("SelectBox")``
    直接能看到"别人是怎么用的"。
@@ -154,7 +156,7 @@ def build(root: Path, known_names: set[str]) -> dict[str, Any]:
             continue
         lines = source.splitlines()
         relpath = path.relative_to(root).as_posix()
-        routes = _routes(source) if path.name == "demo.py" else {}
+        routes = _routes(source)
 
         nodes = _top_level_nodes(tree)
         for node in nodes:
