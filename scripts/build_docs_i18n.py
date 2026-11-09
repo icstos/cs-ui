@@ -57,6 +57,12 @@ M: dict[str, tuple[str, str, str]] = {
         "執行時切換語言，連日期與數字格式一起變",
         "Switch language at runtime — dates and numbers follow",
     ),
+    "nav.responsive.title": ("响应式", "響應式", "Responsive"),
+    "nav.responsive.desc": (
+        "窗口变窄时，栅格与页头怎么自己适应",
+        "視窗變窄時，柵格與頁首怎麼自己適應",
+        "How grids and page headers adapt when the window narrows",
+    ),
     "nav.components.title": ("组件总览", "元件總覽", "All components"),
     "nav.components.desc": (
         "按分类浏览 cs-ui 的全部组件",
@@ -130,6 +136,7 @@ M: dict[str, tuple[str, str, str]] = {
     "site.tab.docs": ("文档", "文件", "Docs"),
     "site.tab.components": ("组件", "元件", "Components"),
     "site.tab.about": ("关于", "關於", "About"),
+    "site.nav.open": ("打开导航", "開啟導航", "Open navigation"),
     "site.search.placeholder": (
         "搜索文档与组件",
         "搜尋文件與元件",
@@ -660,6 +667,144 @@ M: dict[str, tuple[str, str, str]] = {
         "中性色摻一絲品牌色相（彩度 0.006）：Slate 之所以顯高級，正因為它不是三通道相等的死灰。",
         "Neutrals carry a trace of the brand hue (chroma 0.006): Slate looks premium precisely because it is not a dead grey.",
     ),
+    # ------------------------------------------------------------ 响应式
+    "resp.intro": (
+        "响应式不是「给每个组件加一个窄屏样式」，而是先定一条规矩：谁负责判断宽度。"
+        "本框架的规矩是 —— 结构性变化走 Python，连续性变化走渲染层。栅格换列、"
+        "元素拉伸每帧都在变，那是 Flutter 的活；「窄屏要不要收起侧栏」一秒钟最多变一次，"
+        "那才轮到 Python。混着来就会两边都做不好：Python 每帧重算会卡，Flutter 不知道"
+        "你的业务结构。",
+        "響應式不是「給每個元件加一個窄屏樣式」，而是先定一條規矩：誰負責判斷寬度。"
+        "本框架的規矩是 —— 結構性變化走 Python，連續性變化走渲染層。柵格換列、"
+        "元素拉伸每幀都在變，那是 Flutter 的活；「窄屏要不要收起側欄」一秒鐘最多變一次，"
+        "那才輪到 Python。混著來就會兩邊都做不好：Python 每幀重算會卡，Flutter 不知道"
+        "你的業務結構。",
+        "Responsive design is not “add a narrow variant to every component” — it starts with "
+        "one rule: who is allowed to judge width. Here the rule is structural changes in "
+        "Python, continuous changes in the renderer. Reflowing a grid and stretching an element "
+        "happen every frame — that is Flutter's job. “Should the sidebar collapse?” changes at "
+        "most once a second — that is Python's job. Mixing them fails both ways: recomputing every "
+        "frame stutters, and Flutter cannot see your business structure.",
+    ),
+    "resp.rules.title": ("四条规矩", "四條規矩", "Four rules"),
+    "resp.rules.desc": (
+        "断点、档位、通知时机、改哪儿 —— 四件事定死了，组件才有统一的行为：",
+        "斷點、檔位、通知時機、改哪裡 —— 四件事定死了，元件才有統一的行為：",
+        "Breakpoints, window classes, notification timing and what you may touch — once these "
+        "four are fixed, components behave consistently:",
+    ),
+    "resp.rules.point1": (
+        "断点与 flet 的 ResponsiveRow 逐项相同（0 / 576 / 768 / 992 / 1200 / 1400）。"
+        "另采一套边界，就会出现「栅格已经换列、页面还以为自己是窄屏」的错位。",
+        "斷點與 flet 的 ResponsiveRow 逐項相同（0 / 576 / 768 / 992 / 1200 / 1400）。"
+        "另採一套邊界，就會出現「柵格已經換列、頁面還以為自己是窄屏」的錯位。",
+        "Breakpoints are identical to flet's ResponsiveRow (0 / 576 / 768 / 992 / 1200 / 1400). "
+        "A second set of boundaries produces the classic mismatch: the grid already reflowed, the "
+        "page still thinks it is narrow.",
+    ),
+    "resp.rules.point2": (
+        "六个断点归成三档窗口类：compact（< 768）、medium（768–1199）、expanded（≥ 1200）。"
+        "布局策略只需要这三档 —— 再细分就是把同一件事切碎。",
+        "六個斷點歸成三檔視窗類：compact（< 768）、medium（768–1199）、expanded（≥ 1200）。"
+        "佈局策略只需要這三檔 —— 再細分就是把同一件事切碎。",
+        "Six breakpoints collapse into three window classes: compact (< 768), medium (768–1199), "
+        "expanded (≥ 1200). Layout strategy needs exactly these three — finer splits chop one "
+        "decision into fragments.",
+    ),
+    "resp.rules.point3": (
+        "状态里只有窗口类会触发重绘，且值没变就不写。拖动窗口时宽度每像素都在变，"
+        "若每次都通知，界面会变成幻灯片。",
+        "狀態裡只有視窗類會觸發重繪，且值沒變就不寫。拖動視窗時寬度每像素都在變，"
+        "若每次都通知，介面會變成幻燈片。",
+        "Only the window class triggers a repaint, and only when it actually changes. Width changes "
+        "on every pixel while dragging; notifying each time turns the UI into a slideshow.",
+    ),
+    "resp.rules.point4": (
+        "运行期只改属性，不改子树。flet 1.1.2 对已挂载控件树的结构补丁不保证上屏："
+        "把 content 换成新控件、整列换新列表、甚至切 visible，都可能「Python 里全对、"
+        "屏幕纹丝不动」。所以结构只在构建期定，需要跟随档位就整页重渲染（组件）。",
+        "執行期只改屬性，不改子樹。flet 1.1.2 對已掛載元件樹的結構補丁不保證上屏："
+        "把 content 換成新元件、整列換新列表、甚至切 visible，都可能「Python 裡全對、"
+        "螢幕紋絲不動」。所以結構只在建構期定，需要跟隨檔位就整頁重繪（元件）。",
+        "At runtime, change properties only — never the tree. flet 1.1.2 does not guarantee "
+        "that structural patches to an already-mounted tree reach the screen: replacing content, "
+        "swapping a whole list, even toggling visible can leave Python correct and the screen "
+        "unchanged. Decide structure at build time; to follow the window class, re-render the "
+        "page (a component).",
+    ),
+    "resp.live.title": ("拖一下试试", "拖一下試試", "Drag it"),
+    "resp.live.desc": (
+        "下面这块栅格换列时，Python 一行都没跑 —— 列数早在构建时就写进了每个断点，"
+        "换列完全发生在渲染层。这正是「连续性变化交给 Flutter」的意思。",
+        "下面這塊柵格換列時，Python 一行都沒跑 —— 列數早在建構時就寫進了每個斷點，"
+        "換列完全發生在渲染層。這正是「連續性變化交給 Flutter」的意思。",
+        "When the grid below reflows, Python does not run at all — the column count for every "
+        "breakpoint was written in at build time, and reflow happens entirely in the renderer. "
+        "That is what “leave continuous changes to Flutter” means.",
+    ),
+    "resp.grid.title": ("栅格：只说最小格宽", "柵格：只說最小格寬", "Grid: name a minimum, not a count"),
+    "resp.grid.desc": (
+        "ResponsiveRow 要求每个子项手写一份断点字典；Grid 只要一个最小格宽 —— "
+        "「一格至少多宽」是设计上的事实，「第几档放几列」是它的计算结果，不该让人手动重复。",
+        "ResponsiveRow 要求每個子項手寫一份斷點字典；Grid 只要一個最小格寬 —— "
+        "「一格至少多寬」是設計上的事實，「第幾檔放幾列」是它的計算結果，不該讓人手動重複。",
+        "ResponsiveRow asks every child to carry its own breakpoint dictionary; Grid asks for one "
+        "minimum cell width. “How narrow may a cell get” is a design fact; “how many columns per "
+        "breakpoint” is the computed consequence and should not be retyped by hand.",
+    ),
+    "resp.grid.tip": (
+        "列数按「虚拟列数 = 每行格数」下发，子项各占一列 —— 于是等宽来自结构，"
+        "而不是靠 12 能被 3 整除这种巧合。12 栅格里放 5 格会剩下 2 列分不掉。",
+        "列數按「虛擬列數 = 每行格數」下發，子項各佔一列 —— 於是等寬來自結構，"
+        "而不是靠 12 能被 3 整除這種巧合。12 柵格裡放 5 格會剩下 2 列分不掉。",
+        "Column counts are sent as “virtual columns = cells per row” with each child spanning one, "
+        "so equal widths come from structure rather than from 12 being divisible by 3. Five cells "
+        "in a 12-column grid leave two columns that cannot be split.",
+    ),
+    "resp.grid.tip_title": ("为什么不是 12 栅格", "為什麼不是 12 柵格", "Why not a 12-column grid"),
+    "resp.hook.title": ("需要知道档位时", "需要知道檔位時", "When you need the class"),
+    "resp.hook.desc": (
+        "有结构性差别（侧栏有没有、表格还是卡片）才用 hook。它跨档时重绘本组件，"
+        "所以别在它里面算像素 —— 那是渲染层的事。",
+        "有結構性差別（側欄有沒有、表格還是卡片）才用 hook。它跨檔時重繪本元件，"
+        "所以別在它裡面算像素 —— 那是渲染層的事。",
+        "Reach for the hook only when the difference is structural (sidebar or not, table or "
+        "cards). It repaints the component when the class changes, so do not do pixel math inside "
+        "it — that belongs to the renderer.",
+    ),
+    "resp.hook.warn": (
+        "use_responsive() 反映的是窗口宽度。组件可能只占窗口的一部分（侧栏、分栏、对话框），"
+        "那里应该量自己 —— PageLayout、Descriptions 走的是 on_size_change，不看窗口。",
+        "use_responsive() 反映的是視窗寬度。元件可能只佔視窗的一部分（側欄、分欄、對話框），"
+        "那裡應該量自己 —— PageLayout、Descriptions 走的是 on_size_change，不看視窗。",
+        "use_responsive() reflects the window width. A component may occupy only part of it "
+        "(sidebar, split pane, dialog) — there it should measure itself. PageLayout and "
+        "Descriptions use on_size_change and ignore the window.",
+    ),
+    "resp.hook.warn_title": ("窗口宽度 ≠ 你的宽度", "視窗寬度 ≠ 你的寬度", "Window width ≠ your width"),
+    "resp.own.title": ("宽屏要限宽", "寬屏要限寬", "Cap the width on wide screens"),
+    "resp.own.desc": (
+        "响应式的另一半常被忽略：窄屏要挤得下，宽屏不能拉太长。一行超过约 75 个字符，"
+        "眼睛回行距离变长，阅读反而变慢；表单拉满 2000px 会显得左一个标签右一个输入框、"
+        "中间空一大片。所以宽屏的正解是居中限宽。",
+        "響應式的另一半常被忽略：窄屏要擠得下，寬屏不能拉太長。一行超過約 75 個字元，"
+        "眼睛回行距離變長，閱讀反而變慢；表單拉滿 2000px 會顯得左一個標籤右一個輸入框、"
+        "中間空一大片。所以寬屏的正解是居中限寬。",
+        "The other half of responsive design is usually forgotten: narrow screens must fit, and "
+        "wide screens must not stretch. Past roughly 75 characters per line the eye has to "
+        "travel further and reading slows down; a form stretched to 2000px looks like a label on "
+        "the far left and its input on the far right with a desert in between. Centre it and cap it.",
+    ),
+    "resp.own.note": (
+        "PageLayout 的 max_content_width 在窄容器上自动失效 —— 小屏幕上再限宽等于把内容挤没。"
+        "同一份代码，宽屏居中、窄屏铺满，不用写两个版本。",
+        "PageLayout 的 max_content_width 在窄容器上自動失效 —— 小螢幕上再限寬等於把內容擠沒。"
+        "同一份程式碼，寬屏居中、窄屏鋪滿，不用寫兩個版本。",
+        "PageLayout's max_content_width switches itself off on narrow containers — capping width there "
+        "would squeeze the content away. One piece of code: centred when wide, full-bleed when "
+        "narrow, no second variant.",
+    ),
+    "resp.own.note_title": ("限宽会自动让位", "限寬會自動讓位", "The cap steps aside"),
     "theme.trap_title": (
         "不要在页面里直接改 page.theme",
         "不要在頁面裡直接改 page.theme",

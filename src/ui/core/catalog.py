@@ -116,6 +116,7 @@ GROUPS: Final[tuple[Category, ...]] = (
         ("stack", "Stack", "ui.layout.stack"),
         ("list_view", "ListView", "ui.layout.list_view"),
         ("grid_view", "GridView", "ui.layout.grid_view"),
+        ("grid", "Grid", "ui.layout.grid"),
         ("expander", "Expander", "ui.layout.expander"),
         ("step", "Step", "ui.layout.step"),
         ("table", "Table", "ui.layout.table"),

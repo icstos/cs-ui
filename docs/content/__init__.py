@@ -11,7 +11,7 @@ from __future__ import annotations
 from docs.blocks import Doc
 from docs.content.about import ABOUT
 from docs.content.gallery import GALLERY
-from docs.content.guides import ARCHITECTURE, I18N, THEMING
+from docs.content.guides import ARCHITECTURE, I18N, RESPONSIVE, THEMING
 from docs.content.start import QUICKSTART
 
 DOCS: dict[str, Doc] = {
@@ -19,6 +19,7 @@ DOCS: dict[str, Doc] = {
     "architecture": ARCHITECTURE,
     "theming": THEMING,
     "i18n": I18N,
+    "responsive": RESPONSIVE,
     "components": GALLERY,
     "about": ABOUT,
 }

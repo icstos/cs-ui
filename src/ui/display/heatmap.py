@@ -242,7 +242,12 @@ class Heatmap:
     width: int | float | None = None
     on_cell_click: Callable[[HeatmapItem], None] | None = None
 
-    # ---- 运行期状态（下划线开头：不序列化，靠 notify() 重绘）-------------
+    # ---- 运行期状态 ---------------------------------------------------------
+    # 标量用 ``field(init=False)`` 存着没关系；但**控件不能带注解**。
+    # ``@ft.control`` 会把注解变成 dataclass 字段，flet 序列化时会遍历所有
+    # ``ft.Control`` 字段 —— 于是 ``_grid`` 会被当成 Heatmap 的另一个子控件，
+    # 和 ``content`` 里那一份各挂一次，之后对它的 update() 会打到看不见的副本上。
+    # 不带注解的类属性不参与 dataclass，也不参与序列化。
     _days: dict[_dt.date, HeatmapItem] = field(
         default_factory=dict, init=False, repr=False
     )
@@ -265,10 +270,10 @@ class Heatmap:
     _grid_h: int = field(default=0, init=False, repr=False)
     _hover: tuple[int, int] | None = field(default=None, init=False, repr=False)
     _stamp: tuple[Any, ...] | None = field(default=None, init=False, repr=False)
-    _grid: ft.Control | None = field(default=None, init=False, repr=False)
-    _header: ft.Control | None = field(default=None, init=False, repr=False)
-    _labels: ft.Control | None = field(default=None, init=False, repr=False)
-    _footer: ft.Control | None = field(default=None, init=False, repr=False)
+    _grid = None  # ft.Control | None
+    _header = None  # ft.Control | None
+    _labels = None  # ft.Control | None
+    _footer = None  # ft.Control | None
 
     # =====================================================================
     # 对外查询

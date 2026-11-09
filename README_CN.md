@@ -67,7 +67,15 @@
   外框圆角；`column` 决定一行几个字段，`span` 让长内容（地址、备注）跨两列，末行没排满时
   最后一个字段吃掉剩余列，不留空洞。`direction="vertical"` 换成标签在上，`bordered=False`
   去掉边框退成轻量对齐排布。列宽来自 `Row` 的权重（同一行权重之和恒等于 `column`），
-  所以不测量像素，窗口缩放也自动跟手
+  所以不测量像素，窗口缩放也自动跟手。`column` 还能给断点字典
+  （`{"compact": 1, "medium": 2, "expanded": 3}`），构建时按组件自身宽度选档
+- **响应式靠规矩，不靠猜** — 六个断点（`0 / 576 / 768 / 992 / 1200 / 1400`，与 `ResponsiveRow`
+  逐项相同）归成三档窗口类 compact / medium / expanded，**只有跨档才重绘**：精确宽度放在不可变
+  的 `Viewport` 快照里，更新它不触发任何重绘，所以拖动窗口不会把界面拖成幻灯片。连续变化交给
+  渲染层（`Grid` 按最小格宽算一行几格，外加 `ResponsiveRow` / `expand` / `on_size_change`），
+  结构交给 Python、由组件重渲染重建。`Grid(min_col_width=260, max_cols=4)` 一行能放几格就放
+  几格且每格等宽；`PageLayout` 量的是**自身**宽度而不是窗口 —— 放进侧栏、分栏、对话框里一样
+  正确 —— 宽屏把正文收到 720 / 1120 / 1440 并居中，窄屏自动让位
 - **看得见进度的步骤条** — `Step` 把流程建模成状态机：每步只可能是
   `wait` / `process` / `finish` / `error`，既可按 `active` 自动推导，也能在单步上钉死；
   连接线只给"已经走过"的段上色，进度靠颜色说话。横向平铺、垂直轴轨、一行式 `simple`
@@ -281,6 +289,7 @@ src/ui/
 │   ├── container.py         #   Container
 │   ├── divider.py           #   Divider
 │   ├── expander.py          #   Expander
+│   ├── grid.py              #   Grid（按最小格宽自动换列）
 │   ├── grid_view.py         #   GridView
 │   ├── list_view.py         #   ListView
 │   ├── page.py              #   PageLayout
@@ -311,7 +320,7 @@ src/ui/
 | **Display 媒体** | Audio、AudioPlayer、Video、Pdf |
 | **Feedback 反馈** | AlertDialog、Loading、Message、Notification、ProgressBar |
 | **Input 输入** | Button、Checkbox / CheckboxGroup、Chip、ColorPicker、DateInput、DateTimeInput、FilePicker / DirPicker、ImagePicker、Input、MultiSelect、NumberInput、RadioGroup、Rating、SearchBar、SegmentedButton、SelectBox、Slider、Switch、Transfer、Cascader |
-| **Layout 布局** | Card、Column、Container、Divider、Expander、GridView、ListView、PageLayout、Row、Stack、Step、Table、Tabs、View |
+| **Layout 布局** | Card、Column、Container、Divider、Expander、Grid、GridView、ListView、PageLayout、Row、Stack、Step、Table、Tabs、View |
 | **Navigation 导航** | AppBar、BreadCrumb、Menu、Pagination |
 
 **双范式**：
@@ -647,7 +656,7 @@ python scripts/gen_ui_registry.py --check   # 校验是否与源码一致
 一致性靠"记得跑"是守不住的，所以所有检查都在一个入口里：
 
 ```bash
-python scripts/check_all.py                 # 27 项 / 约 51s（静态门禁 + 审计 + 逻辑测试 + 文档）
+python scripts/check_all.py                 # 28 项 / 约 51s（静态门禁 + 审计 + 逻辑测试 + 文档）
 python scripts/check_all.py --stage fast    # 只跑静态门禁与令牌审计（改样式时够用）
 python scripts/check_all.py --stage visual  # 真机截图 + 灰块检测（会开窗口，几分钟）
 ```
@@ -659,6 +668,7 @@ python scripts/check_all.py --stage visual  # 真机截图 + 灰块检测（会�
 | `_tokens_logic.py` | 令牌契约：门面一致、刻度单调、状态层递进、兜底不抛、同源引用、交互态同值、强调四联与 `SEMANTIC` 同源 |
 | `_palette_logic.py` | 色板契约：46 角色齐全、11 档明度等步长且色相不漂、17 组前景/背景对比度达标（8 个种子 × 2 模式全成立）、结构色阶单向递进、语义四色重量一致、非法种子兜底不抛 |
 | `_color_logic.py` | 配色引擎：OKLCH 往返无损、分类色等亮度、色相间距、色阶单调、兜底不抛 |
+| `_responsive_logic.py` | 响应式契约：断点表与 `ResponsiveRow` 逐项相同、档位单调且边界左闭右开、**同档内不重绘**、栅格列数恒在 `[1, max_cols]`、`PageLayout` 用 `min()` 限宽并量化到 8px、私有字段不得漏进序列化树 |
 | `_*_logic.py` | 各组件纯逻辑（状态推导、取值边界、回调） |
 | `_doc_check.py` | 71 个组件的 SPEC / 示例 / API 完整性 |
 | `gen_ui_registry.py --check` | `ui.__all__` 与注册表不漂移 |

@@ -92,7 +92,7 @@ check("单列每项独占一行", layout(Descriptions(items=ITEMS[:3], column=1)
 # ---------------------------------------------------------------------------
 section("带边框横向：结构")
 d = Descriptions(items=[DescriptionsItem("用户名", "shawn"), DescriptionsItem("手机号", "181")], column=2)
-block = d.content.controls[0]
+block = d.content.controls[-1]
 check("外层是描边容器", type(block).__name__, "Container")
 check("外框圆角裁剪", block.clip_behavior, ft.ClipBehavior.ANTI_ALIAS)
 check("表格用 Column 串行", type(block.content).__name__, "Column")
@@ -118,7 +118,7 @@ check(
 # ---------------------------------------------------------------------------
 section("无边框横向：结构")
 d = Descriptions(items=[DescriptionsItem("用户名", "shawn")], column=2, bordered=False)
-check("无边框不包外框", type(d.content.controls[0]).__name__, "Column")
+check("无边框不包外框", type(d.content.controls[-1]).__name__, "Column")
 label, value = first_cell(d).controls
 check("无边框补冒号", label.content.value, "用户名:")
 check("无边框标签不上底色", label.bgcolor, None)

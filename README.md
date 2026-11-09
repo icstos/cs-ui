@@ -73,7 +73,19 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
   per row and `span` lets long values (addresses, notes) take two; if the last row runs short the
   final field absorbs the remainder instead of leaving a hole. Switch to `direction="vertical"`
   for label-above-value cards, or `bordered=False` to skip the frame and get a lightweight aligned
-  layout. Column widths come from flex weights, so nothing is measured and resizing is free
+  layout. Column widths come from flex weights, so nothing is measured and resizing is free.
+  Hand `column` a breakpoint map — `{"compact": 1, "medium": 2, "expanded": 3}` — and the tier is
+  picked from the component's own width at build time
+- **Responsive by rule, not by guesswork** — six breakpoints (`0 / 576 / 768 / 992 / 1200 / 1400`,
+  identical to `ResponsiveRow`) collapse into three window classes — compact / medium / expanded —
+  and only a crossing repaints: the exact width lives in an immutable `Viewport` snapshot that
+  triggers nothing, so dragging the window never turns the UI into a slideshow. Continuous change
+  is the renderer's job (`Grid` derives its column count from a minimum tile width, plus
+  `ResponsiveRow` / `expand` / `on_size_change`); structure is decided in Python and rebuilt by a
+  component re-render. `Grid(min_col_width=260, max_cols=4)` fits as many equal tiles per row as
+  the width allows, and `PageLayout` measures **itself** rather than the window — so it is correct
+  inside a sidebar, a split pane or a dialog — capping content at 720 / 1120 / 1440 on wide screens
+  and stepping aside on narrow ones
 - **Steps that show progress** — `Step` models a flow as a state machine: every step is
   `wait` / `process` / `finish` / `error`, derived from `active` or pinned per step. Connectors tint
   only the segments already walked, so progress reads from colour alone. Lay it out horizontally,
@@ -287,6 +299,7 @@ src/ui/
 │   ├── container.py         #   Container
 │   ├── divider.py           #   Divider
 │   ├── expander.py          #   Expander
+│   ├── grid.py              #   Grid (auto columns from a minimum tile width)
 │   ├── grid_view.py         #   GridView
 │   ├── list_view.py         #   ListView
 │   ├── page.py              #   PageLayout
@@ -317,7 +330,7 @@ src/ui/
 | **Display / Media** | Audio, AudioPlayer, Video, Pdf |
 | **Feedback** | AlertDialog, Loading, Message, Notification, ProgressBar |
 | **Input** | Button, Checkbox / CheckboxGroup, Chip, ColorPicker, DateInput, DateTimeInput, FilePicker / DirPicker, ImagePicker, Input, MultiSelect, NumberInput, RadioGroup, Rating, SearchBar, SegmentedButton, SelectBox, Slider, Switch, Transfer, Cascader |
-| **Layout** | Card, Column, Container, Divider, Expander, GridView, ListView, PageLayout, Row, Stack, Step, Table, Tabs, View |
+| **Layout** | Card, Column, Container, Divider, Expander, Grid, GridView, ListView, PageLayout, Row, Stack, Step, Table, Tabs, View |
 | **Navigation** | AppBar, BreadCrumb, Menu, Pagination |
 
 **Two paradigms**:
@@ -543,7 +556,7 @@ python scripts/gen_ui_registry.py --check   # verify it hasn't drifted
 Consistency does not survive "remember to run it", so all checks live behind one entry point:
 
 ```bash
-python scripts/check_all.py                 # 27 checks / ~51 s (static gate + audit + logic + docs)
+python scripts/check_all.py                 # 28 checks / ~51 s (static gate + audit + logic + docs)
 python scripts/check_all.py --stage fast    # static gate + token audit only (enough when restyling)
 python scripts/check_all.py --stage visual  # real-window screenshots + grey-block detection (minutes)
 ```
@@ -555,6 +568,7 @@ python scripts/check_all.py --stage visual  # real-window screenshots + grey-blo
 | `_tokens_logic.py` | token contract: facade parity, monotonic scales, state-layer progression, safe fallbacks, single-source constants, interaction values, the accent quartet staying in sync with `SEMANTIC` |
 | `_palette_logic.py` | palette contract: all 46 roles present, 11 steps at even lightness with a stable hue, 17 foreground/background pairs clearing their contrast target (across 8 seeds × 2 modes), structural ramp moving one way, four semantic fills at the same weight, bad seeds falling back instead of raising |
 | `_color_logic.py` | color engine: OKLCH round-trip, equal-lightness series, hue spacing, monotonic scales, safe fallbacks |
+| `_responsive_logic.py` | responsive contract: breakpoint table identical to `ResponsiveRow`, window classes monotone with half-open bounds, **no repaint when the class does not change**, grid columns always inside `[1, max_cols]`, `PageLayout` capping by `min()` and quantising to 8px, and no private field leaking into the serialized tree |
 | `_*_logic.py` | per-component logic (state derivation, clamping, callbacks) |
 | `_doc_check.py` | SPEC / examples / API completeness for all 71 components |
 | `gen_ui_registry.py --check` | `ui.__all__` vs registry drift |

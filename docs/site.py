@@ -121,6 +121,9 @@ _ARCHITECTURE = _PAGE(
 )
 _THEMING = _PAGE("theming", "/docs/theming", "guide", ft.Icons.PALETTE_OUTLINED)
 _I18N = _PAGE("i18n", "/docs/i18n", "guide", ft.Icons.TRANSLATE)
+_RESPONSIVE = _PAGE(
+    "responsive", "/docs/responsive", "guide", ft.Icons.ASPECT_RATIO_OUTLINED
+)
 _ABOUT = _PAGE("about", "/about", "project", ft.Icons.INFO_OUTLINE)
 
 #: 组件总览（九宫格）
@@ -174,7 +177,11 @@ _COMPONENT_NAV: Final[tuple[PageMeta, ...]] = tuple(
 
 NAV_GROUPS: Final[tuple[NavGroup, ...]] = (
     NavGroup("start", "nav.group.start", (_QUICKSTART,)),
-    NavGroup("guide", "nav.group.guide", (_ARCHITECTURE, _THEMING, _I18N)),
+    NavGroup(
+        "guide",
+        "nav.group.guide",
+        (_ARCHITECTURE, _THEMING, _I18N, _RESPONSIVE),
+    ),
     NavGroup(
         "components",
         "nav.group.components",

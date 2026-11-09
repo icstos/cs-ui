@@ -1,6 +1,8 @@
-"""三篇指南：架构、主题、多语言。"""
+"""四篇指南：架构、主题、多语言、响应式。"""
 
 from __future__ import annotations
+
+import flet as ft
 
 from docs.blocks import (
     Doc,
@@ -21,6 +23,10 @@ from docs.content.live import (
     theme_playground,
     token_scales,
 )
+from ui import Grid
+from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, overlay
+
+_MUTED = ft.Colors.ON_SURFACE_VARIANT
 
 _TWO_KINDS = """# ① 静态控件：继承 Flet 原生控件，只改默认值
 from ui import Card
@@ -245,4 +251,123 @@ I18N: Doc = (
     h2("i18n.fallback.title"),
     p("i18n.fallback.desc"),
     ul("i18n.fallback.point1", "i18n.fallback.point2", "i18n.fallback.point3"),
+)
+
+
+# ---------------------------------------------------------------------------
+# 响应式
+# ---------------------------------------------------------------------------
+_RESP_GRID = """from ui import Grid
+
+Grid(
+    min_col_width=260,        # 一格至少多宽 —— 不是固定宽度
+    max_cols=4,               # 再宽的屏也就 4 格
+    controls=cards,           # 每个子项自动占一格
+)"""
+
+_RESP_HOOK = """from ui import use_responsive
+
+@ft.component
+def Shell() -> ft.Control:
+    r = use_responsive()                  # 只在**跨档**时重绘
+    return Row(controls=[
+        None if r.is_compact else sidebar(),   # 窄屏收起侧栏
+        content(expand=True),
+    ])"""
+
+_RESP_OWN = """# 部件量**自己**的宽度，不看窗口
+PageLayout(
+    title="用户管理",
+    max_content_width="content",       # 宽屏居中限宽，窄屏自动失效
+    controls=[table, Grid(min_col_width=240, controls=cards)],
+)"""
+
+_RESP_BREAK = """# 断点与 flet.ResponsiveRow 逐项相同（0 / 576 / 768 / 992 / 1200 / 1400）
+size_class(700)    # 'compact'   —— 单列
+size_class(900)    # 'medium'    —— 两列
+size_class(1400)   # 'expanded'  —— 三栏 + 侧栏"""
+
+
+@ft.component
+def responsive_playground() -> ft.Control:
+    """实时演示：拖滑块改容器宽度，栅格自己换列（换列在渲染层，Python 不算）。"""
+    width, set_width = ft.use_state(720)
+    tiles = [
+        ft.Container(
+            height=64,
+            padding=SPACE["3"],
+            border_radius=RADIUS["md"],
+            bgcolor=overlay(0.05),
+            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+            content=ft.Text(
+                f"格 {i}",
+                size=FONT_SIZE["body"],
+                weight=FONT_WEIGHT["medium"],
+            ),
+        )
+        for i in range(1, 7)
+    ]
+    return ft.Column(
+        spacing=SPACE["3"],
+        controls=[
+            ft.Row(
+                spacing=SPACE["3"],
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Text(
+                        f"{width} px",
+                        size=FONT_SIZE["body"],
+                        weight=FONT_WEIGHT["semibold"],
+                    ),
+                    ft.Text(
+                        "拖我改宽度 →",
+                        size=FONT_SIZE["small"],
+                        color=_MUTED,
+                    ),
+                ],
+            ),
+            ft.Slider(
+                min=280,
+                max=1100,
+                value=width,
+                label="{value} px",
+                on_change=lambda e: set_width(int(float(e.control.value))),
+            ),
+            ft.Container(
+                width=width,
+                content=Grid(min_col_width=200, max_cols=4, controls=tiles),
+            ),
+        ],
+    )
+
+
+RESPONSIVE: Doc = (
+    p("resp.intro"),
+    h2("resp.rules.title"),
+    p("resp.rules.desc"),
+    ul(
+        "resp.rules.point1",
+        "resp.rules.point2",
+        "resp.rules.point3",
+        "resp.rules.point4",
+    ),
+    code(_RESP_BREAK, "core/responsive.py"),
+    h2("resp.live.title"),
+    split(
+        (p("resp.live.desc"),),
+        responsive_playground,
+        ratio=(5, 7),
+    ),
+    h2("resp.grid.title"),
+    p("resp.grid.desc"),
+    code(_RESP_GRID, "grid.py"),
+    tip("resp.grid.tip", "resp.grid.tip_title"),
+    h2("resp.hook.title"),
+    p("resp.hook.desc"),
+    code(_RESP_HOOK, "shell.py"),
+    warn("resp.hook.warn", "resp.hook.warn_title"),
+    h2("resp.own.title"),
+    p("resp.own.desc"),
+    code(_RESP_OWN, "page.py"),
+    note("resp.own.note", "resp.own.note_title"),
 )

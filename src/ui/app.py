@@ -7,6 +7,7 @@ import flet as ft
 
 from ui.core.config import logger
 from ui.core.i18n import t, use_t
+from ui.core.responsive import apply_responsive
 from ui.core.theme import apply_theme, theme_state
 from ui.core.tokens import FONT_SIZE, RADIUS
 
@@ -147,6 +148,10 @@ class App:
         if not st.font_family:
             st.font_family = "AlibabaPuHuiTi"
         apply_theme(page, st)
+        # 响应式：读一次当前窗口宽度，之后跟着 on_resize 走。宽度只在**跨档**
+        # （compact / medium / expanded）时触发重绘，拖动窗口不会变成幻灯片。
+        # 与 apply_theme 同一个位置，因为两者都是"页面级、框架级、只做一次"的事。
+        apply_responsive(page)
         if self.with_auto_routing:
             self.auto_routing()
         # 用 manage_views=False + page.render（根视图）：

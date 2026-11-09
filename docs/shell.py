@@ -31,7 +31,14 @@ from docs.site import (
     page_before,
     page_for_route,
 )
-from ui import LanguageSwitcher, Menu, MenuGroup, MenuItem, use_t
+from ui import (
+    LanguageSwitcher,
+    Menu,
+    MenuGroup,
+    MenuItem,
+    use_responsive,
+    use_t,
+)
 from ui.core import catalog
 from ui.core import doc as doc_kit
 from ui.core.theme import use_theme
@@ -172,7 +179,7 @@ def _github_link() -> ft.Control:
 
 
 @ft.component
-def top_bar(*, on_search) -> ft.Control:
+def top_bar(*, on_search, on_nav=None) -> ft.Control:
     tr = use_t()
     location = ft.use_route_location()
     page = ft.context.page
@@ -218,6 +225,18 @@ def top_bar(*, on_search) -> ft.Control:
                     spacing=22,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
+                        *(
+                            []
+                            if on_nav is None
+                            else [
+                                ft.IconButton(
+                                    icon=ft.Icons.MENU,
+                                    icon_size=20,
+                                    tooltip=tr("site.nav.open"),
+                                    on_click=lambda _e: on_nav(),
+                                )
+                            ]
+                        ),
                         brand,
                         ft.Row(
                             spacing=2,
@@ -702,12 +721,35 @@ def site_footer() -> ft.Control:
 # ---------------------------------------------------------------------------
 
 
+def _open_nav_drawer() -> None:
+    """窄屏：把同一份侧边栏塞进抽屉。菜单只有一处定义，不维护第二份。"""
+    page = ft.context.page
+    page.drawer = ft.NavigationDrawer(
+        width=SIDEBAR_WIDTH + 8,
+        bgcolor=ft.Colors.SURFACE,
+        controls=[
+            ft.Container(
+                expand=True,
+                padding=ft.Padding.only(top=12, bottom=12),
+                content=sidebar(),
+            )
+        ],
+    )
+    page.show_drawer()
+
+
 @ft.component
 def site_layout() -> ft.Control:
-    """顶栏 + （侧边栏 | 正文 | 本页目录），外加命令面板浮层。"""
+    """顶栏 + （侧边栏 | 正文 | 本页目录），外加命令面板浮层。
+
+    窄窗口（compact）下侧栏与本页目录都收起来：侧栏改走顶栏的抽屉按钮，
+    正文独占整幅宽度 —— 三栏挤在 700px 里，正文只剩一半，读起来比翻菜单更累。
+    """
     outlet = ft.use_route_outlet()
     location = ft.use_route_location()
     open_search, set_open_search = ft.use_state(False)
+    responsive = use_responsive()
+    compact = responsive.is_compact
 
     search_api.bind(lambda: set_open_search(True))
 
@@ -726,9 +768,13 @@ def site_layout() -> ft.Control:
         spacing=0,
         vertical_alignment=ft.CrossAxisAlignment.STRETCH,
         controls=[
-            *([] if is_home else [sidebar()]),
+            *([] if is_home or compact else [sidebar()]),
             ft.Container(expand=True, bgcolor=kit.PAGE_BG, content=outlet),
-            *([outline_rail(meta.key)] if has_outline and meta is not None else []),
+            *(
+                [outline_rail(meta.key)]
+                if has_outline and meta is not None and not compact
+                else []
+            ),
         ],
     )
 
@@ -739,7 +785,10 @@ def site_layout() -> ft.Control:
             expand=True,
             spacing=0,
             controls=[
-                top_bar(on_search=lambda _e: set_open_search(True)),
+                top_bar(
+                    on_search=lambda _e: set_open_search(True),
+                    on_nav=None if (is_home or not compact) else _open_nav_drawer,
+                ),
                 body,
             ],
         ),

@@ -15,6 +15,7 @@ lazy_exports(
         "VerticalDivider": ".divider",
         "Expander": ".expander",
         "GridView": ".grid_view",
+        "Grid": ".grid",
         "ListView": ".list_view",
         "PageLayout": ".page",
         "Row": ".row",

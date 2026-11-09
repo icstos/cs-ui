@@ -48,10 +48,14 @@ import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.empty import empty_line
+from ui.core.responsive import resolve, size_class, viewport
 from ui.core.i18n import t
 from ui.core.tokens import FONT_SIZE, RADIUS, SPACE, semantic_text
 
 __all__ = ["Descriptions", "DescriptionsItem"]
+
+#: 三档各自的行切分上限 —— 只用于文档与测试断言（列数由调用方给）。
+_TIERS: dict[str, int] = {"compact": 1, "medium": 2, "expanded": 3}
 
 # ---------------------------------------------------------------------------
 # 视觉常量
@@ -113,7 +117,9 @@ class Descriptions(ft.Container):
     Args:
         items: :class:`DescriptionsItem` 列表，也接受
             ``{"label": ..., "value": ..., "span": ...}`` 这种字典写法。
-        column: 一行放几个字段，默认 3。
+        column: 一行放几个字段，默认 3。也可以按断点给：
+            ``{"compact": 1, "medium": 2, "expanded": 3}`` —— 组件按**自身宽度**
+            **在构建时**选档（换档 = 换行切分，属于结构变化；见下方 Notes）。
         direction: ``horizontal``（标签在左，默认）或 ``vertical``（标签在上）。
         bordered: 是否带边框与分隔线，**默认 ``True``**。
         size: ``default`` / ``small``，只影响内边距与字号；``medium`` / ``mini``
@@ -129,10 +135,15 @@ class Descriptions(ft.Container):
         标签列宽固定（``label_width``）是为了换行时**每一行都对得齐**；代价是极窄容器
         （约 < 400px）里标签与内容会互相挤压 —— 这时减少 ``column`` 或调小
         ``label_width`` 比让组件去猜宽度更可控。
+
+        ``column`` 给字典时，档位在**构建时**按自身宽度选定。跨档换列数等于换一套
+        行切分（结构变化），flet 1.1.2 对已挂载子树的结构补丁不保证上屏，所以
+        运行期不重排 —— 要跟着窗口走，就把本组件建在组件里、在组件里
+        ``use_responsive()``，档位变化时整页重渲染即可（见 RESPONSIVE 指南）。
     """
 
     items: list[DescriptionsItem | dict[str, Any]] = field(default_factory=list)
-    column: int = 3
+    column: int | dict[str, int] = 3
     direction: str = "horizontal"
     bordered: bool = True
     size: str = "default"
@@ -141,22 +152,50 @@ class Descriptions(ft.Container):
     colon: bool = True
     label_width: int = LABEL_W
 
+    #: 用户给的原始 column（可能是个断点字典，解析后就地替换成 int 了）
+    #:
+    #: 这两个刻意**不带类型注解**：``@ft.control`` 会把注解变成 dataclass 字段，
+    #: 而 flet 序列化时会遍历所有字段 —— 运行时状态一旦成为字段，就会随每次 patch
+    #: 上线路（``_column_spec`` 里那个断点字典尤其没必要）。不带注解的类属性
+    #: 不参与 dataclass，也就永远不会被序列化。
+    _column_spec = None  # Any
+    _cls = "expanded"
+
     def init(self):
         self._items: list[DescriptionsItem] = [_as_item(i) for i in self.items]
         self._pad_h, self._pad_v, self._font = _size_metrics(self.size)
+        # 列数可以按断点给（``{"compact": 1, "medium": 2, "expanded": 3}``）：
+        # 字段格子是"排出来的"，窄容器里三列会把标签和内容挤成两行。
+        self._column_spec = self.column
+        self._cls = size_class(viewport().width)
+        self.column = int(resolve(self._column_spec, viewport().width))
         self.padding = 0
-        self.content = self._build()
+
+        # 列数（以及由此决定的"行切分"）在**构建期**定下来。
+        #
+        # 换列数是结构变化：一行的格子数与切分方式都变了。flet 1.1.2 对已挂载
+        # 子树的替换补丁不保证上屏（换成新 Column、整列换新列表、甚至切
+        # ``visible`` 都实测不生效），所以这里不去赌运行期能重排 —— 需要跟随窗口
+        # 跨档的页面，把 Descriptions 建在组件里并在组件里 ``use_responsive()``，
+        # 档位一变 flet 会重渲染整页（见 docs 的 RESPONSIVE 指南）。
+        #
+        # 连续变化（格子跟着拉伸）本来就交给渲染层，不需要这里做任何事。
+        self._host = ft.Column(
+            spacing=0,
+            controls=[b for b in (self._header(), self._table()) if b is not None],
+        )
+        self.content = self._host
 
     # ------------------------------------------------------------------
     # 网格：把字段切成行，算出每格占几列
     # ------------------------------------------------------------------
-    def _rows(self) -> list[list[tuple[DescriptionsItem, int]]]:
+    def _rows(self, columns: int | None = None) -> list[list[tuple[DescriptionsItem, int]]]:
         """按 ``span`` 把字段打包成行。
 
         规则只有两条：放不下就换行；末行没排满时**最后一项吃掉剩余列**。
         后者是"表"与"列表"的分界 —— 留着空格子，边框会像漏了一块。
         """
-        total = max(1, self.column)
+        total = max(1, self.column if columns is None else columns)
         rows: list[list[tuple[DescriptionsItem, int]]] = []
         row: list[tuple[DescriptionsItem, int]] = []
         used = 0
@@ -185,12 +224,6 @@ class Descriptions(ft.Container):
     # ------------------------------------------------------------------
     # 组装
     # ------------------------------------------------------------------
-    def _build(self) -> ft.Control:
-        blocks = [b for b in (self._header(), self._table()) if b is not None]
-        if not blocks:
-            return ft.Container()
-        return ft.Column(spacing=0, controls=blocks)
-
     def _header(self) -> ft.Control | None:
         """标题 / 操作区。两者都没有就不占位。"""
         if not self.title and self.extra is None:
@@ -218,8 +251,8 @@ class Descriptions(ft.Container):
             ),
         )
 
-    def _table(self) -> ft.Control:
-        rows = self._rows()
+    def _table(self, columns: int | None = None) -> ft.Control:
+        rows = self._rows(columns)
         if rows:
             last = len(rows) - 1
             cells: list[ft.Control] = []
@@ -475,12 +508,16 @@ class Descriptions(ft.Container):
     # 运行时更新
     # ------------------------------------------------------------------
     def set_items(self, items: list[DescriptionsItem | dict[str, Any]]) -> None:
-        """替换字段列表并就地刷新（已挂载时生效；未挂载则只更新模型）。"""
+        """替换字段列表并就地刷新。
+
+        注意：这一条是**结构变化**，属于 flet 1.1.2 上不保证上屏的那一类
+        （见 :meth:`init` 的说明）。数据模型一定会更新，界面在下次重建时跟上。
+        """
         self.items = list(items)
         self._items = [_as_item(i) for i in self.items]
         try:
-            self.content = self._build()
-            self.update()
+            self._host.controls[-1] = self._table()  # 表格永远在最后一格
+            self._host.update()
         except Exception:  # noqa: BLE001, S110 - 尚未挂到页面时不需要刷新
             pass
 
@@ -724,7 +761,12 @@ SPEC = Spec(
             "[]",
             "字段列表；每项是 DescriptionsItem(label, value, span, icon)，也可传字典",
         ),
-        Api("column", "int", "3", "一行放几个字段；窄容器里降到 1"),
+        Api(
+            "column",
+            "int | dict[str, int]",
+            "3",
+            "一行放几个字段；也可以按断点给（compact/medium/expanded），构建时按自身宽度选档",
+        ),
         Api(
             "direction",
             "str",

@@ -24,7 +24,16 @@ from dataclasses import field
 import flet as ft
 
 from ui.core.doc import Api, Example, Spec, info, run, tip
-from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, overlay
+from ui.core.responsive import size_class, viewport
+from ui.core.tokens import (
+    CONTENT_MAX,
+    FONT_SIZE,
+    FONT_WEIGHT,
+    PAGE_PAD,
+    RADIUS,
+    SPACE,
+    overlay,
+)
 
 __all__ = ["PageLayout"]
 
@@ -41,41 +50,187 @@ class PageLayout(ft.Container):
         controls: 页面内容控件列表。
         title: 页面标题，为空则不渲染标题区。
         subtitle: 页面副标题。
-        actions: 标题右侧的操作区控件（如按钮）。
-        padding: 页面内边距，默认 20。
+        actions: 标题右侧的操作区控件（如按钮）；**窄窗口自动折到标题下方**。
+        padding: 页面内边距；``None``（默认）表示跟着窗口档位走
+            （16 / 24 / 32，见 :data:`~ui.core.tokens.PAGE_PAD`）。
+        max_content_width: 内容最大宽度 —— ``"reading"``（720）/ ``"content"``（1120）/
+            ``"wide"``（1440）/ 具体像素。``None`` 表示不限宽。窄窗口下自动失效。
         spacing: 内容间距，默认 12。
         scroll: 滚动模式，默认 ``AUTO``；传 ``None`` 关闭滚动。
         horizontal_alignment: 内容水平对齐方式。
         bgcolor: 页面背景色。
+
+    Notes:
+        响应式只做三件事，且**都不重建内容**：换内边距、按上限居中、窄屏把页头
+        操作折到第二行。跨档时才执行一次（拖动窗口的过程中不参与），
+        所以它不会成为滚动与拖拽的负担。
     """
 
     controls: list[ft.Control] = field(default_factory=list)
     title: str = ""
     subtitle: str = ""
     actions: list[ft.Control] = field(default_factory=list)
-    padding: ft.PaddingValue = SPACE["5"]
+    padding: ft.PaddingValue | None = None
+    max_content_width: int | str | None = None
     spacing: int = SPACE["3"]
     scroll: ft.ScrollMode | None = ft.ScrollMode.AUTO
     horizontal_alignment: ft.CrossAxisAlignment = ft.CrossAxisAlignment.START
     bgcolor: ft.ColorValue = ft.Colors.TRANSPARENT
 
+    # ---- 运行时状态（不属于公开 API） ----
+    #
+    # 注意：这些**不能写成带类型注解的字段**。``@ft.control`` 会把它变成 dataclass
+    # 字段，而 flet 序列化时会遍历所有 ``ft.Control`` 类型的字段 —— 于是 ``_column``
+    # 会被当成 PageLayout 的另一个子控件，和 ``content`` 里那一份**各挂一次**。
+    # 之后对 ``_column`` 调 update()，补丁会打到客户端那份看不见的副本上：
+    # 对象状态全对、界面纹丝不动。不带注解的类属性不参与 dataclass，也就不会被序列化。
+    _column = None  # ft.Column | None
+    _header = None  # ft.Control | None
+    _centered = False
+    _pad_user = None  # ft.PaddingValue | None
+    _cls = "expanded"
+    _header_compact = False
+    _width = None  # float | None
+    _limit_applied = None  # int | None
+
     def init(self):
         if self.expand is None:
             self.expand = True
 
+        # 初始档位只能先按窗口猜一次：控件此刻还没量过，首个 on_size_change 会纠正它。
+        self._cls = size_class(viewport().width)
+
         body: list[ft.Control] = []
-        header = self._build_header()
-        if header is not None:
-            body.append(header)
+        self._header_compact = self._header_shape()
+        self._header = self._build_header()
+        if self._header is not None:
+            body.append(self._header)
         body.extend(self.controls)
 
-        self.content = ft.Column(
+        self._column = ft.Column(
             controls=body,
             spacing=self.spacing,
             scroll=self.scroll,
             horizontal_alignment=self.horizontal_alignment,
             expand=True,
         )
+        # 用户显式给的内边距要留住 —— 否则第二次计算时会把自己的结果当成"显式值"。
+        self._pad_user = self.padding
+        self.padding = self._pad()
+
+        # 限宽只在**要求**限宽时才套一层 Row：不需要的页面不该多一次布局。
+        # 结构在构建期定死，运行期只改里面那个 Container 的宽度 —— 换档不重挂子树。
+        if self.max_content_width is not None:
+            self._limit_applied = self._limit()
+            self.content = ft.Row(
+                expand=True,
+                alignment=ft.MainAxisAlignment.CENTER,
+                vertical_alignment=ft.CrossAxisAlignment.STRETCH,
+                controls=[
+                    ft.Container(width=self._limit_applied, content=self._column)
+                ],
+            )
+            self._centered = True
+        else:
+            self.content = self._column
+
+        # 量**自己**的宽度，不看窗口：PageLayout 可能放在侧栏、分栏、对话框里，
+        # 那些场景下"窗口很宽"与"我很窄"同时成立，按窗口判断必然错。
+        self.on_size_change = self._on_self_size
+
+    # ------------------------------------------------------------------
+    # 响应式
+    # ------------------------------------------------------------------
+    def _on_self_size(self, e: ft.LayoutSizeChangeEvent) -> None:
+        """自身宽度变了：跨档就换内边距与页头排布，限宽则每 8px 跟一次。
+
+        限宽必须跟着**实际宽度**走，不能只在跨档时算一次：容器从 1200 收到 900
+        仍属同一档，若宽度还钉在 1120，内容就会溢出被裁掉。所以这里按 8px 量化 ——
+        一整段拖动只触发上百次属性更新，而不是每像素一次。
+        """
+        if self._column is None:
+            return
+        width = getattr(e, "width", None)
+        self._width = width
+        cls = size_class(width)
+
+        if cls != self._cls:
+            self._cls = cls
+            self.padding = self._pad()
+            # 只有**形态真的变了**才重建页头（紧凑 ↔ 非紧凑）。同一形态只是宽度
+            # 不同时重建毫无意义，而且白送一次结构补丁 —— 那是最贵也最容易出事
+            # 的一种更新（见 ``_swap_header`` 的说明）。
+            if self._header_shape() != self._header_compact:
+                self._swap_header()
+            self.update()
+
+        if not self._centered:
+            return
+        limit = self._limit()
+        if limit is None or limit == self._limit_applied:
+            return
+        self._limit_applied = limit
+        inner = self.content.controls[0] if self.content is not None else None
+        if isinstance(inner, ft.Container):
+            inner.width = limit
+            self.update()
+
+    def _header_shape(self) -> bool:
+        """页头是不是"紧凑形态"（操作折到第二行）。没有操作时两种形态一样。"""
+        return self._cls == "compact" and bool(self.actions)
+
+    def _swap_header(self) -> None:
+        """换掉页头那一格。
+
+        只动 ``controls[0]`` 这一格、不做整列重建：列表按格替换是 flet 补丁里
+        最稳的一种（新增/删除整棵子树时，客户端会在布局过程中重挂，容易把整帧
+        卡住）。代价是这一格必须"一格换一格"。
+        """
+        header = self._build_header()
+        if header is None or self._header is None:
+            return
+        self._header_compact = self._header_shape()
+        self._column.controls[0] = header
+        self._header = header
+        self._column.update()
+
+    def _hpad(self) -> int:
+        """左右内边距之和。``padding`` 允许是 int / Padding / 字符串，都得认。"""
+        pad = self._pad()
+        if isinstance(pad, (int, float)):
+            return int(pad) * 2
+        if isinstance(pad, ft.Padding):
+            return int(pad.left or 0) + int(pad.right or 0)
+        return 0
+
+    def _pad(self) -> ft.PaddingValue:
+        """内边距：显式给了就照给的，否则按档位取。"""
+        if self._pad_user is not None:
+            return self._pad_user
+        return ft.Padding.all(PAGE_PAD[self._cls])
+
+    def _limit(self) -> int | None:
+        """内容宽度：不超过 ``max_content_width``，也不超过自己装得下的宽度。
+
+        两件事一次做完：宽屏居中限宽（``cap`` 生效），窄屏自然铺满
+        （``cap`` 被可用宽度压住）。所以"窄容器上自动失效"不是特判，
+        是 min() 的必然结果 —— 也就不会出现"宽度钉死、内容溢出"。
+        """
+        value = self.max_content_width
+        if value is None:
+            return None
+        cap = (
+            CONTENT_MAX.get(value.strip().lower())
+            if isinstance(value, str)
+            else int(value)
+        )
+        if cap is None:
+            return None
+        if self._width is None:
+            return cap
+        avail = int(max(0, self._width - self._hpad()))
+        # 8px 量化：一整段拖动只改上百次，而不是每像素一次。
+        return max(8, min(int(cap), avail) // 8 * 8)
 
     # ------------------------------------------------------------------
     # 内部方法
@@ -111,11 +266,26 @@ class PageLayout(ft.Container):
                 )
             )
 
+        compact = self._cls == "compact"
+        title_block = ft.Column(controls=left, spacing=2, expand=not compact)
+        if compact and self.actions:
+            # 窄窗口：操作折到标题下方一行。挤在同一行里，要么标题被压成省略号、
+            # 要么按钮被裁掉一半 —— 都不如换行体面。
+            return ft.Column(
+                spacing=SPACE["2"],
+                controls=[
+                    title_block,
+                    ft.Row(
+                        controls=list(self.actions),
+                        wrap=True,
+                        spacing=SPACE["2"],
+                        run_spacing=SPACE["2"],
+                    ),
+                ],
+            )
+
         return ft.Row(
-            controls=[
-                ft.Column(controls=left, spacing=2, expand=True),
-                *self.actions,
-            ],
+            controls=[title_block, *self.actions],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=SPACE["3"],
         )
@@ -422,7 +592,8 @@ SPEC = Spec(
         ),
         (
             "内容列",
-            "controls 依次排下去，间距 12、四周留白 20，默认 ScrollMode.AUTO。",
+            "controls 依次排下去，间距 12，四周留白按自身宽度在 16 / 24 / 32 之间取，"
+            "默认 ScrollMode.AUTO。",
         ),
         (
             "边界",
@@ -461,9 +632,20 @@ SPEC = Spec(
     api=[
         Api("title", "str", "''", "页面标题；留空且无 actions 时整个页头不渲染"),
         Api("subtitle", "str", "''", "标题下方的说明，单行省略"),
-        Api("actions", "list[ft.Control]", "[]", "页头右侧的操作控件"),
+        Api("actions", "list[ft.Control]", "[]", "页头右侧的操作控件；窄容器上折到标题下方"),
         Api("controls", "list[ft.Control]", "[]", "页面内容，按 spacing 依次排列"),
-        Api("padding", "ft.PaddingValue", "20", "页头与内容四周的留白"),
+        Api(
+            "padding",
+            "ft.PaddingValue | None",
+            "None",
+            "四周留白；None = 跟着自身宽度档位走（16 / 24 / 32）",
+        ),
+        Api(
+            "max_content_width",
+            "int | str | None",
+            "None",
+            "内容最大宽度：reading(720) / content(1120) / wide(1440) / 像素值；窄容器自动失效",
+        ),
         Api("spacing", "int", "12", "页头与内容、内容各块之间的行距"),
         Api("scroll", "ft.ScrollMode | None", "AUTO", "传 None 关闭滚动，由调用方接管"),
         Api(
@@ -484,6 +666,16 @@ SPEC = Spec(
             "页头收进了设计令牌：标题从 22px 落到 headline 档（20），内边距与行距改走"
             " SPACE；标题与副标题都改成单行省略 —— 页面标题变长时，正确的结果是省略，"
             "而不是把右侧操作挤出屏幕、或把页头撑成三行。"
+        ),
+        info(
+            "响应式量的是**自身宽度**（on_size_change），不是窗口宽度。所以把它放进"
+            "侧栏、分栏、对话框里同样正确：「窗口很宽，我很窄」时它会按窄的排版。"
+            "同一档内拖动只改内边距与限宽两个属性，不重建任何子树；页头形态在构建期"
+            "按档位定下来 —— 页面用组件挂载时，档位一变整页重渲染，形态自然跟着换。"
+        ),
+        info(
+            "max_content_width 在窄容器上自动失效 —— 小屏幕上再限宽等于把内容挤没。"
+            "宽屏上则相反：一行文字超过约 75 个字符就会难读，限宽居中比拉满更专业。"
         ),
         info(
             "侧栏与页脚不在这里。PageLayout 的职责只有「页头 + 可滚动内容」，侧栏用 Row "
