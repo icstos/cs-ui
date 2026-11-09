@@ -46,19 +46,32 @@ def _code_tabs(block: CodeTabs) -> ft.Control:
 
 
 def _split(block: Split, tr: Translator) -> ft.Control:
+    """左说明、右演示。宽屏并排，窄屏（< 992）上下堆叠。
+
+    不能写成固定 ``Row`` + ``expand`` 比例：``expand`` 只分配"剩余空间"，
+    640 的窗口里左栏会缩到 250 左右，说明文字一段一行、演示面板里的表单全挤成
+    两行。用 ``ResponsiveRow`` 让换行发生在 Flutter 侧，正文不用重排。
+    """
     left, right = block.ratio
-    return ft.Row(
+    total = max(1, left + right)
+    left_span = max(1, round(12 * left / total))
+    right_span = max(1, 12 - left_span)
+    return ft.ResponsiveRow(
+        columns=12,
         spacing=32,
+        run_spacing=22,
         vertical_alignment=ft.CrossAxisAlignment.START,
         controls=[
             ft.Container(
-                expand=left,
+                col={"xs": 12, "lg": left_span},
                 content=ft.Column(
                     spacing=14,
                     controls=render_blocks(block.left, tr),
                 ),
             ),
-            ft.Container(expand=right, content=block.right()),
+            ft.Container(
+                col={"xs": 12, "lg": right_span}, content=block.right()
+            ),
         ],
     )
 

@@ -13,8 +13,11 @@ import flet as ft
 from docs import kit
 from docs.site import Hit, build_index
 from ui import use_t
+from ui.core.responsive import viewport
 
 _PANEL_WIDTH = 560
+#: 面板两侧至少留出的空当 —— 窄窗口里 560 会顶出屏幕，按可用宽度收。
+_PANEL_MARGIN = 32
 
 #: 由外壳登记"打开面板"的方法，页面就不用知道面板挂在哪一层。
 _open: Callable[[], None] | None = None
@@ -105,7 +108,9 @@ def SearchPalette(*, on_close: Callable[[], None]) -> ft.Control:
         )
 
     card = ft.Container(
-        width=_PANEL_WIDTH,
+        width=min(
+            _PANEL_WIDTH, max(260, int(viewport().width) - _PANEL_MARGIN)
+        ),
         border_radius=16,
         bgcolor=kit.SURFACE,
         border=ft.Border.all(1, kit.BORDER),

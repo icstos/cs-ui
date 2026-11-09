@@ -284,9 +284,10 @@ M: dict[str, tuple[str, str, str]] = {
     ),
     "home.feature.desktop.title": ("桌面优先", "桌面優先", "Desktop first"),
     "home.feature.desktop.desc": (
-        "为鼠标与键盘优化：悬停、密度与滚动。",
-        "為滑鼠與鍵盤最佳化：懸停、密度與捲動。",
-        "Tuned for mouse and keyboard: hover, density, scrolling.",
+        "为鼠标与键盘优化：悬停、密度与滚动；窗口变窄自动收起侧栏与目录。",
+        "為滑鼠與鍵盤最佳化：懸停、密度與捲動；視窗變窄自動收起側欄與目錄。",
+        "Tuned for mouse and keyboard — hover, density, scrolling — and it folds the sidebar and "
+        "outline away when the window narrows.",
     ),
     "home.showcase.title": ("组件都在这儿", "元件都在這裡", "Every component, live"),
     "home.showcase.subtitle": (
@@ -404,6 +405,11 @@ M: dict[str, tuple[str, str, str]] = {
         "看多语言，把文案从代码里搬出去。",
         "看多語言，把文案從程式碼裡搬出去。",
         "i18n: move copy out of your code.",
+    ),
+    "start.next.point4": (
+        "看响应式，理解同一份界面怎么适配三档窗口。",
+        "看響應式，理解同一份介面怎麼適配三檔視窗。",
+        "Responsive: how one layout adapts to three window classes.",
     ),
     # ---------------------------------------------------------------- 架构
     "arch.intro": (
@@ -722,15 +728,18 @@ M: dict[str, tuple[str, str, str]] = {
     "resp.rules.point4": (
         "运行期只改属性，不改子树。flet 1.1.2 对已挂载控件树的结构补丁不保证上屏："
         "把 content 换成新控件、整列换新列表、甚至切 visible，都可能「Python 里全对、"
-        "屏幕纹丝不动」。所以结构只在构建期定，需要跟随档位就整页重渲染（组件）。",
+        "屏幕纹丝不动」；而组件渲染出的控件树会被冻结，运行期连子控件的属性都改不动。"
+        "所以结构只在构建期定，要跟随档位就让 observable 触发整页重渲染（组件）。",
         "執行期只改屬性，不改子樹。flet 1.1.2 對已掛載元件樹的結構補丁不保證上屏："
         "把 content 換成新元件、整列換新列表、甚至切 visible，都可能「Python 裡全對、"
-        "螢幕紋絲不動」。所以結構只在建構期定，需要跟隨檔位就整頁重繪（元件）。",
+        "螢幕紋絲不動」；而元件渲染出的控件樹會被凍結，執行期連子控件的屬性都改不動。"
+        "所以結構只在建構期定，要跟隨檔位就讓 observable 觸發整頁重繪（元件）。",
         "At runtime, change properties only — never the tree. flet 1.1.2 does not guarantee "
         "that structural patches to an already-mounted tree reach the screen: replacing content, "
         "swapping a whole list, even toggling visible can leave Python correct and the screen "
-        "unchanged. Decide structure at build time; to follow the window class, re-render the "
-        "page (a component).",
+        "unchanged — and the tree a component renders is frozen, so not even a child's properties "
+        "can be touched. Decide structure at build time; to follow the window class, let an "
+        "observable re-render the page (a component).",
     ),
     "resp.live.title": ("拖一下试试", "拖一下試試", "Drag it"),
     "resp.live.desc": (
@@ -805,6 +814,19 @@ M: dict[str, tuple[str, str, str]] = {
         "narrow, no second variant.",
     ),
     "resp.own.note_title": ("限宽会自动让位", "限寬會自動讓位", "The cap steps aside"),
+    "resp.boot.title": ("启动就是窄屏", "啟動就是窄屏", "Booted narrow"),
+    "resp.boot.desc": (
+        "窗口的启动尺寸不会触发 on_resize，而 main() 里读到的 page.width 还是上一次的尺寸。"
+        "apply_responsive 会在首帧后补读几次，所以只要调用过它，首帧之后的档位就是准的；"
+        "没调用的话，use_responsive() 会一直停在 expanded —— 侧栏常驻、页头不折行。",
+        "視窗的啟動尺寸不會觸發 on_resize，而 main() 裡讀到的 page.width 還是上一次的尺寸。"
+        "apply_responsive 會在首幀之後補讀幾次，所以只要呼叫過它，首幀之後的檔位就是準的；"
+        "沒呼叫的話，use_responsive() 會一直停在 expanded —— 側欄常駐、頁首不折行。",
+        "A window's startup size does not fire on_resize, and page.width in main() still holds the "
+        "previous size. apply_responsive re-reads it a few times after the first frame, so once it "
+        "has been called the class is right from then on; without it, use_responsive() stays at "
+        "expanded — permanent sidebar, no wrapped header.",
+    ),
     "theme.trap_title": (
         "不要在页面里直接改 page.theme",
         "不要在頁面裡直接改 page.theme",

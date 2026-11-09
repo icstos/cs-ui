@@ -24,6 +24,7 @@ from ui import (
     ProgressBar,
     Rating,
     Switch,
+    use_responsive,
     use_t,
 )
 from ui.core.theme import use_theme
@@ -36,15 +37,15 @@ _MAX = 960
 # ---------------------------------------------------------------------------
 
 
-def _centered(content: ft.Control, *, padding: int = 40) -> ft.Control:
+def _centered(content: ft.Control, *, padding: int = 24) -> ft.Control:
     """内容居中到一个最大宽度，窗口再宽也不会拉成一条长线。
 
-    960 是「最小窗口 1040 减去左右各 40」的余量，窄窗口下也不会顶出边界。
+    宽度取 ``min(960, 可用宽度)``（见 :func:`docs.kit.bounded`）：钉死 960 时
+    640 的窗口会把右半边内容（伪窗口、卡片）裁掉。留白给 24 而不是 40 ——
+    宽屏的呼吸量由 960 的限宽负责，窄屏再由 40 吃一道就只剩 280 了。
     """
-    return ft.Container(
-        padding=ft.Padding.symmetric(horizontal=padding),
-        alignment=ft.Alignment.TOP_CENTER,
-        content=ft.Container(width=_MAX, content=content),
+    return kit.bounded(
+        content, cap=_MAX, padding=ft.Padding.symmetric(horizontal=padding)
     )
 
 
@@ -288,6 +289,9 @@ def _hero() -> ft.Control:
     tr = use_t()
     page = ft.context.page
     theme = use_theme()
+    r = use_responsive()
+    # 46px 的标题在 360 宽的窗口里会挤成三行、每行两个字；按档位收到 34。
+    title_size = 34 if r.is_compact else (42 if r.size_class == "medium" else 46)
 
     left = ft.Column(
         spacing=18,
@@ -318,7 +322,7 @@ def _hero() -> ft.Control:
             ),
             ft.Text(
                 tr("home.title"),
-                size=46,
+                size=title_size,
                 weight=ft.FontWeight.W_800,
                 style=ft.TextStyle(letter_spacing=-1.4, height=1.12),
             ),
@@ -395,17 +399,21 @@ def _stats() -> ft.Control:
         ("100%", tr("home.stats.typed")),
     )
     return _centered(
-        ft.Row(
+        ft.ResponsiveRow(
+            columns=12,
             spacing=28,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            run_spacing=16,
             controls=[
-                ft.Row(
-                    spacing=10,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    controls=[
-                        ft.Text(value, size=24, weight=ft.FontWeight.W_800),
-                        ft.Text(label, size=12, color=kit.MUTED),
-                    ],
+                ft.Container(
+                    col={"xs": 6, "md": 3},
+                    content=ft.Row(
+                        spacing=10,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            ft.Text(value, size=24, weight=ft.FontWeight.W_800),
+                            ft.Text(label, size=12, color=kit.MUTED),
+                        ],
+                    ),
                 )
                 for value, label in items
             ],
@@ -924,7 +932,9 @@ def _playground() -> ft.Control:
                     ),
                     kit.hairline(),
                     ft.Row(
-                        spacing=22,
+                        spacing=18,
+                        wrap=True,
+                        run_spacing=16,
                         vertical_alignment=ft.CrossAxisAlignment.END,
                         controls=[
                             # Input.ui() 自带 expand，用固定宽容器收住，
@@ -972,6 +982,8 @@ def _cta() -> ft.Control:
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=24,
+                wrap=True,
+                run_spacing=14,
                 controls=[
                     ft.Column(
                         spacing=5,
@@ -992,6 +1004,8 @@ def _cta() -> ft.Control:
                     ),
                     ft.Row(
                         spacing=8,
+                        wrap=True,
+                        run_spacing=8,
                         controls=[
                             ft.FilledButton(
                                 tr("home.cta.start"),

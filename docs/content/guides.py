@@ -370,4 +370,6 @@ RESPONSIVE: Doc = (
     p("resp.own.desc"),
     code(_RESP_OWN, "page.py"),
     note("resp.own.note", "resp.own.note_title"),
+    h2("resp.boot.title"),
+    p("resp.boot.desc"),
 )

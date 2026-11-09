@@ -19,9 +19,10 @@ from docs.content import DOCS
 from docs.render import BlocksView
 from docs.shell import page_header, register_scroller, site_footer, step_nav
 from docs.site import COMPONENT_COUNTS, PAGES, PageMeta, group_entries
-from ui import Button, use_t
+from ui import Button, use_responsive, use_t
 from ui.core import catalog
 from ui.core import doc as doc_kit
+from ui.core.tokens import PAGE_PAD
 
 
 @ft.component
@@ -33,16 +34,22 @@ def _frame(
     trail: Sequence[tuple[str, str]] = (),
     desc: str | None = None,
 ) -> ft.Control:
-    """统一外壳：滚动容器 + 页头 + 正文 + 上下页 + 页脚。"""
+    """统一外壳：滚动容器 + 页头 + 正文 + 上下页 + 页脚。
+
+    正文的左右留白跟着窗口档位走（16 / 24 / 32）：窄屏上 44 的留白会吃掉
+    1/7 的宽度，而宽屏上它反而是需要的呼吸量。宽度再交给 :func:`docs.kit.bounded`
+    收在 1120 —— 一行 60~75 个字符最好读，1920 的窗口不该让一行正文横跨整屏。
+    """
+    r = use_responsive()
+    hpad = PAGE_PAD[r.size_class]
     scroller = ft.Column(
         expand=True,
         scroll=ft.ScrollMode.AUTO,
         spacing=0,
         horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
         controls=[
-            ft.Container(
-                padding=ft.Padding.only(left=44, right=44, top=26, bottom=34),
-                content=ft.Column(
+            kit.bounded(
+                ft.Column(
                     spacing=26,
                     horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
                     controls=[
@@ -52,6 +59,8 @@ def _frame(
                         site_footer(),
                     ],
                 ),
+                cap="content",
+                padding=ft.Padding.only(left=hpad, right=hpad, top=26, bottom=34),
             )
         ],
     )

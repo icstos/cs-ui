@@ -89,6 +89,11 @@ QUICKSTART: Doc = (
     code(_TREE, "project", "text"),
     h2("start.next.title"),
     p("start.next.desc"),
-    ul("start.next.point1", "start.next.point2", "start.next.point3"),
+    ul(
+        "start.next.point1",
+        "start.next.point2",
+        "start.next.point3",
+        "start.next.point4",
+    ),
     code(_STATE, "locale.py"),
 )

@@ -311,6 +311,44 @@ check("一列时切成 6 行", [len(row) for row in mid2._rows(1)], [1] * 6)
 
 # ---------------------------------------------------------------------------
 print()
+print("-- 挂载页面：启动宽度与幂等 --")
+# ---------------------------------------------------------------------------
+
+
+class _FakePage:
+    """只够 ``apply_responsive`` 用：尺寸、on_resize、run_task。"""
+
+    def __init__(self, width: float, height: float = 800.0) -> None:
+        self.width = width
+        self.height = height
+        self.on_resize = None
+        self.tasks: list = []
+
+    def run_task(self, handler) -> None:
+        self.tasks.append(handler)
+
+
+# 启动宽度读不到时（客户端还没布局，page.width 是 0）不能写状态：
+# 0 在断点表里是合法值（xs），写进去会把整页判成 compact，然后再跳回宽屏。
+r.reset()
+r._read(_FakePage(0))
+check("宽度 0 不写状态", r.responsive_state().size_class, "expanded")
+
+r._read(_FakePage(900))
+check("读到 900 → medium", r.responsive_state().size_class, "medium")
+
+# 幂等：挂两次不该串出两层 on_resize（否则一次拖动会写两次状态）。
+r.reset()
+page = _FakePage(1400)
+r.apply_responsive(page)
+first = page.on_resize
+r.apply_responsive(page)
+check("重复挂载不换处理器", page.on_resize is first, True)
+check("挂载后补读任务已排", len(page.tasks), 1)
+
+
+# ---------------------------------------------------------------------------
+print()
 print("-- 私有运行时字段不得成为 dataclass 字段 --")
 # ---------------------------------------------------------------------------
 # ``@ft.control`` 会把带注解的字段变成本控件的属性，而 flet 序列化时会遍历所有

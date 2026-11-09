@@ -258,6 +258,8 @@ def token_scales() -> ft.Control:
                     ft.Text(tr("theme.token.radius"), size=11.5, color=kit.MUTED),
                     ft.Row(
                         spacing=10,
+                        wrap=True,
+                        run_spacing=10,
                         controls=[
                             ft.Container(
                                 width=46,

@@ -658,7 +658,9 @@ def _checklist(
         for text in items
     ]
     return ft.Container(
-        expand=True,
+        # 两张卡在窄屏上一人一行：各占一半时"适合/不适合"每行只能放七八个字，
+        # 一条要点要读成三行。ResponsiveRow 在 < 768 时换行，宽屏行为不变。
+        col={"xs": 12, "md": 6},
         padding=ft.Padding.symmetric(horizontal=16, vertical=14),
         border_radius=12,
         bgcolor=ft.Colors.with_opacity(0.04, color),
@@ -699,8 +701,10 @@ def _when(doc: Spec) -> ft.Control:
                 title="不适合",
             )
         )
-    return ft.Row(
+    return ft.ResponsiveRow(
+        columns=12,
         spacing=12,
+        run_spacing=12,
         vertical_alignment=ft.CrossAxisAlignment.START,
         controls=cards,
     )

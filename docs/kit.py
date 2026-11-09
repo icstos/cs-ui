@@ -64,6 +64,62 @@ def hairline(*, color: ft.ColorValue = BORDER) -> ft.Control:
 
 
 # ---------------------------------------------------------------------------
+# 版心
+# ---------------------------------------------------------------------------
+def bounded(
+    content: ft.Control,
+    *,
+    cap: int | str | None = "content",
+    padding: ft.PaddingValue | int | None = None,
+) -> ft.Control:
+    """把正文收进一个"最多 ``cap`` 宽"的居中列。
+
+    实现只用渲染层的两个事实，**不在运行期改任何控件**：
+
+    * ``Container.max_width`` 是 BoxConstraints 的 ``maxWidth``：父宽大于 ``cap``
+      时容器宽就是 ``cap``，父宽更小时自动等于父宽 —— 这正是 ``min()`` 语义，
+      所以"宽屏限宽、窄屏铺满"是同一个约束的两个结果，不需要分支。
+    * 外层 ``Row(alignment=CENTER)`` 负责居中。
+
+    为什么不用 ``on_size_change`` 自己算宽度：文档站整页是 ``@ft.component``
+    渲染出来的，flet 会把组件返回的控件树**冻结**（frozen），运行期改子控件的
+    ``width`` / ``update()`` 直接抛 ``Frozen controls cannot be updated``。
+    渲染层的约束没有这个问题，还省掉一整条重绘路径。
+
+    Args:
+        content: 正文。
+        cap: 上限。``int`` 直接用；``"reading"`` / ``"content"`` / ``"wide"``
+            取 :data:`ui.core.tokens.CONTENT_MAX`；``None`` 表示不限宽。
+        padding: 内边距；``int`` 表示四边等值。
+    """
+    limit = _cap_of(cap)
+    pad = ft.Padding.all(padding) if isinstance(padding, int) else padding
+    if limit is None:
+        return ft.Container(padding=pad, content=content)
+    return ft.Container(
+        padding=pad,
+        # 外层铺满（父列是 STRETCH），内层被 max_width 夹住，alignment 负责居中。
+        alignment=ft.Alignment.TOP_CENTER,
+        content=ft.Container(max_width=limit, content=content),
+    )
+
+
+def _cap_of(cap: int | str | None) -> int | None:
+    if cap is None:
+        return None
+    if isinstance(cap, int):
+        return cap
+    from ui.core.tokens import CONTENT_MAX
+
+    return int(CONTENT_MAX.get(str(cap).strip().lower(), CONTENT_MAX["content"]))
+    if isinstance(padding, ft.Padding):
+        return int(padding.left or 0) + int(padding.right or 0)
+    if isinstance(padding, (int, float)):
+        return int(padding) * 2
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # 文本
 # ---------------------------------------------------------------------------
 
@@ -722,6 +778,7 @@ __all__ = [
     "SURFACE",
     "badge",
     "body",
+    "bounded",
     "bullets",
     "callout",
     "code_block",

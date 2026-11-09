@@ -50,6 +50,8 @@ expanded   ≥ 1200              侧栏 + 内容 + 大纲三栏；内边距 32�
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import weakref
 from dataclasses import dataclass
 from typing import Any, TypeVar
@@ -307,8 +309,20 @@ def apply_responsive(page: ft.Page) -> None:
     幂等：重复调用不会叠加重绘（页面记在一个弱集合里，页面销毁即自动移除）。
     若页面上已有别人写的 ``on_resize``，会被**串起来**（先更新状态，再跑原来那个），
     不会被覆盖掉。
+
+    为什么还要"首帧后补读"
+    ----------------------
+    窗口的**启动尺寸**不会触发 ``on_resize``：flet 建窗时客户端已经按参数把窗口
+    画好了，而 Python 侧的 ``page.width`` 在 ``main()`` 里读到的还是上一次的尺寸
+    （实测 640 的窗口读到 1266）。所以"启动即窄屏"的应用如果只读一次，就会按
+    expanded 建整页 —— 侧栏常驻、页头不折行，之后怎么拖都不会回来（跨档才通知，
+    而它一开始就被记成 expanded）。
+
+    首帧之后 ``page.width`` 才是真正的逻辑像素宽度，这里补读几次（0 / 50 / 150 /
+    400 ms）。读到的宽度稳定就停；跨档时照常只通知一次。
     """
-    update(page.width, page.height)
+
+    _read(page)
     if page in _BOUND_PAGES:
         return
 
@@ -321,4 +335,29 @@ def apply_responsive(page: ft.Page) -> None:
 
     page.on_resize = _on_resize
     _BOUND_PAGES.add(page)
+
+    async def _settle() -> None:
+        last = _viewport.width
+        for delay in (0.0, 0.05, 0.15, 0.4):
+            await asyncio.sleep(delay)
+            _read(page)
+            if abs(_viewport.width - last) < 1:
+                return  # 宽度不再变，说明已经拿到真实值
+            last = _viewport.width
+
+    with contextlib.suppress(Exception):  # 页面还没挂上事件循环时不需要补读
+        page.run_task(_settle)
+
+
+def _read(page: ft.Page) -> None:
+    """读一次页面尺寸。
+
+    只接受 **> 0** 的宽度：``page.width`` 在客户端布局之前是 0，而 ``0`` 在断点
+    表里是合法值（``xs``），直接写进去会把档位判成 compact —— 页面会先按窄屏
+    建一次再跳回宽屏。
+    """
+    width = getattr(page, "width", None)
+    if not width or width <= 0:
+        return
+    update(width, getattr(page, "height", None))
 

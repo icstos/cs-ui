@@ -112,8 +112,21 @@ def _nav_item(label: str, route: str, *, active: bool) -> ft.Control:
 
 
 @ft.component
-def _search_trigger(*, on_click) -> ft.Control:
+def _search_trigger(*, on_click, compact: bool = False) -> ft.Control:
+    """搜索入口。宽屏是一个"假输入框"，窄屏退成一个图标。
+
+    206px 的假输入框在 640 的窗口里会把语言、主题、源码三个按钮一路挤出屏幕 ——
+    顶栏宁可少一个视觉锚点，也不能有按不到的按钮。
+    """
     tr = use_t()
+    if compact:
+        return ft.IconButton(
+            icon=ft.Icons.SEARCH,
+            icon_color=_MUTED,
+            icon_size=19,
+            tooltip=tr("site.search.placeholder"),
+            on_click=on_click,
+        )
     return ft.Container(
         width=206,
         height=32,
@@ -183,6 +196,7 @@ def top_bar(*, on_search, on_nav=None) -> ft.Control:
     tr = use_t()
     location = ft.use_route_location()
     page = ft.context.page
+    compact = use_responsive().is_compact
 
     brand = ft.Container(
         on_click=lambda _e: page.navigate("/"),
@@ -191,22 +205,29 @@ def top_bar(*, on_search, on_nav=None) -> ft.Control:
         padding=ft.Padding.symmetric(horizontal=4, vertical=4),
         content=ft.Row(
             spacing=9,
+            tight=True,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 ft.Image(
                     src=str(LOGO_FILE), width=24, height=24, fit=ft.BoxFit.CONTAIN
                 ),
                 ft.Text("cs-ui", size=15.5, weight=ft.FontWeight.W_800),
-                ft.Container(
-                    padding=ft.Padding.symmetric(horizontal=7, vertical=1),
-                    border_radius=999,
-                    border=ft.Border.all(1, _BORDER),
-                    content=ft.Text(
-                        f"v{PACKAGE_VERSION}",
-                        size=10,
-                        color=_MUTED,
-                        weight=ft.FontWeight.W_600,
-                    ),
+                *(
+                    []
+                    if compact
+                    else [
+                        ft.Container(
+                            padding=ft.Padding.symmetric(horizontal=7, vertical=1),
+                            border_radius=999,
+                            border=ft.Border.all(1, _BORDER),
+                            content=ft.Text(
+                                f"v{PACKAGE_VERSION}",
+                                size=10,
+                                color=_MUTED,
+                                weight=ft.FontWeight.W_600,
+                            ),
+                        )
+                    ]
                 ),
             ],
         ),
@@ -214,7 +235,7 @@ def top_bar(*, on_search, on_nav=None) -> ft.Control:
 
     return ft.Container(
         height=TOPBAR_HEIGHT,
-        padding=ft.Padding.symmetric(horizontal=18),
+        padding=ft.Padding.symmetric(horizontal=12 if compact else 18),
         bgcolor=ft.Colors.SURFACE,
         border=ft.Border(bottom=ft.BorderSide(1, _BORDER)),
         content=ft.Row(
@@ -222,7 +243,7 @@ def top_bar(*, on_search, on_nav=None) -> ft.Control:
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 ft.Row(
-                    spacing=22,
+                    spacing=6 if compact else 22,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
                         *(
@@ -238,25 +259,31 @@ def top_bar(*, on_search, on_nav=None) -> ft.Control:
                             ]
                         ),
                         brand,
-                        ft.Row(
-                            spacing=2,
-                            controls=[
-                                _nav_item(
-                                    tr("site.tab.docs"),
-                                    "/docs/quickstart",
-                                    active=location.startswith("/docs"),
-                                ),
-                                _nav_item(
-                                    tr("site.tab.components"),
-                                    "/components",
-                                    active=location.startswith("/components"),
-                                ),
-                                _nav_item(
-                                    tr("site.tab.about"),
-                                    "/about",
-                                    active=location.startswith("/about"),
-                                ),
-                            ],
+                        *(
+                            []
+                            if compact
+                            else [
+                                ft.Row(
+                                    spacing=2,
+                                    controls=[
+                                        _nav_item(
+                                            tr("site.tab.docs"),
+                                            "/docs/quickstart",
+                                            active=location.startswith("/docs"),
+                                        ),
+                                        _nav_item(
+                                            tr("site.tab.components"),
+                                            "/components",
+                                            active=location.startswith("/components"),
+                                        ),
+                                        _nav_item(
+                                            tr("site.tab.about"),
+                                            "/about",
+                                            active=location.startswith("/about"),
+                                        ),
+                                    ],
+                                )
+                            ]
                         ),
                     ],
                 ),
@@ -264,11 +291,11 @@ def top_bar(*, on_search, on_nav=None) -> ft.Control:
                     spacing=2,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        _search_trigger(on_click=on_search),
-                        ft.Container(width=4),
+                        _search_trigger(on_click=on_search, compact=compact),
+                        ft.Container(width=0 if compact else 4),
                         LanguageSwitcher(compact=True),
                         _theme_button(),
-                        _github_link(),
+                        *([] if compact else [_github_link()]),
                     ],
                 ),
             ],
@@ -652,19 +679,21 @@ def _step_card(meta: PageMeta, *, forward: bool) -> ft.Control:
 
 @ft.component
 def step_nav(meta: PageMeta) -> ft.Control:
+    """上一页 / 下一页。窄屏竖着放：两栏各占一半时，"上一页"的标题会被压成
+    两三个字一行，反而不如各占一行好点。"""
     previous = page_before(meta.route)
     following = page_after(meta.route)
+    prev_card = _step_card(previous, forward=False) if previous else None
+    next_card = _step_card(following, forward=True) if following else None
+    if use_responsive().is_compact:
+        return ft.Column(
+            spacing=10, controls=[c for c in (prev_card, next_card) if c is not None]
+        )
     return ft.Row(
         spacing=12,
         controls=[
-            ft.Container(
-                expand=True,
-                content=_step_card(previous, forward=False) if previous else None,
-            ),
-            ft.Container(
-                expand=True,
-                content=_step_card(following, forward=True) if following else None,
-            ),
+            ft.Container(expand=True, content=prev_card),
+            ft.Container(expand=True, content=next_card),
         ],
     )
 
@@ -771,8 +800,10 @@ def site_layout() -> ft.Control:
             *([] if is_home or compact else [sidebar()]),
             ft.Container(expand=True, bgcolor=kit.PAGE_BG, content=outlet),
             *(
+                # 本页目录只在真正宽的时候占一栏：medium（768–1199）里侧栏 252 +
+                # 目录 196 之后，正文只剩 450 —— 一行二十来字，比没有目录更难读。
                 [outline_rail(meta.key)]
-                if has_outline and meta is not None and not compact
+                if has_outline and meta is not None and responsive.is_expanded
                 else []
             ),
         ],
