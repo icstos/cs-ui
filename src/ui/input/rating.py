@@ -171,9 +171,9 @@ class Rating(ft.Row):
             border_radius=CELL // 2,
             data=index,
             tooltip=f"{index + 1} 分" if not self.readonly else None,
-            # 可交互才挂处理器。这里曾经写成 ``None if self._interactive else ...``
-            # （条件反了）：可交互的星表一个处理器都没挂，只读/禁用的反而全挂上 ——
-            # 于是在 @ft.component 树里悬停只读示例就会撞上冻结树直接抛异常。
+            # 可交互才挂处理器。条件写成 ``None if self._interactive else ...``
+            # 会反掉：可交互的星表一个处理器都不挂，只读 / 禁用的反而全挂上 ——
+            # 于是在 @ft.component 树里悬停只读示例就会撞上冻结树抛异常。
             on_hover=None if not self._interactive else self._handle_hover,
             on_tap_down=None if not self._interactive else self._handle_tap,
             content=icon,

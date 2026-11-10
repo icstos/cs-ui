@@ -118,7 +118,7 @@ class Chip(Label):
                     color=ft.Colors.ON_PRIMARY if is_selected else ft.Colors.ON_SURFACE,
                 ),
                 selected=is_selected,
-                # 以前写死 GREEN：换主题种子后胶囊还是绿的，和整页脱离。
+                # 必须走主题角色：写死 GREEN 的话，换主色后胶囊还是绿的、和整页脱离。
                 selected_color=ft.Colors.PRIMARY,
                 check_color=ft.Colors.ON_PRIMARY,
                 on_click=make_on_click(option),

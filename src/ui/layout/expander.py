@@ -138,7 +138,6 @@ class Expander(ft.Container):
             旋转箭头永远独占最右一格，不会被它挤掉。
         expanded: 初始是否展开，默认 ``False``。
         expandable: 置 ``False`` 为禁用态 —— 箭头消失、文字置灰、点击无反应。
-        dense: 兼容旧参数；``True`` 等价于 ``density="compact"``。
         variant: 外观 —— ``card``（默认）/ ``filled`` / ``plain``。
         density: 密度 —— ``compact`` / ``default`` / ``comfortable``。
         accent: 前置图标的强调色 —— ``primary``（默认）/ ``success`` /
@@ -171,7 +170,6 @@ class Expander(ft.Container):
     # ---- 外观 ---------------------------------------------------------
     variant: str = "card"
     density: str = "default"
-    dense: bool = False
     accent: str = "primary"
     chevron: bool = True
     chevron_leading: bool = False
@@ -210,9 +208,8 @@ class Expander(ft.Container):
         self.clip_behavior = ft.ClipBehavior.ANTI_ALIAS
 
     def _density(self) -> dict[str, int]:
-        """解析密度档位（``dense=True`` 视作 ``compact``）。"""
-        name = "compact" if self.dense else self.density
-        return DENSITIES.get(name, DENSITIES["default"])
+        """解析密度档位；未知档位落到 ``default``。"""
+        return DENSITIES.get(self.density, DENSITIES["default"])
 
     def _radius(self) -> float:
         """外框圆角（px）。``border_radius`` 可能是数字，也可能是 ``BorderRadius``。"""

@@ -45,14 +45,10 @@ ROW_HOVER = state_layer("hover", role=ft.Colors.PRIMARY)
 #: 斑马纹底色：比悬停更轻，只用来分行、不抢内容
 ROW_STRIPE = overlay(0.03)
 
-#: 表头 / 网格线 / 外框 —— 全部用 M3 角色名，不再写死 M2 硬色
+#: 表头 / 网格线 / 外框 —— 全部用 M3 角色名
 HEADING_ROW_COLOR = ft.Colors.SURFACE_CONTAINER_LOW
 HORIZONTAL_LINE = ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)
 TABLE_BORDER = ft.Border.all(1, ft.Colors.OUTLINE_VARIANT)
-
-#: 「编号」列的兜底文案。真实文案走 ``ui.table.number``（英文是 ``#``），
-#: 这里保留常量只为兼容老代码的 ``from ui.layout.table import NUMBER_COLUMN_LABEL``。
-NUMBER_COLUMN_LABEL = "编号"
 
 _MUTED = ft.Colors.ON_SURFACE_VARIANT
 
@@ -88,14 +84,11 @@ class TableState:
     _source: ft.DataTable = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        # 曾经这里是 ``copy.deepcopy(self.data_table)``，理由是"build_rows 会插入
-        # 编号列，别污染调用方的数据"。但这条理由不成立：``build_rows`` 里
-        # ``cells = list(row.cells)`` 已经先复制了列表，``columns()`` 也是
-        # ``list(self._source.columns)`` —— 插入只发生在**副本**上，数据源一个字节
-        # 都没被改。而 ``Table`` 是组件，``_default_state`` 每次重绘都跑一遍，
-        # 深拷贝于是变成了"每帧复制整张表"：实测 200×6 的表光这一行就要 15ms，
-        # 行数越多样越慢（1000 行 ~75ms），翻页时整页都会卡一下。
-        # 现在只留引用。若将来真要就地改数据源，请改那份副本，别改这里。
+        # 只存引用，不深拷贝。``build_rows`` 里 ``cells = list(row.cells)``、
+        # ``columns()`` 里 ``list(self._source.columns)`` 都已经先复制了，插入
+        # 编号列只发生在**副本**上，数据源一个字节都不会被改。而 ``Table`` 是
+        # 组件，``_default_state`` 每次重绘都跑一遍，深拷贝等于每帧复制整张表
+        # （200×6 实测 15ms，1000 行 ~75ms，翻页时整页卡一下）。
         self._source = self.data_table
 
     @property

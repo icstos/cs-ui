@@ -31,8 +31,8 @@ __all__ = ["Checkbox", "CheckboxGroup"]
 BORDER_RADIUS = RADIUS["lg"]
 
 # ---------------------------------------------------------------------------
-# 配色：全部走主题角色。原来写死 BLUE / GREY / BLACK，换主色或切到深色主题后
-# 选中色和页面主色对不上，未选中的方框还在深底上糊成一片。
+# 配色：全部走主题角色。写死 BLUE / GREY / BLACK 时，换主色后选中色与页面主色
+# 对不上，未选中的方框还会在深底上糊成一片。
 # ---------------------------------------------------------------------------
 CHECK_BG = ft.Colors.PRIMARY
 CHECK_FG = ft.Colors.ON_PRIMARY
@@ -171,7 +171,7 @@ class CheckboxGroup(Label):
         checkbox_controls: list[ft.Control] = [check_all]
 
         if self.checkbox_layout_type == LayoutType.HORIZONTAL:
-            # 竖排用 Divider 横线；横排用 1px 竖线，原来那块 2px 纯黑在深色下直接消失
+            # 竖排用 Divider 横线；横排用 1px 竖线 —— 2px 纯黑在深色下会直接消失
             checkbox_controls.append(
                 ft.Container(width=1, height=16, bgcolor=ft.Colors.OUTLINE_VARIANT)
             )
@@ -415,7 +415,7 @@ SPEC = Spec(
         ),
         info(
             "配色改成 PRIMARY / ON_PRIMARY / OUTLINE 三个角色，禁用走 on-surface 的"
-            "38% 透明度；原来写死 BLUE / GREY / BLACK，换主色或深色主题时不跟随。"
+            "38% 透明度；写死 BLUE / GREY / BLACK 则不跟随主色与明暗。"
         ),
     ],
     tags=("复选框", "多选", "checkbox", "全选", "半选", "表单"),

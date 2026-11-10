@@ -1,3 +1,10 @@
+"""应用入口：把主题、响应式、路由三件「页面级、只做一次」的事合成一个对象。
+
+``App.run()`` 就是 ``ft.run(lambda page: page.render(self._app))`` —— 唯一的要求是
+根视图走 ``page.render`` + ``Router(manage_views=False)``（见 :mod:`ui.core.float_layer`：
+视图栈会盖住 ``page.overlay``，浮层面板全部失灵）。
+"""
+
 import traceback
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import getmembers
@@ -79,27 +86,19 @@ def NotFoundView():
     )
 
 
-def set_app():
-    page = ft.context.page
-
-    # page.scroll = ft.ScrollMode.AUTO
-    # page.spacing = 0
-    # page.padding = 0
-    # page.scroll = ft.ScrollMode.AUTO
-
-    # page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    # page.vertical_alignment = ft.MainAxisAlignment.START
-
-    page.window.resizable = True  # 页面缩放
-    # # page.on_resized = lambda _: on_page_resize(_, on_resize)
-    # page.window_full_screen = True
-    page.window.maximizable = True
-    page.window.maximized = True
-
-    # # page.window_always_on_top = True
-
-
 class App:
+    """应用骨架：起页面、铺主题、挂路由。
+
+    Args:
+        name: 窗口标题，同时作为 ``ft.run(name=...)`` 的值。
+        host / port: Web 视图下的监听地址与端口。
+        view: ``ft.AppView.FLET_APP``（桌面）等。
+        assets_dir: 静态资源目录。
+        upload_dir: 上传落盘目录。
+        web_renderer / route_url_strategy / no_cdn / export_asgi_app: 原样透传给 ``ft.run``。
+        with_auto_routing: 是否扫描 ``views/`` 目录自动收集 ``ft.Route``。
+    """
+
     def __init__(
         self,
         name: str = "CS-UI App",
@@ -112,10 +111,7 @@ class App:
         route_url_strategy: ft.RouteUrlStrategy = ft.RouteUrlStrategy.PATH,
         no_cdn: None | bool = False,
         export_asgi_app: None | bool = False,
-        target=None,
-        with_auto_routing=True,
-        route_init="/",  # todo
-        route_login="/login",  # todo
+        with_auto_routing: bool = True,
     ):
         self.name = name
         self.host = host
@@ -133,60 +129,51 @@ class App:
 
     @ft.component
     def _app(self):
-        # page.vertical_alignment = ft.MainAxisAlignment.CENTER
-        # page = ft.context.page
         page = ft.context.page
         page.title = self.name
         page.fonts = FONTS
-        # 主题**不再在这里手搓一份**。手搓的那份少了 surfaces / 输入框 / 弹出菜单
-        # 的主题，于是同一个应用里"框架按钮"和"flet 按钮"、"框架下拉"和
-        # "flet 下拉"各是一套配色 —— 正是"组件与框架不和谐"的来源。
-        # 全部交给 ui.core.theme：那里是主题的唯一事实源。apply_theme 会同时
-        # 写下明暗两套主题 —— 只写 page.theme 的话，深色模式没有为深色准备的
-        # 那棵树，Flutter 会把浅色色板硬套上去。
+        # 主题只有一个事实源：ui.core.theme。apply_theme 同时写下明暗两套 ——
+        # 只写 page.theme 的话深色模式没有为深色准备的那棵树。
         st = theme_state()
         if not st.font_family:
             st.font_family = "AlibabaPuHuiTi"
         apply_theme(page, st)
-        # 响应式：读一次当前窗口宽度，之后跟着 on_resize 走。宽度只在**跨档**
-        # （compact / medium / expanded）时触发重绘，拖动窗口不会变成幻灯片。
-        # 与 apply_theme 同一个位置，因为两者都是"页面级、框架级、只做一次"的事。
+        # 响应式与主题同一个位置：都是"页面级、框架级、只做一次"的事。
+        # 宽度只在**跨档**时触发重绘，拖动窗口不会变成幻灯片。
         apply_responsive(page)
         if self.with_auto_routing:
             self.auto_routing()
-        # 用 manage_views=False + page.render（根视图）：
-        # manage_views=True 的视图栈会盖住页面浮层（page.overlay / show_dialog
-        # 都不渲染），MultiSelect 这类需要悬挂面板的组件会失效。
-        # 相应地，页面组件必须返回普通控件而不是 ft.View。
+        # manage_views=False + page.render（根视图）：视图栈会盖住页面浮层，
+        # MultiSelect 这类需要悬挂面板的组件会失效。相应地，页面组件必须返回
+        # 普通控件而不是 ft.View。
         return ft.Router([self.route], not_found=NotFoundView, manage_views=False)
 
     def add_route(self, route: ft.Route | list[ft.Route]):
         if isinstance(route, ft.Route):
             route = [route]
-        if self.route.children is not None:
-            self.route.children.extend(route)
-        else:
-            print("Error: route.children is None")
+        if self.route.children is None:
+            logger.error("route.children is None")
+            return
+        self.route.children.extend(route)
 
     def auto_routing(self, file_dir: str | Path = "views"):
+        """扫描 ``file_dir`` 下所有模块，收集其中的 ``ft.Route`` 实例。"""
         routes = []
-        # for file in file_dir.rglob('*.py[c]'):
         file_dir = Path(file_dir)
         for file in file_dir.rglob("*.py"):
-            if file.name != "__init__.py":
-                spec = spec_from_file_location(file.stem, file)
-                if spec is not None:
-                    module = module_from_spec(spec)
-                    if spec.loader is not None:
-                        spec.loader.exec_module(module)
-                    for _, object_page in getmembers(module):
-                        if isinstance(object_page, ft.Route):
-                            routes.append(object_page)
-        if len(routes) == 0:
-            # raise ValueError(
-            print(
-                f"Warning: No instances of ft.Route found. Check the assigned path of the {file_dir.absolute()}"
+            if file.name == "__init__.py":
+                continue
+            spec = spec_from_file_location(file.stem, file)
+            if spec is None:
+                continue
+            module = module_from_spec(spec)
+            if spec.loader is not None:
+                spec.loader.exec_module(module)
+            routes.extend(
+                obj for _, obj in getmembers(module) if isinstance(obj, ft.Route)
             )
+        if not routes:
+            logger.warning("No ft.Route found in %s", file_dir.resolve())
         self.add_route(routes)
 
     def run(self):

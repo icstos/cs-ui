@@ -32,7 +32,7 @@ __all__ = ["SelectBox", "SelectOption"]
 TEXT_SIZE = FONT_SIZE["body"]
 PADDING = 10
 #: 与输入框同高 —— 放在同一行表单里不能出现"台阶"。
-#: 曾经写死 42，比 Input 的 36 高出一截。
+#: 写死 42 就比 Input 的 36 高出一截。
 INPUT_HEIGHT = CONTROL_HEIGHT["md"]
 #: 默认宽度：下拉框不跟着最长选项撑开 —— 一个「中华人民共和国…」的选项
 #: 会把整行表单顶出容器，而候选的完整文本在弹层里本来就能读到。
@@ -124,7 +124,7 @@ class SelectBox(Label):
             enable_filter=self.editable,
             # 42 高的框里留 10 的上下内边距，14px 文字才落在中线上
             content_padding=ft.Padding.symmetric(horizontal=PADDING, vertical=10),
-            # 描边走角色色：以前的 GREY_200 定值在深色主题下是一块亮灰
+            # 描边走角色色：GREY_200 这种定值在深色主题下是一块亮灰
             border=outline_input(
                 INPUT_RADIUS, ft.Colors.OUTLINE_VARIANT, ft.Colors.PRIMARY
             ),

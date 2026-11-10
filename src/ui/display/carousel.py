@@ -475,8 +475,8 @@ class Carousel:
         "脸面"在浮现 / 未浮现之间换了个壳。
         """
         key = "prev" if direction < 0 else "next"
-        # 不循环时走到头，这一侧的箭头点了也不会动。以前它照常亮着、照常悬停、
-        # 点了什么都不发生 —— 看起来就是坏了。现在淡出并且不接点击。
+        # 不循环时走到头，这一侧的箭头点了也不会动：淡出并且不接点击。
+        # 照常亮着、照常悬停却什么都不发生，看起来就是坏了。
         at_edge = not self.loop and (
             self._index <= 0 if direction < 0 else self._index >= len(self.slides) - 1
         )

@@ -168,9 +168,9 @@ class RangeSlider(Label):
     def __post_init__(self) -> None:
         """夹紧两端、保证 ``start <= end``。
 
-        只有 ``None`` 才套用「两端各让 20%」的默认值。以前用 ``== min`` /
-        ``== max`` 判断「没传」，于是 ``start_value=0`` 这种合法值会被悄悄改成
-        20% —— 用户根本选不了从 0 开始的区间。
+        只有 ``None`` 才套用「两端各让 20%」的默认值。用 ``== min`` / ``== max``
+        判断「没传」的话，``start_value=0`` 这种合法值会被悄悄改成 20% ——
+        用户根本选不了从 0 开始的区间。
         """
         span = float(self.max) - float(self.min)
         if span <= 0:

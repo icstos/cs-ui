@@ -528,7 +528,7 @@ def _prose(text: str) -> ft.Control:
 
 
 def _muted(text: str, *, size: float | None = None) -> ft.Control:
-    """次要说明：12px。字号取字阶上的档位（原来写 12.5，是字阶外的孤值）。"""
+    """次要说明：12px。字号取字阶上的档位（12.5 是字阶外的孤值）。"""
     return ft.Text(
         text,
         style=typography.text_style(
@@ -983,8 +983,9 @@ def _api_table(rows: Sequence[Api]) -> ft.Control:
 #: * ``warning`` 在 M3 里**没有对应角色**，只能用框架的语义色，而语义色是
 #:   具体十六进制值、随明暗切换 —— 所以它**不能在导入期求值**。
 #:
-#: 曾经把 ``"#B26A00"`` 直接写进这张表：字典在 import 时就固化了，切到深色
-#: 主题后这行备注仍然是浅色的深琥珀，对比度掉到 2:1 出头。
+#: 所以 ``warning`` 的色值只能在**渲染期**求，不能写进任何模块级字典：
+#: 字典在 import 时就固化了，把 ``"#B26A00"`` 钉进去，切到深色主题后这行备注
+#: 仍是浅色的深琥珀，对比度掉到 2:1 出头。
 _NOTE_ICON: dict[str, ft.IconData] = {
     "tip": ft.Icons.LIGHTBULB_OUTLINE_ROUNDED,
     "info": ft.Icons.INFO_OUTLINE_ROUNDED,

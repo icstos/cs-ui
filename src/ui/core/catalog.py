@@ -8,7 +8,7 @@
 全部跟着变 —— 它们读的都是这份表。
 
 约定：``key`` 与实现文件的模块名一致（``ui.input.number_input`` → ``number_input``），
-``scripts/_doc_logic.py`` 会校验这一点，防止侧边栏点进去是空的。
+``scripts/_doc_check.py`` 会校验这一点，防止侧边栏点进去是空的。
 """
 
 from __future__ import annotations
@@ -179,7 +179,7 @@ GROUPS: Final[tuple[Category, ...]] = (
         "charts",
         ft.Icons.INSERT_CHART_OUTLINED,
         ("line_chart", "LineChart", "ui.chart.line_chart"),
-        ("area_chart", "AreaChart", "ui.chart.rea_chart"),
+        ("area_chart", "AreaChart", "ui.chart.area_chart"),
         ("bar_chart", "BarChart", "ui.chart.bar_chart"),
         ("scatter_chart", "ScatterChart", "ui.chart.scatter_chart"),
     ),

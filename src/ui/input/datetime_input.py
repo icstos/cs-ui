@@ -62,23 +62,24 @@ from ui.input.calendar_panel import (
     CAL_GRID_H,
     CAL_GRID_W,
     CELL_RADIUS,
-    FIELD_HEIGHT,
-    FIELD_WIDTH,
     FOOTER_H,
     HEADER_H,
+    SELECTED_BG,
+    CalendarPanel,
+)
+from ui.input.date_input import _parse_date
+from ui.input.input import Label
+from ui.input.panel_field import (
+    FIELD_HEIGHT,
+    FIELD_WIDTH,
     HOVER_BG,
     LABEL_SIZE,
     PANEL_GAP,
     PANEL_PAD,
-    SELECTED_BG,
     TEXT_SIZE,
-    WEEKDAYS,  # noqa: F401  (历史导入路径)
-    CalendarPanel,
     _truthy,
     place_panel,
 )
-from ui.input.date_input import _parse_date
-from ui.input.input import Label
 
 __all__ = ["DateTimeInput"]
 

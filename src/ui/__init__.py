@@ -2,25 +2,20 @@
 
 导入策略（**改前先读**，这里的取舍是实测结论）：
 
-``import ui`` 只加载 ``flet`` 本身，组件在第一次被访问时才导入所属子包。
-历史写法是 ``from .ft_init import *`` + ``from flet import *`` + 各子包 star-import，
-实测总耗时 1.4~1.6s，其中绝大部分是「用不到也得付」的钱：
+``import ui`` 只加载 ``flet`` 本身（0.19s），组件在第一次被访问时才导入所属子包。
+全量 star-import 实测 1.4~1.6s，钱都花在「用不到也得付」的地方：
 
 - ``ui.chart`` → ``flet_charts`` → matplotlib + plotly                  ~0.62s
-- ``ft_init`` 的 536 个 ``ft.X = ...`` 逐属性反射（触发 flet 懒导入全部子模块） ~0.59s
+- 536 个 ``ft.X = ...`` 逐属性反射（触发 flet 懒导入全部子模块）          ~0.59s
 - 其余子包（display / feedback / input / layout / navigation / utils）  ~0.18s
 
-而 ``import flet`` 本身只要 0.19s。也就是说，「用一次 ui 就要先烧掉 1.4s」对一个
-桌面应用的启动关键路径是灾难（CSearch 实测首帧因此晚约 1.4s）。
-
-现在改成 PEP 562 模块级 ``__getattr__``：
+改成 PEP 562 模块级 ``__getattr__``：
 
 1. ``ui.X`` 首次被访问 → 按 ``_registry.COMPONENT_MODULES`` 导入所属子包并缓存到
    ``globals()``，此后就是普通属性查找；
 2. ``ui.<子包名>`` → 直接返回 ui 自己的子模块（**必须先于 flet 判断**：flet 的
-   ``__all__`` 里也有 ``utils`` / ``input`` / ``icons`` 这类同名项，覆盖顺序必须和
-   原来的 star-import 一致：ui 的子包赢）；
-3. 其余交给 ``flet`` —— 等价于原先 ``ft_init`` 提供的 536 个别名，但只在用到时反射。
+   ``__all__`` 里也有 ``utils`` / ``input`` / ``icons`` 这类同名项，ui 的子包赢）；
+3. 其余交给 ``flet`` —— 只在用到时反射。
 
 ``dir(ui)`` 仍返回完整名字表（含未加载的），IDE 补全与 ``from ui import *`` 行为不变。
 新增 / 删除组件后必须重新生成注册表：``python scripts/gen_ui_registry.py``。
@@ -53,18 +48,16 @@ _SUBMODULES: tuple[str, ...] = (
     "app",
     "chart",
     "cli",
-    "components",
     "core",
     "display",
     "feedback",
-    "ft_init",
     "input",
     "layout",
     "navigation",
     "utils",
 )
 
-#: 不属于任何子包 ``__all__``、但曾经由 star-import 暴露出来的名字
+#: 不属于任何子包 ``__all__``、但要能从 ``ui`` 直接取到的名字
 _EXTRA_LAZY: dict[str, str] = {"App": "ui.app"}
 
 #: 惰性求值的模块级属性。``__version__`` 要读安装元数据（首次约 37ms），
@@ -122,9 +115,7 @@ def __dir__() -> list[str]:
     )
 
 
-# ``from ui import *`` 的导出面 = 改造前 star-import 的并集：
-# flet 全部公开名 + ft_init 的 536 个别名（⊆ flet.__all__）+ 各子包 __all__
-# + 子模块名 + 'ft'
+# ``from ui import *`` 的导出面 = flet 全部公开名 + 各子包 __all__ + 子模块名 + 'ft'
 # 由几份来源拼成并集，ruff 静态看不到里面的元素类型
 __all__ = [  # noqa: PLE0604
     *sorted(
@@ -140,7 +131,6 @@ __all__ = [  # noqa: PLE0604
 ]
 
 
-# 手动
 # ⚠️ 不要在这里写 `__name__ = "cs-ui"`。
 # `from ui import X` 在 X 不存在时，CPython 的 _handle_fromlist 会用
 # `f"{module.__name__}.{X}"` 去 import 子模块；一旦 __name__ 被改成 "cs-ui"，
@@ -153,5 +143,4 @@ __pkg_name__ = "cs-ui"
 __author__ = "Shawn Chen"
 __email__ = "cs@cstos.com"
 __copyright__ = "Shawn Chen"
-__description__ = ""
 __url__ = "https://github.com/icstos/cs-ui"

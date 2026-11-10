@@ -180,7 +180,6 @@ COMPONENT_MODULES: dict[str, str] = {
     "VerticalDivider": "ui.layout",
     "Video": "ui.display",
     "VideoMedia": "ui.display",
-    "View": "ui.layout",
     "Viewport": "ui.core",
     "accent_fill": "ui.core",
     "accent_on": "ui.core",

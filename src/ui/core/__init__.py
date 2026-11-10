@@ -3,9 +3,9 @@
 **这个包的门面是惰性的**（PEP 562），理由和 :mod:`ui` 顶层一样，但代价更隐蔽：
 
 ``ui.core`` 是每个组件模块的父包 —— ``from ui.core.doc import Spec`` 这行看起来
-只想要一个文档数据类，实际会先执行本文件的 ``__init__``。历史上这里写着十几组
-star-import，于是**只要 import 任何一个组件**，就要连带加载 i18n（651 键 × 3 语的
-文案表）、theme、config、logger（拖进 ``logging.handlers`` + ``pickle``）、format……
+只想要一个文档数据类，实际会先执行本文件的 ``__init__``。所以这里**不能有
+star-import**：一旦有，只要 import 任何一个组件，就要连带加载 i18n（651 键 × 3 语
+的文案表）、theme、config、logger（拖进 ``logging.handlers`` + ``pickle``）、format……
 实测单项组件导入因此多付约 90~170ms，其中通常八成是当次根本用不到的。
 
 现在改成 ``_ORIGIN`` 名字表 + 模块级 ``__getattr__``：

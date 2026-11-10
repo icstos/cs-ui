@@ -10,7 +10,8 @@ from types import SimpleNamespace
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from ui.input.date_input import DateInput, _parse_date, _get_days_in_month  # noqa: E402
+from ui.input.calendar_panel import _get_days_in_month  # noqa: E402
+from ui.input.date_input import DateInput, _parse_date  # noqa: E402
 
 ok = True
 

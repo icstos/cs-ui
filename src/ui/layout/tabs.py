@@ -55,8 +55,6 @@ class Tab(ft.Tab):
     """一个标签。``text`` 是 ``label`` 的简写；内容不放在这里。"""
 
     text: str | ft.Control = ""
-    #: 兼容旧代码：flet 1.1 的 Tab 没有内容槽位，这个值不会被渲染。
-    content: ft.Control | None = None
 
     def init(self):
         self.label = self.label or self.text

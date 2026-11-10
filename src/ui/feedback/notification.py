@@ -47,7 +47,7 @@ from ui.core.tokens import (
 from ui.input.button import Button
 
 from ._look import icon_chip
-from ._overlay import SLOTS, Card, host_for, peek_host
+from ._overlay import SLOTS, OverlayCard, host_for, peek_host
 
 __all__ = ["Notification"]
 
@@ -101,7 +101,7 @@ class Notification:
         self.offset = offset
         self.on_click = on_click
         self.on_close = on_close
-        self._card: Card | None = None
+        self._card: OverlayCard | None = None
         self._host: Any = None
 
     # ------------------------------------------------------------------

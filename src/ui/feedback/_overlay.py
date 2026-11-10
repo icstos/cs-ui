@@ -41,7 +41,7 @@ from ui.core.config import logger
 from ui.core.float_layer import overlay_usable
 from ui.core.tokens import DURATION
 
-__all__ = ["Card", "OverlayHost", "host_for", "peek_host"]
+__all__ = ["OverlayCard", "OverlayHost", "host_for", "peek_host"]
 
 #: 进场时长。200ms 是"看得见但不拖沓"的档位（与 tokens.DURATION["normal"] 同源）
 ENTER_MS = DURATION["normal"]
@@ -98,7 +98,7 @@ SLOTS: dict[str, Slot] = {
 
 
 @dataclass
-class Card:
+class OverlayCard:
     """一条已经挂上栈的卡片。调用方拿它去 ``close()``，或读 ``count``。"""
 
     control: ft.Control
@@ -132,7 +132,7 @@ class OverlayHost:
         self.position = position
         self.slot = SLOTS[position]
         self.inset = DEFAULT_INSET[position] if inset is None else inset
-        self.cards: list[Card] = []
+        self.cards: list[OverlayCard] = []
         self.column = ft.Column(
             spacing=gap, tight=True, horizontal_alignment=self.slot.cross()
         )
@@ -174,7 +174,7 @@ class OverlayHost:
         merge_key: Any = None,
         on_merge: Callable[[int], None] | None = None,
         on_close: Callable[[], None] | None = None,
-    ) -> Card:
+    ) -> OverlayCard:
         """把一张卡片压入栈顶（贴底位置是栈底）。
 
         Args:
@@ -200,7 +200,7 @@ class OverlayHost:
                     self._update()
                     return card
 
-        card = Card(
+        card = OverlayCard(
             control=control,
             duration=duration,
             merge_key=merge_key,
@@ -225,7 +225,7 @@ class OverlayHost:
         self._later(FIRST_FRAME_MS, lambda: self._reveal(card))
         return card
 
-    def close(self, card: Card, *, animated: bool = True) -> None:
+    def close(self, card: OverlayCard, *, animated: bool = True) -> None:
         """让一张卡片退场（幂等）。"""
         if card.closed:
             return
@@ -273,7 +273,7 @@ class OverlayHost:
             # 页面已经关掉了 —— 消息条没义务在窗口消失后继续存在
             logger.debug("Message/Notification 重绘失败（页面可能已关闭）", exc_info=True)
 
-    def _reveal(self, card: Card) -> None:
+    def _reveal(self, card: OverlayCard) -> None:
         if card.closed or card.wrapper is None:
             return
         card.wrapper.opacity = 1
@@ -281,7 +281,7 @@ class OverlayHost:
         self._update()
         self._arm(card)
 
-    def _drop(self, card: Card) -> None:
+    def _drop(self, card: OverlayCard) -> None:
         if card.dismissed:
             return
         card.dismissed = True
@@ -317,7 +317,7 @@ class OverlayHost:
             # 事件循环已经停了（页面关闭 / 纯逻辑测试里的假 Page）
             logger.debug("无法排队延时回调", exc_info=True)
 
-    def _arm(self, card: Card) -> None:
+    def _arm(self, card: OverlayCard) -> None:
         """（重新）开始倒计时。"""
         if card.duration <= 0:
             return
@@ -334,7 +334,7 @@ class OverlayHost:
 
         self._later(delay, _fire)
 
-    def _on_hover(self, card: Card, e: Any) -> None:
+    def _on_hover(self, card: OverlayCard, e: Any) -> None:
         if card.closed or card.duration <= 0:
             return
         hovering = bool(getattr(e, "data", False))

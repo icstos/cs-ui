@@ -37,7 +37,6 @@ from ui.core.i18n import t
 from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE
 from ui.input.button import Button
 
-from ._look import accent as _accent
 from ._look import icon_chip, wash
 
 __all__ = ["AlertDialog", "show_alert_dialog"]
@@ -69,8 +68,8 @@ class AlertDialog(ft.AlertDialog):
 
     def init(self):
         self.actions_padding = ft.Padding.only(right=SPACE["2"], bottom=SPACE["2"])
-        #: 每个操作按钮四周的留白。原来是上下 16：两个 28px 的按钮撑出 60px 的操作区，
-        #: 比标题条还高，视觉上把正文压没了。
+        #: 每个操作按钮四周的留白。上下给到 16，两个 28px 的按钮就撑出 60px 的
+        #: 操作区，比标题条还高，视觉上把正文压没了。
         self.action_button_padding = ft.Padding.symmetric(
             horizontal=SPACE["1"], vertical=SPACE["2"]
         )

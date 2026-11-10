@@ -385,8 +385,8 @@ def _text_basic() -> ft.Control:
     """四档常用字号：正文 / 次要 / 标签 / 统计数字。
 
     文字色只有两档：``ON_SURFACE``（正文）与 ``ON_SURFACE_VARIANT``（一切次要
-    文字）。**层次交给字号，不交给对比度** —— 曾经给「标签」用过 ``OUTLINE``，
-    那是边框角色，浅色主题下对比度只有约 3.2:1，11px 的小字读不清。
+    文字）。**层次交给字号，不交给对比度** —— ``OUTLINE`` 是边框角色，浅色主题下
+    对比度只有约 3.2:1，11px 的小字读不清。
     """
     return ft.Column(
         spacing=SPACE["3"],
@@ -1067,7 +1067,7 @@ _HEADING_SPEC = Spec(
         ),
         (
             "别名",
-            "Title / Header 指向 H1，SubTitle / SubHeader 指向 H2；老代码不必改。",
+            "Title / Header 指向 H1，SubTitle / SubHeader 指向 H2。",
         ),
     ],
     when=[
@@ -1114,8 +1114,8 @@ _HEADING_SPEC = Spec(
     notes=[
         info(
             "六档对到字阶的六个档位（36 / 28 / 24 / 20 / 16 / 14），行高与字距"
-            "按各自字号现算。**不要再按 M3 的 theme_style 槽位来想**：那层映射一改，"
-            "H2 就可能比 H3 还小（曾经 24 vs 28），层级在视觉上反了。"
+            "按各自字号现算。**不要按 M3 的 theme_style 槽位来想**：那层映射一改，"
+            "H2 就可能比 H3 还小（24 vs 28），层级在视觉上反了。"
         ),
         warn(
             "H6 与正文同为 14px，只靠 600 的字重区分。正文很长时它会被读成「加粗的"

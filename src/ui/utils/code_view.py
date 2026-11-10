@@ -125,7 +125,7 @@ class CodeView(ft.Column):
                         height=self.height,
                     )
                 ],
-                dense=True,
+                density="compact",
                 expanded=self.expanded,
             )
         )

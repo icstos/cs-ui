@@ -23,7 +23,7 @@ from dataclasses import field
 
 import flet as ft
 
-from ui.core.doc import Api, Example, Spec, info, run, tip
+from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.responsive import size_class, viewport
 from ui.core.tokens import (
     CONTENT_MAX,
@@ -63,7 +63,8 @@ class PageLayout(ft.Container):
     Notes:
         响应式只做三件事，且**都不重建内容**：换内边距、按上限居中、窄屏把页头
         操作折到第二行。跨档时才执行一次（拖动窗口的过程中不参与），
-        所以它不会成为滚动与拖拽的负担。
+        所以它不会成为滚动与拖拽的负担。这些都在 ``init`` 与 ``on_size_change``
+        里完成 —— 因此组件树（冻结）中它是静态的，见 ``SPEC`` 里的 warn。
     """
 
     controls: list[ft.Control] = field(default_factory=list)
@@ -147,8 +148,13 @@ class PageLayout(ft.Container):
         限宽必须跟着**实际宽度**走，不能只在跨档时算一次：容器从 1200 收到 900
         仍属同一档，若宽度还钉在 1120，内容就会溢出被裁掉。所以这里按 8px 量化 ——
         一整段拖动只触发上百次属性更新，而不是每像素一次。
+
+        在 ``@ft.component`` 渲染出的**冻结树**里，这里的每一次赋值都会被 flet
+        拒绝（``Frozen controls cannot be updated``），连 ``update()`` 也调不动。
+        那种场景下的响应式要走 ``use_responsive()`` + 整页重渲染（档位一变重新
+        构建页面），所以这里直接返回：初始值来自 ``init()`` 时的档位，页面照常渲染。
         """
-        if self._column is None:
+        if self._column is None or hasattr(self, "_frozen"):
             return
         width = getattr(e, "width", None)
         self._width = width
@@ -672,6 +678,12 @@ SPEC = Spec(
             "侧栏、分栏、对话框里同样正确：「窗口很宽，我很窄」时它会按窄的排版。"
             "同一档内拖动只改内边距与限宽两个属性，不重建任何子树；页头形态在构建期"
             "按档位定下来 —— 页面用组件挂载时，档位一变整页重渲染，形态自然跟着换。"
+        ),
+        warn(
+            "把 PageLayout 放进 @ft.component 渲染出的树里时，它是**冻结**的："
+            "on_size_change 里的赋值会被 flet 拒绝（Frozen controls cannot be updated）。"
+            "那种场景要在组件里 use_responsive()，档位一变整页重渲染，而不是让 "
+            "PageLayout 在事件里改自己。"
         ),
         info(
             "max_content_width 在窄容器上自动失效 —— 小屏幕上再限宽等于把内容挤没。"

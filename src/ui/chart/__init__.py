@@ -13,7 +13,7 @@ from ui._lazy import lazy_exports
 lazy_exports(
     globals(),
     {
-        "AreaChart": ".rea_chart",
+        "AreaChart": ".area_chart",
         "BarChart": ".bar_chart",
         "LineChart": ".line_chart",
         "ScatterChart": ".scatter_chart",

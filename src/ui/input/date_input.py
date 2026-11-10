@@ -72,22 +72,21 @@ from ui.core.i18n import t, use_t
 from ui.core.tokens import FONT_SIZE
 from ui.input.calendar_panel import (
     CAL_W,
-    FIELD_HEIGHT,
-    FIELD_WIDTH,
     FOOTER_H,
-    PANEL_GAP,
     PANEL_H,
     RANGE_W,
-    TEXT_SIZE,
-    WEEKDAYS,  # noqa: F401  (历史导入路径)
     CalendarPanel,
     DayMark,
-    _get_days_in_month,  # noqa: F401  (兼容导入)
-    _is_leap_year,  # noqa: F401  (兼容导入)
     _norm_ym,
-    place_panel,
 )
 from ui.input.input import Label
+from ui.input.panel_field import (
+    FIELD_HEIGHT,
+    FIELD_WIDTH,
+    PANEL_GAP,
+    TEXT_SIZE,
+    place_panel,
+)
 
 __all__ = ["DateInput", "DateType"]
 

@@ -61,9 +61,9 @@ def _as_picked(items: Sequence[Any]) -> list[ft.FilePickerFile]:
     """把初始值统一成 ``FilePickerFile`` 列表。
 
     ``value`` 允许传 ``Path`` / ``str`` / ``FilePickerFile`` 三种：来自配置的
-    多半是路径，来自上一次选择的已经是 FilePickerFile。以前这里一边遍历副本
-    一边往原列表里追加，结果 value 里同时躺着 Path 和转换后的对象；文件不存在
-    时 ``stat()`` 还会直接抛异常，整块控件渲染不出来。
+    多半是路径，来自上一次选择的已经是 FilePickerFile。转换必须落在**一份新列表**
+    上：边遍历副本边往原列表追加，会让 value 里同时躺着 Path 和转换后的对象；
+    文件不存在时 ``stat()`` 还会直接抛异常，整块控件渲染不出来。
     """
     files: list[ft.FilePickerFile] = []
     for item in items:
@@ -616,7 +616,7 @@ _FILE_SPEC = Spec(
     notes=[
         tip(
             "allowed_extensions 只在 file_type=CUSTOM 时生效。组件在扩展名非空时自动"
-            "切过去 —— 以前只传列表，对话框里其实还能看到全部文件。"
+            "切过去 —— 只传列表的话，对话框里其实还能看到全部文件。"
         ),
         warn(
             "取消选择时 flet 返回空列表而不是 None。组件只在结果非空时覆盖 value，"

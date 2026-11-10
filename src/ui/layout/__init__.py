@@ -28,7 +28,6 @@ lazy_exports(
         "TabBar": ".tabs",
         "TabBarView": ".tabs",
         "Tabs": ".tabs",
-        "View": ".view",
     },
     __name__,
 )

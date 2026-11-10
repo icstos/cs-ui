@@ -5,9 +5,8 @@ import flet as ft
 
 from ui.core.tokens import CONTROL_HEIGHT
 
-#: 表单控件（输入框 / 下拉 / 按钮）的统一高度。
-#: 曾经在 core 与 3 个组件里各写一遍 ``= 36``，谁改一处就漂一格；
-#: 现在只有 tokens 一个来源。
+#: 表单控件（输入框 / 下拉 / 按钮）的统一高度。只有 tokens 一个来源：
+#: 在 core 与组件里各写一遍 ``= 36``，改一处就漂一格。
 DEFAULT_FORM_HEIGHT = CONTROL_HEIGHT["md"]
 
 
@@ -51,10 +50,9 @@ class FeedbackStyle:
 
     **唯一的构造方是** :func:`ui.feedback._look.feedback_style` ——
     组件不要自己填这几个字段，否则又回到"每处各配一套色"的老路。
-    曾经这个类是 ``(icon, color, color_light, color_accent)`` 四元组的包装，
-    色值直接来自枚举，而枚举里写的是 ``ft.Colors.GREEN`` / ``YELLOW_600``
-    这类**不随主题变**的静态色板：于是消息条的成功色是 ``#047857``、按钮的
-    成功色是 ``#4CAF50``，深色主题下按钮的浅色描边会亮得像贴了块白纸。
+    字段里直接放 ``ft.Colors.GREEN`` / ``YELLOW_600`` 这类**不随主题变**的静态
+    色板同样不行：同一个"成功"在消息条里是一个绿、在按钮里是另一个绿，深色主题
+    下按钮的浅色描边还会亮得像贴了块白纸。
     """
 
     icon: ft.IconData

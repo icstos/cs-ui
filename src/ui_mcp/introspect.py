@@ -45,7 +45,6 @@ _BOILERPLATE_DOCS = (
 _DEMO_ENTRY_NAMES = {
     "App",
     "main",
-    "set_app",
     "Home",
     "About",
     "Contact",

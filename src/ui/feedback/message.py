@@ -51,7 +51,7 @@ from ui.input.button import Button
 
 from ._look import accent as _accent
 from ._look import icon_chip
-from ._overlay import DEFAULT_INSET, Card, host_for, peek_host
+from ._overlay import DEFAULT_INSET, OverlayCard, host_for, peek_host
 
 __all__ = ["Message"]
 
@@ -110,7 +110,7 @@ class Message:
         self.width = width
         self.offset = offset
         self.on_close = on_close
-        self._card: Card | None = None
+        self._card: OverlayCard | None = None
         self._host: Any = None
         self._badge: ft.Text | None = None
         self._badge_box: ft.Container | None = None

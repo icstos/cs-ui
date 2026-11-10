@@ -84,6 +84,20 @@ def slug(route: str) -> str:
     return "_".join(parts) or "home"
 
 
+def known_routes() -> set[str]:
+    """站点里真实存在的路由。
+
+    必须有这道前置检查：写错一个路由，站点会渲染 404 页 —— 而 404 页**又白又整齐**，
+    灰占比 0.001、溢出 0，于是报表上是个漂亮的 ``ok``。查的是"页面渲染成功吗"，
+    却答成了"这个不存在的页面渲染正常"，比没检查更危险。
+    """
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from docs.site import PAGE_BY_ROUTE
+
+    return set(PAGE_BY_ROUTE)
+
+
 def is_grey_block(path: Path) -> tuple[bool, float]:
     """检测截图内容区是否被 ErrorWidget 灰块占据。"""
     from PIL import Image
@@ -151,9 +165,14 @@ def main() -> int:
     notes = dict(ROUTES)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     bad: list[str] = []
+    routes = known_routes()
 
     for raw in args.routes:
         route = normalize_route(raw)
+        if route not in routes:
+            print(f"!! {route}: 路由不存在（站点会渲染 404，截出来的图必然'通过'）")
+            bad.append(route)
+            continue
         suffix = f"_{args.mode}" if args.mode == "dark" else ""
         if args.scroll:
             suffix += f"_s{args.scroll}"

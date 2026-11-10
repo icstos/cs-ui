@@ -273,7 +273,7 @@ SPEC = Spec(
     notes=[
         info(
             "选中建议走 on_select（纯文本）；需要事件对象用 on_click。选中后组件会调用"
-            " close_view(option) 回填并收起 —— 原来的实现只触发回调，框里不会出现选中文本。"
+            " close_view(option) 回填并收起 —— 只触发回调的话，框里不会出现选中文本。"
         ),
         tip(
             "不要在回调里直接改控件的 value：@ft.component 渲染出的控件是冻结的，赋值会抛"

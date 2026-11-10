@@ -101,7 +101,7 @@ class Button(ft.Button):
         accent = self._style.text
         if self.style_type == StyleType.DEFAULT:
             # 文字按钮：无填充、无描边，只在悬停时浮一层面色（M3 悬停档 8%）。
-            # 以前给白色底 + 白色边：浅色页面上像纯文字，深色页面上是一块白砖。
+            # 白底 + 白边在浅色页面上像纯文字，在深色页面上是一块白砖。
             # DEFAULT + plain 仍是文字按钮 —— 白色描边在页面里本来就看不见。
             self.style.color = self.style.color or {
                 ft.ControlState.DEFAULT: ft.Colors.ON_SURFACE,
@@ -120,8 +120,8 @@ class Button(ft.Button):
             self.style.overlay_color = self.style.overlay_color or {
                 ft.ControlState.DEFAULT: state_layer("hover", role=accent)
             }
-            # 悬停只加一层极淡的底色，**不动描边**：以前悬停会把描边换成
-            # 更浅的一档（GREEN_100 之类的淡彩），线在鼠标下变虚，像"禁用"。
+            # 悬停只加一层极淡的底色，**不动描边**：描边换成更浅的一档
+            # （GREEN_100 之类的淡彩）时，线会在鼠标下变虚，像"禁用"。
             self.style.side = self.style.side or {
                 ft.ControlState.DEFAULT: ft.BorderSide(1, accent),
                 ft.ControlState.DISABLED: ft.BorderSide(1, DISABLED_SIDE),
@@ -139,9 +139,9 @@ class Button(ft.Button):
             # 实心：实底 + 反白（或深墨）字。
             #
             # 悬停**不换底色**，而是压一层前景色：M3 对实心控件的做法就是
-            # "底色不动，叠 8% 的前景色"。以前是换成深一档的同色系
-            # （BLUE -> BLUE_800），两档之间的跳变在深色主题下看不出来，
-            # 反倒把"按下"和"悬停"画成了同一个颜色。
+            # "底色不动，叠 8% 的前景色"。换成深一档的同色系（BLUE → BLUE_800）
+            # 时，两档的跳变在深色主题下看不出来，反倒把"按下"和"悬停"画成了
+            # 同一个颜色。
             self.style.color = self.style.color or {
                 ft.ControlState.DEFAULT: self._style.on,
                 ft.ControlState.DISABLED: DISABLED_FG,

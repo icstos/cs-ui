@@ -279,8 +279,8 @@ class Input(Label):
             error=self.error_text,
             multiline=self.multiline,
             min_lines=3 if self.multiline else None,
-            # 描边 + 透明底。以前铺 ``SURFACE_CONTAINER_HIGHEST``：那是 M3 里
-            # 最重的一档容器色，在 1.1 的中性表面下就成了一块灰 —— 和卡片底、
+            # 描边 + 透明底。铺 ``SURFACE_CONTAINER_HIGHEST`` 会出问题：那是 M3
+            # 里最重的一档容器色，在 1.1 的中性表面下就成了一块灰 —— 和卡片底、
             # 和旁边的只读框全糊在一起，边界只剩一圈比它更淡的线。
             filled=False,
             height=None if self.multiline or has_message else DEFAULT_FORM_HEIGHT,

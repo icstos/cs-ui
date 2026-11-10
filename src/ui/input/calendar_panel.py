@@ -24,11 +24,8 @@
   ``__post_init__`` 里初始化**（长度 = :meth:`_cal_view_count`）；
 - ``_mode``：``"day"`` / ``"month"`` / ``"year"``。
 
-.. note::
-    ``FIELD_*`` / ``PANEL_*`` / ``*_SIZE`` / ``HOVER_BG`` / ``DISABLED_FG`` /
-    ``place_panel`` / ``_truthy`` 这些名字**仍从本模块重导出**（历史上它们定义
-    在这里，``date_input`` / ``datetime_input`` 以及仓库外的代码都按老路径导入）。
-    新代码请直接从 :mod:`ui.input.panel_field` 导入。
+外壳的尺寸与配色一律从 :mod:`ui.input.panel_field` 取；本模块只定义月历特有的
+几何（``CAL_*`` / ``HEADER_H`` / ``FOOTER_H`` / ``CELL_*``）与 ``DayMark``。
 """
 
 from __future__ import annotations
@@ -42,31 +39,19 @@ from ui.core.format import calendar_title, first_weekday, month_cell, weekday_na
 from ui.core.i18n import t
 from ui.core.tokens import accent_soft
 
-# 通用外壳（尺寸 / 配色 / 定位 / 混入）全部来自 panel_field。
-# 这里原样重导出，保持 `from ui.input.calendar_panel import PANEL_PAD` 这类
-# 历史导入路径可用。
-from ui.input.panel_field import (  # noqa: F401
+# 通用外壳（尺寸 / 配色 / 混入）来自 panel_field，只取本模块真正用到的。
+from ui.input.panel_field import (
     DISABLED_FG,
-    FIELD_HEIGHT,
-    FIELD_PAD_H,
-    FIELD_RADIUS,
-    FIELD_WIDTH,
     HOVER_BG,
     LABEL_SIZE,
     NAV_RADIUS,
-    NAV_SIZE,
-    PANEL_GAP,
     PANEL_PAD,
-    SCREEN_MARGIN,
-    SMALL_SIZE,
     TEXT_SIZE,
     PanelField,
     _truthy,
-    panel_shell,
-    place_panel,
 )
 
-__all__ = ["CalendarPanel", "DayMark", "WEEKDAYS", "place_panel", "panel_shell"]
+__all__ = ["CalendarPanel", "DayMark", "WEEKDAYS"]
 
 # ---------------------------------------------------------------------------
 # 尺寸（月历独有）
@@ -102,7 +87,7 @@ BAND_BG = accent_soft("primary")  # 区间 / 整周连条
 
 #: 星期标签的**中文字形兜底**，索引与 ``datetime.date.weekday()`` 一致：
 #: 0 = 周一 … 6 = 周日。真正的标签来自语言包（``ui.calendar.weekdays``），
-#: 这个常量只在语言包异常时兜底，并供老代码按原路径导入。
+#: 这个常量只在语言包异常时兜底。
 WEEKDAYS = ("一", "二", "三", "四", "五", "六", "日")
 
 
