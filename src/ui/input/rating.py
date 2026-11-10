@@ -14,6 +14,18 @@
     Column([rating])
 
 只读展示把 ``readonly`` 打开：外观不变，但点不动、也不吃悬停预览。
+
+两种使用场景，两种预览通道
+--------------------------
+
+``Rating`` 是 ``ft.Control`` 子类，可以直接 ``page.add``，此时悬停预览由组件自己
+重绘那五颗星（最省：只下发五个图标更新）。
+
+但在 ``@ft.component`` 渲染出的树里，flet 1.1.2 给**整棵子树**打了冻结标记，
+之后 ``icon.icon = ...`` 直接抛 ``Frozen controls cannot be updated``，而 patch
+也会因 ``frozen and src is dst`` 把这棵子树整个跳过 —— 改了也上不了屏。所以那种
+场景下预览必须走**受控**通道：调用方给 ``preview`` 并把悬停意图接在 ``on_preview``
+上，由它重渲染出一棵新树。不接 ``on_preview`` 也不会崩，只是没有预览。
 """
 
 from __future__ import annotations
@@ -60,6 +72,27 @@ def _is_true(payload: object) -> bool:
     return str(payload).strip().lower() == "true"
 
 
+def _normalize(value: float | None, count: int, step: float) -> float | None:
+    """夹进 0..count，并按 ``step`` 吸附；0 归一成「未评分」。"""
+    if value is None:
+        return None
+    score = min(max(float(value), 0.0), float(count))
+    score = round(round(score / step) * step, 2)
+    return score or None
+
+
+def _fill(score: float, index: int) -> float:
+    """第 ``index`` 颗星拿到多少（0~1）：≥1 整星、≥0.5 半星、其余空星。"""
+    return max(0.0, min(1.0, score - index))
+
+
+def _icon(score: float, index: int) -> str:
+    fill = _fill(score, index)
+    if fill >= 1:
+        return STAR_FULL
+    return STAR_HALF if fill >= 0.5 else STAR_EMPTY
+
+
 @ft.control
 class Rating(ft.Row):
     """星级评分：一排可点的星，值落在分数上。
@@ -70,7 +103,11 @@ class Rating(ft.Row):
         precision: 精度，``1`` 为整星、``0.5`` 为半星。
         readonly: 只读：外观不变，但点击与悬停预览都关掉。
         disabled: 禁用：整排降灰且不可点；与只读的区别是「看起来就不能用」。
+        preview: 受控预览值（1 起）。给了它就完全由外部决定「亮几颗」，
+            ``None`` 表示没有预览。``@ft.component`` 里必须用这种方式。
         on_change: 分数变化回调，入参是分数；清空时收到 0。
+        on_preview: 悬停预览变化回调，入参是预览分数或 ``None``。接上它就进入
+            受控预览模式（组件自己不重绘，交给调用方重渲染）。
     """
 
     value: float | None = None
@@ -80,31 +117,47 @@ class Rating(ft.Row):
     # disabled 继承自 ft.Row 的 kw_only 字段，重新声明时必须显式 kw_only=True，
     # 否则它会变成第 0 个位置参数（详见 ui.input.button.Button）。
     disabled: bool = field(default=False, kw_only=True)
+    preview: float | None = None
     on_change: Callable[[float], None] | None = None
+    on_preview: Callable[[float | None], None] | None = None
 
     def init(self):
         self.precision = 0.5 if 0 < float(self.precision) < 1 else 1.0
         self.elements = max(1, int(self.elements))
         self.value = self._normalize(self.value)
+        self.preview = self._normalize(self.preview)
         self.on_change = self.on_change or (lambda _score: None)
-        self._preview: float | None = None
+        self._local_preview: float | None = None
         self._icons: list[ft.Icon] = []
         self.controls = [self._build_star(index) for index in range(self.elements)]
         self.spacing = 0
-        self._paint(self.value or 0.0)
+        self._paint(self._shown())
 
     # -- 取值 ---------------------------------------------------------------
     @property
     def _interactive(self) -> bool:
         return not (self.readonly or self.disabled)
 
+    @property
+    def _frozen_tree(self) -> bool:
+        """是否处在 ``@ft.component`` 渲染出的冻结树里。
+
+        冻结之后写子控件属性会抛 ``Frozen controls``，而且 patch 会把这棵子树
+        整个跳过（``frozen and src is dst`` 直接 return）—— 写了也上不了屏。
+        所以这时只能把状态变化交给回调，由调用方重渲染出新实例。
+        """
+        return hasattr(self, "_frozen")
+
     def _normalize(self, value: float | None) -> float | None:
-        """夹进 0..elements，并按 ``precision`` 吸附；0 归一成「未评分」。"""
-        if value is None:
-            return None
-        score = min(max(float(value), 0.0), float(self.elements))
-        score = round(round(score / self.precision) * self.precision, 2)
-        return score or None
+        return _normalize(value, self.elements, self.precision)
+
+    def _shown(self) -> float:
+        """这一刻该画几分：受控预览 > 本地预览 > 真实值。"""
+        if self.preview is not None:
+            return float(self.preview)
+        if self._local_preview is not None:
+            return self._local_preview
+        return self.value or 0.0
 
     # -- 构建 ---------------------------------------------------------------
     def _build_star(self, index: int) -> ft.Container:
@@ -118,8 +171,11 @@ class Rating(ft.Row):
             border_radius=CELL // 2,
             data=index,
             tooltip=f"{index + 1} 分" if not self.readonly else None,
-            on_hover=None if self._interactive else self._handle_hover,
-            on_tap_down=None if self._interactive else self._handle_tap,
+            # 可交互才挂处理器。这里曾经写成 ``None if self._interactive else ...``
+            # （条件反了）：可交互的星表一个处理器都没挂，只读/禁用的反而全挂上 ——
+            # 于是在 @ft.component 树里悬停只读示例就会撞上冻结树直接抛异常。
+            on_hover=None if not self._interactive else self._handle_hover,
+            on_tap_down=None if not self._interactive else self._handle_tap,
             content=icon,
         )
 
@@ -128,16 +184,14 @@ class Rating(ft.Row):
 
         每一颗取 ``score - index`` 的剩余量：≥1 整星、≥0.5 半星、其余空星。
         这样 4.5 分在第 5 颗上是半星，4 分则是整星。
+
+        **只在未冻结的树上调用** —— 冻结树里这个写入会抛异常。
         """
         for index, icon in enumerate(self._icons):
-            fill = max(0.0, min(1.0, score - index))
-            if fill >= 1:
-                icon.icon, color = STAR_FULL, FILLED
-            elif fill >= 0.5:
-                icon.icon, color = STAR_HALF, FILLED
-            else:
-                icon.icon, color = STAR_EMPTY, EMPTY
-            icon.color = DIMMED if self.disabled else color
+            icon.icon = _icon(score, index)
+            icon.color = (
+                DIMMED if self.disabled else (FILLED if _fill(score, index) >= 0.5 else EMPTY)
+            )
 
     # -- 交互 ---------------------------------------------------------------
     def _handle_hover(self, e: ft.ControlEvent) -> None:
@@ -146,12 +200,24 @@ class Rating(ft.Row):
         只重置自己那一档的预览 —— 从第 3 颗滑到第 4 颗时，第 3 颗的移出事件
         不该把第 4 颗刚点亮的预览抹掉。
         """
-        index = int(e.control.data)
+        if not self._interactive:
+            return
+        index = float(int(e.control.data)) + 1.0
+        current = self.preview if self.preview is not None else self._local_preview
         if _is_true(e.data):
-            self._preview = float(index) + 1.0
-        elif self._preview == float(index) + 1.0:
-            self._preview = None
-        self._paint(self._preview if self._preview is not None else (self.value or 0.0))
+            wanted: float | None = index
+        elif current == index:
+            wanted = None
+        else:
+            return
+        # 受控优先：外部给了 on_preview 就由它重渲染，组件不自己动。
+        if self.on_preview is not None:
+            self.on_preview(wanted)
+            return
+        if self._frozen_tree:
+            return  # 冻结树里写不了也刷不动，静默降级（不预览，但不崩）
+        self._local_preview = wanted
+        self._paint(self._shown())
         self.update()
 
     def _handle_tap(self, e: ft.ControlEvent) -> None:
@@ -169,18 +235,29 @@ class Rating(ft.Row):
         self._set(score)
 
     def _set(self, value: float | None) -> None:
-        self.value = self._normalize(value)
-        self._preview = None
-        self._paint(self.value or 0.0)
-        self.on_change(self.value if self.value is not None else 0)  # type: ignore[misc]
+        score = self._normalize(value)
+        if self._frozen_tree:
+            # 冻结树里改不动自己，把结果交给调用方 —— 它重渲染时传入新 value。
+            self.on_change(score if score is not None else 0)  # type: ignore[misc]
+            return
+        self.value = score
+        self._local_preview = None
+        self._paint(self._shown())
+        self.on_change(score if score is not None else 0)  # type: ignore[misc]
         self.update()
 
     # -- 外部赋值 -----------------------------------------------------------
     def set_value(self, value: float | None) -> None:
-        """外部改分并重绘，不触发 ``on_change`` —— 数据源回流不该再发一次事件。"""
+        """外部改分并重绘，不触发 ``on_change`` —— 数据源回流不该再发一次事件。
+
+        冻结树里无事可做（写不进去、patch 也跳过）：那种场景请改 ``value`` 参数
+        让调用方重渲染。
+        """
+        if self._frozen_tree:
+            return
         self.value = self._normalize(value)
-        self._preview = None
-        self._paint(self.value or 0.0)
+        self._local_preview = None
+        self._paint(self._shown())
         if self.parent is not None:
             self.update()
 
@@ -200,10 +277,16 @@ def _score_text(score: float) -> str:
 def _basic() -> ft.Control:
     """基础五星：悬停预览、点击落分、再点同一档取消。"""
     score, set_score = ft.use_state(0.0)
+    preview, set_preview = ft.use_state(None)
     return ft.Column(
         spacing=SPACE["2"],
         controls=[
-            Rating(value=score, on_change=set_score),
+            Rating(
+                value=score,
+                preview=preview,
+                on_change=set_score,
+                on_preview=set_preview,
+            ),
             _caption(f"当前评分：{_score_text(score)}（点同一颗星可取消）"),
         ],
     )
@@ -213,10 +296,17 @@ def _basic() -> ft.Control:
 def _half() -> ft.Control:
     """半星精度：点左半边是半星，点右半边是整星。"""
     score, set_score = ft.use_state(3.5)
+    preview, set_preview = ft.use_state(None)
     return ft.Column(
         spacing=SPACE["2"],
         controls=[
-            Rating(value=score, precision=0.5, on_change=set_score),
+            Rating(
+                value=score,
+                precision=0.5,
+                preview=preview,
+                on_change=set_score,
+                on_preview=set_preview,
+            ),
             _caption(f"当前评分：{_score_text(score)}（precision=0.5）"),
         ],
     )
@@ -307,17 +397,24 @@ SPEC = Spec(
         Api("readonly", "bool", "False", "只读：外观不变，但点击与悬停预览都关掉"),
         Api("disabled", "bool", "False", "禁用：整排降灰且不可点，值与只读一样可读"),
         Api(
+            "preview",
+            "float | None",
+            "None",
+            "受控预览值；给了就完全由外部决定亮几颗（@ft.component 里用它）",
+        ),
+        Api(
             "on_change",
             "Callable[[float], None] | None",
             "None",
             "分数变化回调；清空时收到 0，用于回写表单或触发提交",
         ),
         Api(
-            "set_value",
-            "method",
-            "—",
-            "外部改分并重绘，不触发 on_change",
+            "on_preview",
+            "Callable[[float | None], None] | None",
+            "None",
+            "悬停预览变化回调；接上即进入受控预览模式，由调用方重渲染",
         ),
+        Api("set_value", "method", "—", "外部改分并重绘，不触发 on_change"),
     ],
     notes=[
         tip(
@@ -333,6 +430,13 @@ SPEC = Spec(
         info(
             "颜色从写死的 GREY / BLUE 换成 ON_SURFACE_VARIANT / PRIMARY，禁用走"
             "on-surface 38%：换主色或切深色主题时整排星自动跟随。"
+        ),
+        tip(
+            "在 ``@ft.component`` 里用要给 ``preview`` + ``on_preview``（受控）。"
+            "那种树里的控件是冻结的：``icon.icon = ...`` 会抛 "
+            "``Frozen controls cannot be updated``，而 patch 又因 "
+            "``frozen and src is dst`` 把整棵子树跳过 —— 组件自己重绘既写不进也刷不动。"
+            "不接这两个参数不会崩，只是没有悬停预览。"
         ),
     ],
     tags=("评分", "rating", "星级", "打分", "表单"),
