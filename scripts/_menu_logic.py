@@ -253,6 +253,57 @@ m4 = Menu(items=tree(), selected_key="cold", expanded_keys=())
 check("effective 含 archive", m4._effective_expanded(), ("archive",))
 check("字段本身没被改", m4.expanded_keys, ())
 
+print()
+print("=== 子项有选中时，父项也能收起（回归）===")
+# 曾经的 bug：effective 无条件并入选中项的祖先链，于是"装着当前页的那一组"
+# 永远收不起来 —— 点父项没有任何反应。
+m6 = Menu(items=tree(), selected_key="hl", expanded_keys=())
+check("自动露出的祖先", m6._effective_expanded(), ("host",))
+m6.toggle("host")
+check("收起成功", m6._effective_expanded(), ())
+check("选中项不受影响（收起不等于取消选中）", m6.selected_key, "hl")
+check(
+    "子项确实不画了",
+    "hl" in keys(r for (r, _d) in visible_rows(tree(), m6._effective_expanded())),
+    False,
+)
+m6.toggle("host")
+check("再点一次又开", m6._effective_expanded(), ("host",))
+m6.toggle("host")
+check("可以反复收/开", m6._effective_expanded(), ())
+
+m7 = Menu(items=tree(), selected_key="hl")
+m7.toggle("host")
+m7.select("hg")
+check("换选中项 → 那条链路重新自动展开", m7._effective_expanded(), ("host",))
+
+m8 = Menu(items=tree(), selected_key="eip-a")
+check("三层：祖先自动露两级", m8._effective_expanded(), ("net", "eip"))
+m8.toggle("net")
+check("收起最外层：下一级不再算展开", m8._effective_expanded(), ("eip",))
+check("可见行回到 5 个顶层项", len(visible_rows(tree(), m8._effective_expanded())), 5)
+
+m9 = Menu(items=tree(), selected_key="hl")
+m9.toggle("host")
+m9.expand("host")
+check("expand 会销掉收起记录", m9._effective_expanded(), ("host",))
+
+print()
+print("=== toggle 的无效输入 ===")
+m10 = Menu(items=tree(), selected_key="hl")
+m10.toggle("hl")
+check("叶子不参与展开", m10.expanded_keys, ())
+m10.toggle("audit")
+check("禁用项不响应", m10.expanded_keys, ())
+m10.toggle("nope")
+check("不存在的键不落地", m10.expanded_keys, ())
+check("以上都不影响 effective", m10._effective_expanded(), ("host",))
+
+seen.clear()
+m11 = Menu(items=tree(), selected_key="hl", on_expand=seen.append)
+m11.toggle("host")
+check("收起自动展开的祖辈也回调 on_expand", seen, [()])
+
 
 print()
 print("==============================================")

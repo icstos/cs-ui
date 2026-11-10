@@ -379,6 +379,8 @@ class Menu:
             在 ``on_select`` 里回写自己的值。
         expanded_keys: 展开的父项键。构造后由菜单自己维护；外部想"默认展开某组"
             就传进来，后续的展开收起不会回调外部（要同步用 ``on_expand``）。
+            选中项的祖先会自动算进展开集合（不写回这个字段），但用户手动收起
+            过的父项除外 —— 收起的意图优先。
         collapsed: 折叠成图标条（仅 ``vertical``）。文字、子项、分组标题都不渲染。
         accordion: 手风琴 —— 同一层级同时只展开一个。
         dot: 给所有叶子项前面加圆点（单项可用 ``MenuItem.dot`` 覆盖）。
@@ -422,26 +424,67 @@ class Menu:
     # ------------------------------------------------------------------
     # 对外的小动作
     # ------------------------------------------------------------------
+    def __post_init__(self) -> None:
+        # 运行期状态：用户**明确收起**过的父项（哪怕里面装着当前选中项）。
+        #
+        # 为什么非要有这一笔账：选中项的祖先链是自动展开的（见
+        # ``_effective_expanded``），只看展开集合的话，用户点父项收起后，
+        # 下一条规则立刻又把它顶开 —— 表现就是**装着当前页的那一组收不起来**。
+        # 这里让"用户的手"压过"自动展开"；换选中项、或再次点开时销账。
+        # 下划线开头 => 不参与序列化（像 ``_picked`` / ``_hover`` 一样），
+        # 变更后靠 ``_repaint`` 触发重绘。
+        self._suppressed: set[str] = set()
+
     def select(self, key: str) -> None:
         """选中某一项（不触发 ``on_select``，供外部同步用）。"""
-        self.selected_key = norm_selected(self.items, key)
+        self._set_selected(norm_selected(self.items, key))
 
     def expand(self, *keys: str) -> None:
         """强制展开这些父项（``on_expand`` 照常触发）。"""
         merged = prune_expanded(self.items, (*self.expanded_keys, *keys))
-        if merged != self.expanded_keys:
-            self.expanded_keys = merged
-            if self.on_expand:
-                self.on_expand(merged)
+        # 明确展开 = 销账：用户改主意了，别再替他记着"这组他收起过"。
+        keep = {k for k in self._suppressed if k not in merged}
+        dropped = keep != self._suppressed
+        self._suppressed = keep
+        if merged == self.expanded_keys:
+            if dropped:
+                self._repaint()
+            return
+        self.expanded_keys = merged
+        if self.on_expand:
+            self.on_expand(merged)
 
     def toggle(self, key: str) -> None:
-        """展开 / 收起某个父项。"""
-        merged = toggle_expanded(
-            self.items, self.expanded_keys, key, accordion=self.accordion
-        )
+        """展开 / 收起某个父项。
+
+        收起是**用户的明确意图**，要压过"选中项的祖先自动露出来"这条便利规则
+        —— 否则装着当前页的那一组永远收不起来。这一笔账记在 ``_suppressed``：只有
+        当收起的正是选中项的祖先时才记（别处的收起本来就没人跟它抢）。
+        之后再点开、``expand()``、或者跳到别的项，账自动销掉。
+        """
+        item = self._item_of(key)
+        if item is None or item.disabled or not item.children:
+            return  # 禁用的父项、叶子、或键根本不存在
+        trail = find_path(self.items, self.selected_key)
+        if key in self._effective_expanded(trail):
+            # 收起：确认它真的从展开集合里去掉，并（若它是选中项的祖先）记账
+            merged = tuple(k for k in dict.fromkeys(self.expanded_keys) if k != key)
+            keep = set(self._suppressed)
+            if key in trail[:-1]:
+                keep.add(key)
+        else:
+            merged = toggle_expanded(
+                self.items, self.expanded_keys, key, accordion=self.accordion
+            )
+            keep = {k for k in self._suppressed if k != key}
+        if merged == self.expanded_keys and keep == self._suppressed:
+            return
+        self._suppressed = keep
         if merged == self.expanded_keys:
-            return  # 禁用的父项、或键根本不存在
-        self.expanded_keys = merged
+            # expanded_keys 一个字没变，只是记了一笔账 —— 得自己敲一下重绘
+            self._repaint()
+        else:
+            self.expanded_keys = merged
         if self.on_expand:
             self.on_expand(merged)
 
@@ -469,9 +512,10 @@ class Menu:
     def _effective_expanded(self, path: Sequence[str] | None = None) -> tuple[str, ...]:
         """真正生效的展开集合：``expanded_keys`` + 选中项的祖先链。
 
-        **只算出来，不写回字段** —— 写回去就等于"用户永远收不起任何一个装着
-        选中项的父级"，那是个很招人烦的小毛病。渲染时父项的箭头也必须看这份
-        集合，否则会出现"子项明明露着、父项箭头却朝下"的自相矛盾。
+        祖先链必须露出来，否则"我在哪"无从看起；但**只在用户没有明确收起它
+        的时候** —— 用户点一下父项，意图比"自动露出"更强，那笔账记在
+        ``_suppressed`` 里（见 ``__post_init__``）。这层"自动展开"仍然只算、
+        不写回 ``expanded_keys``：写回去就把用户的收起意图抹平了。
 
         Args:
             path: 已知的选中链路（``find_path`` 的结果）。一次渲染里这个链路要被
@@ -481,7 +525,22 @@ class Menu:
         trail = path if path is not None else find_path(self.items, self.selected_key)
         if not trail:
             return expanded
-        return tuple(dict.fromkeys((*expanded, *trail[:-1])))
+        auto = [key for key in trail[:-1] if key not in self._suppressed]
+        return tuple(dict.fromkeys((*expanded, *auto)))
+
+    def _set_selected(self, key: str) -> None:
+        """换选中项，并让新链路上的"用户收起过"作废。
+
+        不作废的后果很具体：用户收起过「主机」，之后从别处跳到「主机 › 主机列表」，
+        那一组还收着 —— 菜单上完全看不出自己身在何处，只有个亮着的父项。
+        """
+        if self._suppressed:
+            trail = set(find_path(self.items, key)[:-1])
+            keep = {k for k in self._suppressed if k not in trail}
+            if keep != self._suppressed:
+                # 不在这里 _repaint：紧接着的 selected_key 赋值本来就要重绘一次
+                self._suppressed = keep
+        self.selected_key = key
 
     def _group_starts(self) -> dict[str, MenuGroup]:
         """ "分组标题挂在哪一行之前"：组内第一项的键 → 分组。一次 O(项数)。
@@ -524,7 +583,7 @@ class Menu:
             return
         if item.key == self.selected_key:
             return  # 再点一次同一个不算"换了"
-        self.selected_key = item.key
+        self._set_selected(item.key)
         if self.on_select:
             self.on_select(item)
 
@@ -1197,6 +1256,12 @@ SPEC = Spec(
             "tip",
             "选中用 12% 主色底而不是主色实底：一屏几十行，满饱和的色会压过页面正文。"
             "图标比文字淡一档（outline），否则一列图标与文字同深度会发糊。",
+        ),
+        (
+            "info",
+            "选中项的祖先会自动展开，但**用户点一下就收得起来** —— 收起的意图优先，"
+            "直到再点开、expand() 或跳到别的项。子项被收起后不画，父项仍留着主色，"
+            "「你在哪条链上」不会丢。",
         ),
         (
             "info",
