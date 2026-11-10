@@ -22,6 +22,7 @@ lazy_exports(
         "Heatmap": ".heatmap",
         "HeatmapItem": ".heatmap",
         "Image": ".image",
+        "Kbd": ".kbd",
         "ImageGridView": ".image_gridview",
         "ListTile": ".list_tile",
         "LogContainer": ".log_container",

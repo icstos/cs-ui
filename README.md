@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.12%2B-green)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-A component library for [Flet](https://flet.dev/): 72 components, a computed palette, and a
+A component library for [Flet](https://flet.dev/): 74 components, a computed palette, and a
 typographic law.
 
 ## Features
@@ -434,7 +434,7 @@ python scripts/check_all.py --stage visual  # real screenshots + grey-block dete
 | `_responsive_logic.py` | breakpoints identical to `ResponsiveRow`, classes monotonic and boundary-closed-left, no repaint within a class, width limit takes `min()`, private fields never leak into the serialized tree |
 | `_*_logic.py` | per-component pure logic (state derivation, value bounds, callbacks, frozen-tree degradation) |
 | `_ui_mcp_logic.py` | MCP index contract: paradigm matches code, only base-module constants, same-name lookups resolvable, Chinese aliases never point at deleted symbols |
-| `_doc_check.py` | SPEC / examples / API completeness for 72 components (examples are actually executed) |
+| `_doc_check.py` | SPEC / examples / API completeness for 74 components (examples are actually executed) |
 | `gen_ui_registry.py --check` | `ui.__all__` and the registry do not drift |
 | `build_docs_i18n.py --check` | the three site locales stay in sync |
 
@@ -443,7 +443,7 @@ the hue changes; assert invariants such as "the lightness spread across four sem
 
 ## Docs site and examples
 
-The docs site is the example library: 72 components, each with runnable examples and an API table.
+The docs site is the example library: 74 components, each with runnable examples and an API table.
 
 ```bash
 python docs/main.py
@@ -480,7 +480,7 @@ files ship with the package; the server never imports `ui`:
 
 | Artifact | Contents |
 |---|---|
-| `data/api.json` | 95 components, 28 data classes, 185 functions, 8 enums, 52 token constants, plus member tables for 45 inherited external classes |
+| `data/api.json` | 96 components, 28 data classes, 185 functions, 8 enums, 52 token constants, plus member tables for 44 inherited external classes |
 | `data/examples.json` | `examples/` split by page + a real call snippet for every component |
 | `data/docs.json` | README / TODO / project memory, split into searchable sections |
 

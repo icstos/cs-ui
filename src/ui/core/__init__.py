@@ -87,6 +87,14 @@ _ORIGIN: dict[str, str] = {
     "use_i18n": ".i18n",
     "use_t": ".i18n",
     "validate": ".i18n",
+    # empty —— 空状态（单行 / 整块两种形态，所有组件共用）
+    # 组件内部一直用它们；应用层同样需要（列表为空、搜索无结果、面板未选），
+    # 所以提到门面上，免得每个应用再手绘一遍"图标 + 一行灰字"。
+    "EMPTY_HEIGHT": ".empty",
+    "EMPTY_ICON_BOX": ".empty",
+    "EMPTY_LINE_HEIGHT": ".empty",
+    "empty_block": ".empty",
+    "empty_line": ".empty",
     # icons —— 语义图标（一个动作一个图标，见 ui.core.icons）
     # 只导出"表达约定"的那几个；CLOSE / SEARCH 这类通用名留在 ui.core.icons 里，
     # 免得 ui.core 顶层出现一堆看不出用途的单词。
