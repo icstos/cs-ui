@@ -48,7 +48,9 @@ from typing import Any, Literal
 
 import flet as ft
 
+from ui.core import typography
 from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, ICON_SIZE, RADIUS, semantic_text
+from ui.core.typography import RHYTHM
 
 # 代码块配色：**故意不跟随明暗主题**。代码高亮有自己的色板，浅色主题下把
 # 代码块也刷白，行内高亮的对比度会全线崩掉 —— VS Code / GitHub 也一样：
@@ -488,17 +490,22 @@ def _marker() -> ft.Control:
 
 
 def _section(anchor: str, title: str, body: Sequence[ft.Control]) -> ft.Control:
+    # 标题与它下面那段之间用节奏里的 paragraph（12）：比一个行盒紧、比控件缝隙松，
+    # 读者的眼睛才认得出"这行是标题、下面是它的内容"。
     return ft.Column(
         key=anchor,
-        spacing=14,
+        spacing=RHYTHM["paragraph"],
         horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
         controls=[
             ft.Row(
-                spacing=8,
+                spacing=RHYTHM["block"],
                 vertical_alignment=ft.CrossAxisAlignment.START,
                 controls=[
                     _marker(),
-                    ft.Text(title, size=FONT_SIZE["title"], weight=FONT_WEIGHT["bold"]),
+                    ft.Text(
+                        title,
+                        style=typography.text_style("title", weight=FONT_WEIGHT["bold"]),
+                    ),
                 ],
             ),
             *body,
@@ -507,16 +514,27 @@ def _section(anchor: str, title: str, body: Sequence[ft.Control]) -> ft.Control:
 
 
 def _prose(text: str) -> ft.Control:
+    """文档正文：14px，行高按"长文"（1.75）而不是 UI 正文（1.618）。
+
+    连续阅读与扫一眼是两件事：正文行距太紧会串行，这也是本框架唯一一处
+    放宽行高的地方（见 :data:`ui.core.typography.LEADING_PROSE`）。
+    """
     return ft.Text(
         text,
-        size=14,
-        color=ft.Colors.ON_SURFACE,
-        style=ft.TextStyle(height=1.85),
+        style=typography.text_style(
+            "body", color=ft.Colors.ON_SURFACE, leading=typography.LEADING_PROSE
+        ),
     )
 
 
-def _muted(text: str, *, size: float = 12.5) -> ft.Control:
-    return ft.Text(text, size=size, color=_MUTED, style=ft.TextStyle(height=1.65))
+def _muted(text: str, *, size: float | None = None) -> ft.Control:
+    """次要说明：12px。字号取字阶上的档位（原来写 12.5，是字阶外的孤值）。"""
+    return ft.Text(
+        text,
+        style=typography.text_style(
+            "small", color=_MUTED, size=int(size) if size else None
+        ),
+    )
 
 
 # -- 头部 -------------------------------------------------------------------
@@ -531,26 +549,24 @@ def header(doc: Spec) -> ft.Control:
         spacing=12,
         horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
         controls=[
+            # 眉标：全大写式的分类 / 键名，加宽字距把两个词分开（小字不加宽会粘连）
             ft.Text(
                 f"{_GROUP_LABEL.get(doc.group, doc.group)} / {doc.key}",
-                size=FONT_SIZE["caption"],
-                color=ft.Colors.PRIMARY,
-                weight=ft.FontWeight.W_600,
-                style=ft.TextStyle(letter_spacing=0.6),
+                style=typography.text_style(
+                    "caption",
+                    color=ft.Colors.PRIMARY,
+                    weight=ft.FontWeight.W_600,
+                    tracking=0.6,
+                ),
             ),
-            ft.Text(
-                doc.name,
-                size=FONT_SIZE["display_lg"],
-                weight=ft.FontWeight.W_800,
-                style=ft.TextStyle(letter_spacing=-0.8, height=1.15),
-            ),
+            ft.Text(doc.name, style=typography.text_style("display_lg")),
             ft.Container(
                 padding=ft.Padding.only(right=40),
                 content=ft.Text(
                     doc.summary,
-                    size=FONT_SIZE["title"],
-                    color=_MUTED,
-                    style=ft.TextStyle(height=1.7),
+                    style=typography.text_style(
+                        "title", color=_MUTED, leading=1.5
+                    ),
                 ),
             ),
             *(
@@ -616,9 +632,11 @@ def _anatomy(doc: Spec) -> ft.Control:
                         expand=True,
                         content=ft.Text(
                             desc,
-                            size=FONT_SIZE["body"],
-                            color=_MUTED,
-                            style=ft.TextStyle(height=1.75),
+                            style=typography.text_style(
+                                "body",
+                                color=_MUTED,
+                                leading=typography.LEADING_PROSE,
+                            ),
                         ),
                     ),
                 ],

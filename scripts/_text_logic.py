@@ -18,8 +18,19 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import flet as ft
 
+from ui.core import typography
 from ui.core.tokens import FONT_SIZE, RADIUS, SPACE
-from ui.display.text import Header_1, Header_2, Quote, SubTitle, Title
+from ui.display.text import (
+    Header_1,
+    Header_2,
+    Header_3,
+    Header_4,
+    Header_5,
+    Header_6,
+    Quote,
+    SubTitle,
+    Title,
+)
 
 _fails: list[str] = []
 _passed = 0
@@ -37,6 +48,16 @@ def check(name: str, got: object, want: object) -> None:
 
 def section(title: str) -> None:
     print(f"\n== {title} ==")
+
+
+def check_true(name: str, ok: bool, detail: str = "") -> None:
+    global _passed
+    if ok:
+        _passed += 1
+        print(f"PASS  {name}{('  ' + detail) if detail else ''}")
+    else:
+        _fails.append(f"{name}{('  ' + detail) if detail else ''}")
+        print(f"FAIL  {name}{('  ' + detail) if detail else ''}")
 
 
 # ---------------------------------------------------------------------------
@@ -63,11 +84,18 @@ lines = body.content
 check("正文用 Column 串行", type(lines).__name__, "Column")
 check("引文 + 署名两行", len(lines.controls), 2)
 quote_text, sign = lines.controls
-check("引文斜体", quote_text.italic, True)
-check("引文字号取正文档", quote_text.size, FONT_SIZE["body"])
-check("引文用次要文字色", quote_text.color, ft.Colors.ON_SURFACE_VARIANT)
+# 引文的三件套现在都在 style 里（字号 / 行高 / 字距），控件上的 size/color 反而是 None。
+check("引文斜体", quote_text.style.italic, True)
+check("引文字号取正文档", quote_text.style.size, FONT_SIZE["body"])
+check("引文用次要文字色", quote_text.style.color, ft.Colors.ON_SURFACE_VARIANT)
+check(
+    "引文行高取长文档（比 UI 正文松）",
+    quote_text.style.height,
+    typography.LEADING_PROSE,
+)
+check_true("引文行高确实比正文松", typography.LEADING_PROSE > typography.ROLES["body"].leading)
 check("署名带破折号前缀", sign.value, "—— 出处 · 作者")
-check("署名比引文小一档", sign.size, FONT_SIZE["small"])
+check("署名比引文小一档", sign.style.size, FONT_SIZE["small"])
 
 # ---------------------------------------------------------------------------
 section("Quote：入参数种写法")
@@ -101,11 +129,34 @@ check("调用方给的底色不被覆盖", custom.bgcolor, ft.Colors.ERROR)
 check("调用方给的圆角不被覆盖", custom.border_radius, 12)
 
 # ---------------------------------------------------------------------------
-section("Heading：别名指向同一个类")
+section("Heading：别名与六档层级")
 check("Title 就是 Header_1", Title is Header_1, True)
 check("SubTitle 就是 Header_2", SubTitle is Header_2, True)
-check("H1 用 DISPLAY_SMALL", Header_1().theme_style, ft.TextThemeStyle.DISPLAY_SMALL)
-check("H2 用 HEADLINE_LARGE", Header_2().theme_style, ft.TextThemeStyle.HEADLINE_LARGE)
+
+heads = [cls() for cls in (Header_1, Header_2, Header_3, Header_4, Header_5, Header_6)]
+sizes = [h.size for h in heads]
+# 这一条曾经是红的：H2 走 M3 的 headline_large 槽、H3 走 headline_medium，而主题把
+# 两个槽钉到 24 / 28 —— H2 比 H3 还小，层级在视觉上反了。
+check_true("六档字号严格递减", all(a > b for a, b in zip(sizes, sizes[1:])), str(sizes))
+check("H1 = display_lg 档", sizes[0], typography.ROLES["display_lg"].size)
+check("H6 = 正文大小（靠字重站住）", sizes[-1], FONT_SIZE["body"])
+check_true(
+    "字重也逐级不增",
+    all(
+        int(a.weight.value[1:]) >= int(b.weight.value[1:])
+        for a, b in zip(heads, heads[1:])
+    ),
+)
+check_true(
+    "每档行高都跟自己的字号走（不是同一个数）",
+    len({h.style.height for h in heads}) >= 4,
+    str([h.style.height for h in heads]),
+)
+check_true(
+    "大字收紧字距、小字放宽",
+    heads[0].style.letter_spacing < 0 < heads[-1].style.letter_spacing + 0.001,
+)
+check("调用方覆盖字号后行高重算", Header_3(size=30).style.height, typography.leading(30))
 
 # ---------------------------------------------------------------------------
 print(f"\n{_passed} passed, {len(_fails)} failed")

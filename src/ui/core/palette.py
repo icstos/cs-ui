@@ -130,10 +130,10 @@ _LIGHT_STOPS: dict[str, float] = {
     "high": 0.930,  # 比外壳再深一档
     "highest": 0.908,
     "dim": 0.930,  # 遮罩后的页面（对话框背后）
-    "ink": 0.232,  # 一级文字
-    "ink_soft": 0.500,  # 二级文字
-    "outline": 0.705,  # 可见边框（约 2.5:1）
-    "hairline": 0.884,  # 分隔线（装饰性，不需要 3:1）
+    "ink": 0.232,  # 一级文字（对最暗表面 12.8:1）
+    "ink_soft": 0.478,  # 二级文字（对最暗表面 5.0:1，AA 留 10% 余量）
+    "outline": 0.660,  # 可见边框（对最暗表面约 2.4:1，图形可读下界）
+    "hairline": 0.870,  # 分隔线（装饰性：对表面 1.5:1，看得见但不抢眼）
     "inverse": 0.240,  # 反色面（snackbar、tooltip）
     "inverse_ink": 0.955,
 }
@@ -148,8 +148,8 @@ _DARK_STOPS: dict[str, float] = {
     "highest": 0.316,
     "dim": 0.162,
     "ink": 0.935,
-    "ink_soft": 0.772,
-    "outline": 0.545,  # 约 3:1
+    "ink_soft": 0.778,  # 对最亮表面 5.6:1
+    "outline": 0.585,  # 对最亮表面约 2.6:1
     "hairline": 0.330,
     "inverse": 0.930,
     "inverse_ink": 0.205,

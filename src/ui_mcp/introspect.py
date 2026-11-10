@@ -72,6 +72,7 @@ _PLUMBING = {
 # 对"照着写应用代码"的人只是噪音，而且语言表动辄上万字符。
 _CONST_MODULES = (
     "ui.core.tokens",
+    "ui.core.typography",
     "ui.core.responsive",
     "ui.core.theme",
     "ui.core.palette",

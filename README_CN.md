@@ -19,6 +19,13 @@
   `TextField`、`Dropdown`、`DatePicker` 默认都是 14，不依赖 Flutter 自带默认值
   （换 flet 版本也不会悄悄漂成 16）。11 / 12 / 16 / 20 / 24 / 28 / 36 是其余档位，
   相邻档至少差 2px
+- **行高、字距、字重是一套律，不是手挑的数** — `ui.core.typography` 由字号推出另外
+  三件套：行高 `φ − 0.018 × (size − 14)`（正文 14px 恰好是 φ=1.618，36px 收到 1.222
+  因为标题该紧，11px 放到 1.672 因为小字该松），字距按 em 做光学补偿（小字放宽
+  +0.018em、大字收紧 −0.022em、等宽归零），字重四档（小字 500 防断笔、正文 400 耐读、
+  标题 600、显示级 700）。行高**不**量化到 4px 网格 —— 正文 22.65px 夹在 20 与 24 之间，
+  选哪个都偏离 φ 一档；4px 网格只管间距（`RHYTHM` 六级：4/8/12/20/32/52，相邻比
+  1.4~2.1 贴着 φ）。分栏也在这里：12 栏网格上的 2:1（8+4）、φ:1（7+5）、1:2（4+8）
 - **一套配色，五个分层** — 表面 / 前景 / 交互 / 强调 / 数据各用一种表达手段，
   不跨层借用。按钮、消息条、徽标、日志级别共用同一套强调角色（`accent_*`），
   "成功"按钮与"成功"提示条是同一个绿，主按钮实底就是 M3 的 `PRIMARY`（换主色
@@ -403,6 +410,31 @@ disabled_layer()            # 'onsurface,0.38' —— 禁用文字 / 图标
 disabled_layer("container") # 'onsurface,0.12' —— 禁用控件的底 / 边
 hairline()                  # 1px 分隔线
 ```
+
+**排印令牌**（`ui.core.typography`）：字号只占四件套里的四分之一，另外三件由字号推出来。
+
+```python
+from ui import typography as tp
+
+tp.leading(14)              # 1.618 —— 正文拿到 φ，不用手填 height
+tp.leading(36)              # 1.222 —— 标题该紧
+tp.leading(11)              # 1.672 —— 小字该松
+tp.tracking(14)             # 0.0    —— 字距以 em 记，±0.025 内做光学补偿
+tp.tracking(36)             # -0.80  —— 大字收紧（-0.022em）
+tp.tracking(30)             # -0.62  —— 字阶外按 em 在相邻两档间插值（-0.021em）
+tp.role("body")             # Role(size=14, leading=1.618, tracking=0.0, weight=w400)
+tp.text_style("title", color=..., weight=...)   # 组件侧唯一该用的排字入口
+tp.RHYTHM["section"]        # 32 — hair 4 / block 8 / paragraph 12 /
+                            #      group 20 / section 32 / page 52
+tp.LEADING_PROSE            # 1.75 —— 长文正文比 UI 正文松一档
+tp.LEADING_CODE             # 1.55 —— 代码块
+tp.cols("thirds")           # ({"md": 8}, {"md": 4}) —— 12 栏上的 2:1
+tp.cols("golden")           # 7 + 5（φ:1，7.42 取整）
+tp.cols("aside")            # 4 + 8 —— 说明左、演示右
+```
+
+一条规矩：**组件里排字不要自己填 `height=` / `letter_spacing=`**。四件套必须成套下发，
+单改一项就会破坏律 —— 而律是 `scripts/_typography_logic.py` 用 86 条断言守着的不变量。
 
 **语义色三档**（重要）：一个语义色不能一个值用到底，必须拆成
 

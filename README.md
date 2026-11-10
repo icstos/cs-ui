@@ -12,6 +12,15 @@ A Python UI framework built on [Flet](https://flet.dev/), providing a rich set o
   `text_theme` slots, so a bare `ft.Text`, `ListTile`, `TextField`, `Dropdown` and
   `DatePicker` all default to 14 instead of Flutter's own `bodyMedium`. Bumping flet
   can't silently drift it. Other steps: 11 / 12 / 16 / 20 / 24 / 28 / 36, at least 2px apart
+- **Leading, tracking and weight are a law, not a pile of picked numbers** — `ui.core.typography`
+  derives the other three quarters from the size: leading `φ − 0.018 × (size − 14)` (14px lands
+  exactly on φ = 1.618, 36px tightens to 1.222 because headings should be tight, 11px loosens to
+  1.672 because small text should breathe), tracking as an optical correction in em (small text
+  +0.018em, large text −0.022em, monospace forced to zero), weight in four steps (500 for small
+  text so strokes don't break, 400 for body, 600 for headings, 700 for display). Leading is
+  deliberately **not** snapped to the 4px grid — body text is 22.65px, and 20 or 24 both miss φ
+  by a whole step; the grid governs spacing only (`RHYTHM`: 4/8/12/20/32/52, adjacent ratios
+  1.4–2.1, hugging φ). Split ratios live here too: 2:1 (8+4), φ:1 (7+5) and 1:2 (4+8) on 12 columns
 - **Design tokens + Material 3 theming** — no raw color / radius / font-size literals inside
   components. A single brand color is turned into all 46 M3 roles by `ui.core.palette`
   (one set for light, one for dark; change the brand and the whole set changes) instead of
@@ -415,6 +424,33 @@ disabled_layer()            # 'onsurface,0.38' — disabled text / icons
 disabled_layer("container") # 'onsurface,0.12' — disabled control fill / border
 hairline()                  # 1px divider
 ```
+
+**Typography tokens** (`ui.core.typography`) — font size is only a quarter of the quartet; the
+other three are derived from it:
+
+```python
+from ui import typography as tp
+
+tp.leading(14)              # 1.618 — body lands on φ, no hand-typed height
+tp.leading(36)              # 1.222 — headings tighten
+tp.leading(11)              # 1.672 — small text loosens
+tp.tracking(14)             # 0.0    — tracking in em, optical correction within ±0.025
+tp.tracking(36)             # -0.80  — large text tightens (-0.022em)
+tp.tracking(30)             # -0.62  — off-scale sizes interpolate in em (-0.021em)
+tp.role("body")             # Role(size=14, leading=1.618, tracking=0.0, weight=w400)
+tp.text_style("title", color=..., weight=...)   # the only entry point for setting type
+tp.RHYTHM["section"]        # 32 — hair 4 / block 8 / paragraph 12 /
+                            #      group 20 / section 32 / page 52
+tp.LEADING_PROSE            # 1.75 — long-form body, one step looser than UI body
+tp.LEADING_CODE             # 1.55 — code blocks
+tp.cols("thirds")           # ({"md": 8}, {"md": 4}) — 2:1 on 12 columns
+tp.cols("golden")           # 7 + 5 (φ:1, 7.42 rounded)
+tp.cols("aside")            # 4 + 8 — prose left, demo right
+```
+
+One rule: **don't set `height=` / `letter_spacing=` yourself in components**. The quartet has to
+ship as a set — changing one member breaks the law, and the law is an invariant guarded by 86
+assertions in `scripts/_typography_logic.py`.
 
 **Semantic colors come in three tiers** — one value cannot serve every use:
 

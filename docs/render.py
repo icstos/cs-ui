@@ -20,6 +20,8 @@ from docs.blocks import (
     Split,
 )
 from ui import Translator, use_t
+from ui.core import typography
+from ui.core.typography import RHYTHM
 
 _MUTED = kit.MUTED
 
@@ -52,26 +54,21 @@ def _split(block: Split, tr: Translator) -> ft.Control:
     640 的窗口里左栏会缩到 250 左右，说明文字一段一行、演示面板里的表单全挤成
     两行。用 ``ResponsiveRow`` 让换行发生在 Flutter 侧，正文不用重排。
     """
-    left, right = block.ratio
-    total = max(1, left + right)
-    left_span = max(1, round(12 * left / total))
-    right_span = max(1, 12 - left_span)
+    left_col, right_col = typography.cols(block.ratio, breakpoint="lg")
     return ft.ResponsiveRow(
         columns=12,
-        spacing=32,
-        run_spacing=22,
+        spacing=RHYTHM["section"],
+        run_spacing=RHYTHM["group"],
         vertical_alignment=ft.CrossAxisAlignment.START,
         controls=[
             ft.Container(
-                col={"xs": 12, "lg": left_span},
+                col=left_col,
                 content=ft.Column(
-                    spacing=14,
+                    spacing=RHYTHM["paragraph"],
                     controls=render_blocks(block.left, tr),
                 ),
             ),
-            ft.Container(
-                col={"xs": 12, "lg": right_span}, content=block.right()
-            ),
+            ft.Container(col=right_col, content=block.right()),
         ],
     )
 

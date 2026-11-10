@@ -44,11 +44,10 @@ from dataclasses import dataclass
 
 import flet as ft
 
-from ui.core import palette
+from ui.core import palette, typography
 from ui.core.i18n import use_t
 from ui.core.styles import outline_input
 from ui.core.tokens import (
-    FONT_SIZE,
     PRIMARY_SEEDS,
     RADIUS,
     SEMANTIC_ROLES,
@@ -217,22 +216,28 @@ def use_theme() -> ThemeState:
 
 
 def text_theme() -> ft.TextTheme:
-    """把 :data:`~ui.core.tokens.FONT_SIZE` 铺到 Material 3 的十三个文字槽位上。
+    """把排印系统铺到 Material 3 的十三个文字槽位上。
 
     **为什么必须显式写**：``ft.Text`` 不传 ``size`` 时用的是 Flutter 侧
     ``TextTheme.bodyMedium`` 的默认值 —— 那是框架外部的一份常量，flet 升级、
     Flutter 换版本、甚至 ``use_material3`` 开关一变，全局正文就可能从 14 漂到
     16 或 13。整个框架的正文字号必须由**自己**的令牌说了算，所以这里一次性把
-    每个槽位都钉死到 :data:`FONT_SIZE`，不留给默认值。
+    每个槽位都钉死，不留给默认值。
 
-    映射关系（左 M3 槽位，右框架档位）::
+    **每个槽位给的是"四件套"而不只是字号**：字号、行高、字距、字重都来自
+    :mod:`ui.core.typography`。只钉字号是过去做法留下的坑 —— 34px 的标题沿用
+    正文的 1.618 行高，上下两块之间会空出一大截；11px 的标签又会被挤成一团。
+    现在大小字各按各的律走，``ft.Text`` 不写 ``style`` 也能排对。
 
-        display_small    36  display_lg      headline_medium  28  display
-        headline_large   24  headline_lg     headline_small   20  headline
-        title_large      20  headline        title_medium     16  title
-        title_small      14  body            body_large       16  title
-        body_medium      14  body (默认)     body_small       12  small
-        label_large      14  body            label_medium     12  small
+    映射关系（左 M3 槽位，右框架档位 — 与 :data:`~ui.core.typography.HEADING`
+    的六级标题一致，顺序**必须**保持 H1 > H2 > … > H6）::
+
+        display_small    36  display_lg     headline_medium  24  headline_lg
+        headline_large   28  display        headline_small   20  headline
+        title_large      20  headline       title_medium     16  title
+        title_small      14  body           body_large       16  title
+        body_medium      14  body (默认)    body_small       12  small
+        label_large      14  body           label_medium     12  small
         label_small      11  caption
 
     ``body_medium`` 就是"正文 14"的落地点：``ft.Text``、``ft.ListTile``、
@@ -245,21 +250,24 @@ def text_theme() -> ft.TextTheme:
     失败也没撑破盒子。所以颜色一律给 M3 的 ``ON_SURFACE``，需要别的颜色时由控件
     自己覆盖。
     """
+    def slot(name: str) -> ft.TextStyle:
+        return typography.text_style(name, color=ft.Colors.ON_SURFACE)
+
     _fg = ft.Colors.ON_SURFACE
     return ft.TextTheme(
-        display_small=ft.TextStyle(size=FONT_SIZE["display_lg"], color=_fg),
-        headline_large=ft.TextStyle(size=FONT_SIZE["headline_lg"], color=_fg),
-        headline_medium=ft.TextStyle(size=FONT_SIZE["display"], color=_fg),
-        headline_small=ft.TextStyle(size=FONT_SIZE["headline"], color=_fg),
-        title_large=ft.TextStyle(size=FONT_SIZE["headline"], color=_fg),
-        title_medium=ft.TextStyle(size=FONT_SIZE["title"], color=_fg),
-        title_small=ft.TextStyle(size=FONT_SIZE["body"], color=_fg),
-        body_large=ft.TextStyle(size=FONT_SIZE["title"], color=_fg),
-        body_medium=ft.TextStyle(size=FONT_SIZE["body"], color=_fg),
-        body_small=ft.TextStyle(size=FONT_SIZE["small"], color=_fg),
-        label_large=ft.TextStyle(size=FONT_SIZE["body"], color=_fg),
-        label_medium=ft.TextStyle(size=FONT_SIZE["small"], color=_fg),
-        label_small=ft.TextStyle(size=FONT_SIZE["caption"], color=_fg),
+        display_small=slot("display_lg"),
+        headline_large=slot("display"),
+        headline_medium=slot("headline_lg"),
+        headline_small=slot("headline"),
+        title_large=slot("headline"),
+        title_medium=slot("title"),
+        title_small=slot("body"),
+        body_large=slot("title"),
+        body_medium=slot("body"),
+        body_small=slot("small"),
+        label_large=slot("body"),
+        label_medium=slot("small"),
+        label_small=slot("caption"),
     )
 
 
@@ -333,17 +341,22 @@ def build_theme(state: ThemeState, mode: str | None = None) -> ft.Theme:
             content_padding=ft.Padding.symmetric(
                 horizontal=SPACE["3"], vertical=SPACE["2"]
             ),
-            hint_style=ft.TextStyle(
-                size=FONT_SIZE["body"], color=ft.Colors.ON_SURFACE_VARIANT
+            # 提示语与标签走排印档位：输入框里的字与页面正文用同一套行高，
+            # 光标高度、垂直居中才会和 36px 的控件高度对上（Material 默认 16px
+            # 的行盒会让光标顶到描边上）。
+            hint_style=typography.text_style(
+                "body", color=ft.Colors.ON_SURFACE_VARIANT
             ),
-            label_style=ft.TextStyle(size=FONT_SIZE["body"]),
-            helper_style=ft.TextStyle(
-                size=FONT_SIZE["caption"], color=ft.Colors.ON_SURFACE_VARIANT
+            label_style=typography.text_style(
+                "body", color=ft.Colors.ON_SURFACE_VARIANT
+            ),
+            helper_style=typography.text_style(
+                "caption", color=ft.Colors.ON_SURFACE_VARIANT
             ),
         ),
         # 编辑中的文字与框架正文同档（Material 默认 16，比正文大一号）
         text_field_theme=ft.TextFieldTheme(
-            text_style=ft.TextStyle(size=FONT_SIZE["body"], color=ft.Colors.ON_SURFACE)
+            text_style=typography.text_style("body", color=ft.Colors.ON_SURFACE)
         ),
         scrollbar_theme=ft.ScrollbarTheme(
             thickness=4,
@@ -375,8 +388,8 @@ def build_theme(state: ThemeState, mode: str | None = None) -> ft.Theme:
             # 1.1 新增：菜单项悬停高亮的圆角。不设的话是直角，跟容器圆角打架。
             border_radius=RADIUS["lg"],
             menu_padding=ft.Padding.symmetric(vertical=6),
-            label_text_style=ft.TextStyle(
-                size=FONT_SIZE["body"], color=ft.Colors.ON_SURFACE
+            label_text_style=typography.text_style(
+                "body", color=ft.Colors.ON_SURFACE
             ),
         ),
     )
@@ -548,14 +561,14 @@ def App() -> ft.Control:
                 controls=[
                     ft.Text(
                         "设计令牌 + 主题运行时",
-                        size=FONT_SIZE["headline"],
-                        weight=ft.FontWeight.W_600,
+                        style=typography.text_style("headline"),
                     ),
                     ft.Text(
                         "下面的卡片、状态胶囊、按钮全部走 Material 3 角色色，"
                         "切明暗 / 换主色时不需要改任何一行组件代码。",
-                        size=FONT_SIZE["body"],
-                        color=ft.Colors.ON_SURFACE_VARIANT,
+                        style=typography.text_style(
+                            "body", color=ft.Colors.ON_SURFACE_VARIANT
+                        ),
                     ),
                     ft.Row(
                         spacing=12,
@@ -585,8 +598,10 @@ def App() -> ft.Control:
                                             ),
                                             ft.Text(
                                                 f"{role:<8} {semantic(role)}",
-                                                size=FONT_SIZE["body"],
-                                                color=semantic_text(role),
+                                                style=typography.text_style(
+                                                    "body",
+                                                    color=semantic_text(role),
+                                                ),
                                             ),
                                         ],
                                     )

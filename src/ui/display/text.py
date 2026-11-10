@@ -19,6 +19,7 @@ from dataclasses import field
 import flet as ft
 import flet_code_editor as fce
 
+from ui.core import typography
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, disabled_layer
 
@@ -46,18 +47,53 @@ Text = ft.Text
 
 
 # ---------------------------------------------------------------------------
-# 标题：六级，直接对应 M3 字阶
+# 标题：六级
 #
-# 字号不在这里写死 —— theme_style 交给 Flutter 的 Typography，跨平台一套值：
-# DISPLAY_SMALL 36 / HEADLINE_LARGE 32 / HEADLINE_MEDIUM 28 / HEADLINE_SMALL 24 /
-# TITLE_LARGE 22 / TITLE_MEDIUM 16。字重只分两档：前两级 BOLD，其余 W_500。
+# 字号不再交给 M3 的 theme_style 槽位：那条路会把"类名"与"像素"隔开一层，
+# 主题一改映射，H2 就可能比 H3 还小（实测发生过：headline_large→24、
+# headline_medium→28，层级在视觉上反了）。现在每级直接对应字阶里的一个档：
+#
+#   H1  36  display_lg   700      整页只有一个
+#   H2  28  display      700      分区
+#   H3  24  headline_lg  600      小节
+#   H4  20  headline     600      段落组
+#   H5  16  title        600      卡片 / 弹窗标题
+#   H6  14  body         600      与正文同号，只靠字重站住
+#
+# 行高与字距跟着字号走（见 ui.core.typography）：36px 的 1.222 与 14px 的 1.618
+# 不是同一个数，写死一个必然有一头难看。
 # ---------------------------------------------------------------------------
+def _apply_heading(heading: ft.Text, level: int) -> None:
+    """把某级的四件套（字号 / 字重 / 行高 / 字距）落到控件上。
+
+    只补**没被调用方覆盖**的那几项：``Header_3(..., size=30)`` 仍然生效，行高与
+    字距按 30px 重新算一遍（见 :func:`ui.core.typography.tracking` 的插值分支），
+    不会出现"字号变了、行高还是 24px 那一档"的错位。
+    """
+    spec = typography.role(typography.HEADING[level])
+    if heading.size is None:
+        heading.size = spec.size
+    if heading.weight is None:
+        heading.weight = FONT_WEIGHT[typography.HEADING_WEIGHT[level]]
+    if heading.style is None:
+        heading.style = ft.TextStyle(
+            height=typography.leading(heading.size),
+            letter_spacing=(
+                spec.tracking
+                if heading.size == spec.size
+                else typography.tracking(heading.size)
+            ),
+        )
+
+
 @ft.control
 class Header_1(ft.Text):
-    """一级标题：M3 ``DISPLAY_SMALL``，36px / BOLD，整页只应出现一个。"""
+    """一级标题：36px / 700，整页只应出现一个。"""
 
-    theme_style: ft.TextThemeStyle = ft.TextThemeStyle.DISPLAY_SMALL
-    weight: ft.FontWeight = ft.FontWeight.BOLD
+    _LEVEL = 1
+
+    def init(self):
+        _apply_heading(self, self._LEVEL)
 
 
 Title = Header_1
@@ -66,10 +102,12 @@ Header = Header_1
 
 @ft.control
 class Header_2(ft.Text):
-    """二级标题：M3 ``HEADLINE_LARGE``，32px / BOLD，用于分区。"""
+    """二级标题：28px / 700，用于分区。"""
 
-    theme_style: ft.TextThemeStyle = ft.TextThemeStyle.HEADLINE_LARGE
-    weight: ft.FontWeight = ft.FontWeight.BOLD
+    _LEVEL = 2
+
+    def init(self):
+        _apply_heading(self, self._LEVEL)
 
 
 SubTitle = Header_2
@@ -78,34 +116,42 @@ SubHeader = Header_2
 
 @ft.control
 class Header_3(ft.Text):
-    """三级标题：M3 ``HEADLINE_MEDIUM``，28px / W_500。"""
+    """三级标题：24px / 600。"""
 
-    theme_style: ft.TextThemeStyle = ft.TextThemeStyle.HEADLINE_MEDIUM
-    weight: ft.FontWeight = ft.FontWeight.W_500
+    _LEVEL = 3
+
+    def init(self):
+        _apply_heading(self, self._LEVEL)
 
 
 @ft.control
 class Header_4(ft.Text):
-    """四级标题：M3 ``HEADLINE_SMALL``，24px / W_500。"""
+    """四级标题：20px / 600。"""
 
-    theme_style: ft.TextThemeStyle = ft.TextThemeStyle.HEADLINE_SMALL
-    weight: ft.FontWeight = ft.FontWeight.W_500
+    _LEVEL = 4
+
+    def init(self):
+        _apply_heading(self, self._LEVEL)
 
 
 @ft.control
 class Header_5(ft.Text):
-    """五级标题：M3 ``TITLE_LARGE``，22px / W_500。"""
+    """五级标题：16px / 600，卡片与弹窗的标题档。"""
 
-    theme_style: ft.TextThemeStyle = ft.TextThemeStyle.TITLE_LARGE
-    weight: ft.FontWeight = ft.FontWeight.W_500
+    _LEVEL = 5
+
+    def init(self):
+        _apply_heading(self, self._LEVEL)
 
 
 @ft.control
 class Header_6(ft.Text):
-    """六级标题：M3 ``TITLE_MEDIUM``，16px / W_500，与正文同号的最后一档。"""
+    """六级标题：14px / 600 —— 与正文同号，靠字重区分层级。"""
 
-    theme_style: ft.TextThemeStyle = ft.TextThemeStyle.TITLE_MEDIUM
-    weight: ft.FontWeight = ft.FontWeight.W_500
+    _LEVEL = 6
+
+    def init(self):
+        _apply_heading(self, self._LEVEL)
 
 
 # ---------------------------------------------------------------------------
@@ -143,21 +189,26 @@ class Quote(ft.Container):
                 horizontal=SPACE["4"], vertical=SPACE["3"]
             )
 
+        # 引文的行高取"长文档"（1.75）而不是 UI 正文的 1.618：引用是要逐字读完的，
+        # 比旁边的正文松半档，"这不是我的叙述"这件事连行距都在说。
         lines: list[ft.Control] = [
             ft.Text(
                 text,
-                size=FONT_SIZE["body"],
-                italic=True,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-                style=ft.TextStyle(height=1.75),
+                style=typography.text_style(
+                    "body",
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    leading=typography.LEADING_PROSE,
+                    italic=True,
+                ),
             )
         ]
         if self.attribution:
             lines.append(
                 ft.Text(
                     f"—— {self.attribution}",
-                    size=FONT_SIZE["small"],
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    style=typography.text_style(
+                        "small", color=ft.Colors.ON_SURFACE_VARIANT
+                    ),
                 )
             )
 
@@ -261,7 +312,10 @@ class Code(fce.CodeEditor):
         if self.padding is None:
             self.padding = ft.Padding.all(SPACE["3"])
         if self.text_style is None:
-            self.text_style = ft.TextStyle(size=FONT_SIZE["small"], height=1.55)
+            # 等宽字体**不加字距**：每个字宽度相同，tracking 会把代码栅格撕开。
+            self.text_style = typography.text_style(
+                "small", leading=typography.LEADING_CODE, tracking=0
+            )
         # 空内容时 CodeEditor 会缩成一条线，示例舞台跟着塌掉。
         if self.min_height is None:
             self.min_height = 44
@@ -310,7 +364,9 @@ class Json(fce.CodeEditor):
         if self.padding is None:
             self.padding = ft.Padding.all(SPACE["3"])
         if self.text_style is None:
-            self.text_style = ft.TextStyle(size=FONT_SIZE["small"], height=1.55)
+            self.text_style = typography.text_style(
+                "small", leading=typography.LEADING_CODE, tracking=0
+            )
         if self.min_height is None:
             self.min_height = 44
 
@@ -445,11 +501,11 @@ def _heading_scale() -> ft.Control:
     """六档并排：一眼看清字号与字重的落差。"""
     rows = (
         (Header_1, "显示级：页面主标题", "36"),
-        (Header_2, "分区：一个模块的标题", "32"),
-        (Header_3, "小节：模块里的第一层", "28"),
-        (Header_4, "段落组：更贴近正文", "24"),
-        (Header_5, "卡片标题 / 弹窗标题", "22"),
-        (Header_6, "最小一级：与正文同号", "16"),
+        (Header_2, "分区：一个模块的标题", "28"),
+        (Header_3, "小节：模块里的第一层", "24"),
+        (Header_4, "段落组：更贴近正文", "20"),
+        (Header_5, "卡片标题 / 弹窗标题", "16"),
+        (Header_6, "最小一级：与正文同号", "14"),
     )
     return ft.Column(
         spacing=SPACE["3"],
@@ -832,12 +888,12 @@ _TEXT_CODE = """Text("正文：默认 14px。")
 Text("次要说明。", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
 Text("长文在窄容器里收成省略号。", max_lines=2, overflow=ft.TextOverflow.ELLIPSIS)"""
 
-_HEADING_CODE = """Header_1("页面主标题")      # 36 / BOLD
-Header_2("分区标题")        # 32 / BOLD
-Header_3("小节标题")        # 28 / W_500
-Header_4("段落组标题")      # 24 / W_500
-Header_5("卡片标题")        # 22 / W_500
-Header_6("最小一级")        # 16 / W_500
+_HEADING_CODE = """Header_1("页面主标题")      # 36 / 700 / 行高 1.222
+Header_2("分区标题")        # 28 / 700 / 行高 1.366
+Header_3("小节标题")        # 24 / 600 / 行高 1.438
+Header_4("段落组标题")      # 20 / 600 / 行高 1.510
+Header_5("卡片标题")        # 16 / 600 / 行高 1.582
+Header_6("最小一级")        # 14 / 600 / 行高 1.618
 
 # 别名：Title / Header → Header_1，SubTitle / SubHeader → Header_2
 SubTitle("仍然指向二级标题")"""
@@ -987,26 +1043,27 @@ _HEADING_SPEC = Spec(
     summary="六档标题：字号与字重取自 M3 字阶，跨平台一致。",
     definition=(
         "标题不是「大一号的正文」。它同时承担层级（谁属于谁）与节奏（两段之间留"
-        "多少空），所以字号、字重必须成套出现。这里把 Material 3 的六级字阶固定成"
-        "六个类，调用方只选级别，不再逐处调 size —— 换字体或切换语言时，行高与"
-        "字重仍然成组。"
+        "多少空），所以字号、字重、行高、字距必须成套出现。这里把六级标题固定成"
+        "六个类：字号取自字阶（36 / 28 / 24 / 20 / 16 / 14），字重前两级 700、"
+        "其余 600，行高按各自字号现算（大字收紧、小字放宽，见 ui.core.typography）。"
+        "调用方只选级别，不再逐处调 size —— 换字体或切换语言时，四件套仍然成组。"
     ),
     anatomy=[
         (
             "H1 · Header_1",
-            "DISPLAY_SMALL 36px / BOLD；整页只出现一个，用于页面主标题。",
+            "36px / 700 / 行高 1.222；整页只出现一个，用于页面主标题。",
         ),
         (
             "H2 · Header_2",
-            "HEADLINE_LARGE 32px / BOLD；分区标题，常见于标题下接一句副标题。",
+            "28px / 700 / 行高 1.366；分区标题，常见于标题下接一句副标题。",
         ),
         (
             "H3 / H4",
-            "HEADLINE_MEDIUM 28 / HEADLINE_SMALL 24，W_500；小节与卡片组标题。",
+            "24px 与 20px，字重 600；小节与卡片组标题。",
         ),
         (
             "H5 / H6",
-            "TITLE_LARGE 22 / TITLE_MEDIUM 16，W_500；最贴近正文的两档。",
+            "16px 与 14px，字重 600；最贴近正文的两档，H6 与正文同号只靠字重区分。",
         ),
         (
             "别名",
@@ -1042,12 +1099,12 @@ _HEADING_SPEC = Spec(
         ),
     ],
     api=[
-        Api("Header_1", "type[ft.Text]", "", "H1：DISPLAY_SMALL 36px / BOLD"),
-        Api("Header_2", "type[ft.Text]", "", "H2：HEADLINE_LARGE 32px / BOLD"),
-        Api("Header_3", "type[ft.Text]", "", "H3：HEADLINE_MEDIUM 28px / W_500"),
-        Api("Header_4", "type[ft.Text]", "", "H4：HEADLINE_SMALL 24px / W_500"),
-        Api("Header_5", "type[ft.Text]", "", "H5：TITLE_LARGE 22px / W_500"),
-        Api("Header_6", "type[ft.Text]", "", "H6：TITLE_MEDIUM 16px / W_500"),
+        Api("Header_1", "type[ft.Text]", "", "H1：36px / 700 / 行高 1.222"),
+        Api("Header_2", "type[ft.Text]", "", "H2：28px / 700 / 行高 1.366"),
+        Api("Header_3", "type[ft.Text]", "", "H3：24px / 600 / 行高 1.438"),
+        Api("Header_4", "type[ft.Text]", "", "H4：20px / 600 / 行高 1.510"),
+        Api("Header_5", "type[ft.Text]", "", "H5：16px / 600 / 行高 1.582"),
+        Api("Header_6", "type[ft.Text]", "", "H6：14px / 600 / 行高 1.618"),
         Api("value", "str", "''", "标题文字，与其他 ft.Text 一致"),
         Api("weight", "FontWeight", "", "覆盖字重；字号请保持本级默认"),
         Api(
@@ -1056,11 +1113,12 @@ _HEADING_SPEC = Spec(
     ],
     notes=[
         info(
-            "六档全部映射 M3 字阶（36 / 32 / 28 / 24 / 22 / 16），没有自定义像素："
-            "Flutter 的 Typography 会为每种语言挑合适的行高，写死 size 反而会错位。"
+            "六档对到字阶的六个档位（36 / 28 / 24 / 20 / 16 / 14），行高与字距"
+            "按各自字号现算。**不要再按 M3 的 theme_style 槽位来想**：那层映射一改，"
+            "H2 就可能比 H3 还小（曾经 24 vs 28），层级在视觉上反了。"
         ),
         warn(
-            "H6 与正文同为 16px 左右，只靠字重区分。正文很长时它会被读成「加粗的"
+            "H6 与正文同为 14px，只靠 600 的字重区分。正文很长时它会被读成「加粗的"
             "一段」，需要明确层级就退回 H5。"
         ),
         tip(
@@ -1086,7 +1144,7 @@ _QUOTE_SPEC = Spec(
         ),
         (
             "引文",
-            "斜体 + ON_SURFACE_VARIANT，行高 1.75；多行时整块一起缩进。",
+            "斜体 + ON_SURFACE_VARIANT，行高 1.75（比正文松半档）；多行时整块一起缩进。",
         ),
         (
             "署名",

@@ -93,11 +93,16 @@ class Demo:
 
 @dataclass(frozen=True, slots=True)
 class Split:
-    """左说明、右演示的两栏区块（说明部分仍是 blocks）。"""
+    """左说明、右演示的两栏区块（说明部分仍是 blocks）。
+
+    ``ratio`` 默认取三分法则 1:2（说明占三分之一、演示占三分之二）：读者一眼
+    先扫到左侧的"这是什么"，视线再往右落到能动手的演示上。两栏等宽会让两边
+    都不够用 —— 说明被拉成一整行、演示里的表单挤成两行。
+    """
 
     left: tuple[Block, ...]
     right: Factory
-    ratio: tuple[int, int] = (5, 7)
+    ratio: tuple[int, int] = (1, 2)
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,7 +184,7 @@ def demo(
 
 
 def split(
-    left: tuple[Block, ...], right: Factory, *, ratio: tuple[int, int] = (5, 7)
+    left: tuple[Block, ...], right: Factory, *, ratio: tuple[int, int] = (1, 2)
 ) -> Split:
     return Split(left, right, ratio)
 

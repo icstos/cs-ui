@@ -172,6 +172,26 @@ _ORIGIN: dict[str, str] = {
     "semantic": ".tokens",
     "semantic_text": ".tokens",
     "state_layer": ".tokens",
+    # typography —— 排印系统（行高 / 字距 / 字重 / 节奏 / 分栏比例）
+    "BODY": ".typography",
+    "GRID": ".typography",
+    "HEADING": ".typography",
+    "HEADING_WEIGHT": ".typography",
+    "LEADING_CODE": ".typography",
+    "LEADING_PROSE": ".typography",
+    "MAX_TRACKING": ".typography",
+    "PHI": ".typography",
+    "RHYTHM": ".typography",
+    "ROLES": ".typography",
+    "SPLIT": ".typography",
+    "Role": ".typography",
+    "cols": ".typography",
+    "leading": ".typography",
+    "line_box": ".typography",
+    "role": ".typography",
+    "split": ".typography",
+    "text_style": ".typography",
+    "tracking": ".typography",
 }
 
 # __all__ 由 _ORIGIN 表推导（数量不写死在这里，手写两遍必然漂移）；
