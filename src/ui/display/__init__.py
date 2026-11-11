@@ -42,6 +42,7 @@ lazy_exports(
         "Title": ".text",
         "Tree": ".tree",
         "TreeNode": ".tree",
+        "Tag": ".tag",
     },
     __name__,
 )

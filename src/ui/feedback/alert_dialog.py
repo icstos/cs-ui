@@ -74,6 +74,11 @@ class AlertDialog(ft.AlertDialog):
             horizontal=SPACE["1"], vertical=SPACE["2"]
         )
         self.actions_overflow_button_spacing = SPACE["2"]
+        # 遮罩：不写就走 Flutter 的默认值，而在这套 Flet 里默认值是**全透明** ——
+        # 弹窗像一张纸贴在页面上，用户分不清哪部分还能点。0.45 的黑足够压住背景，
+        # 又留着轮廓看得出"后面是什么"，比纯灰更接近系统弹窗的质感。
+        if self.barrier_color is None:
+            self.barrier_color = ft.Colors.with_opacity(0.45, ft.Colors.BLACK)
         #: 对话框与窗口边缘的最小距离。写 0 时窄窗口下对话框会直接贴住窗口边。
         self.inset_padding = ft.Padding.symmetric(
             horizontal=SPACE["8"], vertical=SPACE["6"]

@@ -31,7 +31,7 @@ from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.styles import outline_input
 from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, ICON_SIZE, RADIUS, SPACE
 
-__all__ = ["Input", "Label"]
+__all__ = ["Input", "Label", "field_label"]
 
 #: 字段前缀图标（文件选择那类）：与 body 文字（14）同行，取 md 档 16。
 FIELD_ICON_SIZE = ICON_SIZE["md"]
@@ -42,6 +42,46 @@ LABEL_SIZE = FONT_SIZE["body"]
 LABEL_WEIGHT = FONT_WEIGHT["medium"]
 BORDER_RADIUS = RADIUS["lg"]
 SPACING = SPACE["2"]  # 标签与输入框之间
+#: 横排标签列的默认宽度。150 是按「推送所有远程：」这类**成句**的标签定的 ——
+#: Switch / Chip / Checkbox 的标签常常是一句话，收窄就会折行。
+#: 整张表单请用 :class:`~ui.layout.form_row.FormRow`：它把这一列收到 96，
+#: 因为表单里的标签只是字段名，控件才是要读的内容。
+LABEL_WIDTH = 150
+
+
+def field_label(
+    text: str,
+    *,
+    width: int | None = LABEL_WIDTH,
+    required: bool = False,
+    align: ft.TextAlign = ft.TextAlign.END,
+    colon: bool = True,
+) -> ft.Text:
+    """一行表单标签：星号 + 文案 + 冒号，颜色取次级前景。
+
+    :attr:`Label.v_label` 与 :class:`~ui.layout.form_row.FormRow` 都从这里出 ——
+    「自带标签的输入框」和「给原生控件补标签」必须是同一种观感，否则同一张表单里
+    会并排出现两种字重、两种颜色，甚至一边有冒号一边没有。
+
+    颜色取 ``ON_SURFACE_VARIANT`` 而不是正文色：标签是**指路牌**，填进去的值才是
+    内容，两者同色时视线没有落点。
+    """
+    plain = text.rstrip()
+    spans: list[ft.TextSpan] = []
+    if required:
+        # 星号走 ERROR 角色色：写死 RED 在深色主题下会和其它语义红脱节
+        spans.append(ft.TextSpan(text="*", style=ft.TextStyle(color=ft.Colors.ERROR)))
+    spans.append(ft.TextSpan(text=plain))
+    if colon and not plain.endswith((":", "：")):
+        spans.append(ft.TextSpan(text="："))
+    return ft.Text(
+        spans=spans,
+        text_align=align,
+        width=width,
+        size=LABEL_SIZE,
+        weight=LABEL_WEIGHT,
+        color=ft.Colors.ON_SURFACE_VARIANT,
+    )
 
 
 def _is_true(payload: object) -> bool:
@@ -55,7 +95,7 @@ def _is_true(payload: object) -> bool:
 @dataclass
 class Label:
     label: str | None = None
-    label_width: int = 150
+    label_width: int = LABEL_WIDTH
     is_vertical: bool = False
     is_required: bool = False
     spacing: ft.Number = 10
@@ -63,28 +103,20 @@ class Label:
 
     @property
     def v_label(self):
-        if self.label is not None:
-            if self.is_required:
-                spans = [
-                    # 必填星号走 ERROR 角色色：写死 RED 在深色主题下会和其他语义红脱节
-                    ft.TextSpan(text="*", style=ft.TextStyle(color=ft.Colors.ERROR)),
-                    ft.TextSpan(self.label),
-                ]
-            else:
-                spans = [ft.TextSpan(text=self.label)]
-            if self.label.endswith(":") or self.label.endswith("："):
-                pass
-            else:
-                #     self.label = self.label + ": " # NOTE, 在前面走这处，程序就死机了
-                spans.append(ft.TextSpan(text=": "))
-            return ft.Text(
-                spans=spans,
-                text_align=ft.TextAlign.START if self.is_vertical else ft.TextAlign.END,
-                width=self.label_width,
-                size=LABEL_SIZE,
-            )
-        else:
+        """渲染好的标签控件：横排右对齐、纵排左对齐。
+
+        文案与样式统一走 :func:`field_label`；横排补冒号（右对齐时冒号是"值在
+        右边"的视觉锚点），纵排不补 —— 标签在控件正上方，冒号只会多一个顿点。
+        """
+        if self.label is None:
             return None
+        return field_label(
+            self.label,
+            width=self.label_width,
+            required=self.is_required,
+            align=ft.TextAlign.START if self.is_vertical else ft.TextAlign.END,
+            colon=not self.is_vertical,
+        )
 
 
 @ft.observable
@@ -590,6 +622,7 @@ SPEC = Spec(
         Api("error_text", "str | None", "None", "失败文案；非空时描边切成错误色"),
         Api("password", "bool", "False", "密码框，圆点显示并带「眼睛」临时查看"),
         Api("width", "int", "500", "输入框宽度；标签宽度另由 label_width 控制"),
+        Api("label_width", "int", "150", "横排时标签列宽；一列表单项靠它对齐"),
         Api("is_required", "bool", "False", "标签前加星号；校验仍由调用方决定"),
         Api(
             "on_blur",

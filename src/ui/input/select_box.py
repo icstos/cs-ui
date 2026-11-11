@@ -37,6 +37,8 @@ INPUT_HEIGHT = CONTROL_HEIGHT["md"]
 #: 默认宽度：下拉框不跟着最长选项撑开 —— 一个「中华人民共和国…」的选项
 #: 会把整行表单顶出容器，而候选的完整文本在弹层里本来就能读到。
 DEFAULT_WIDTH = 240
+#: 标签与框之间：与 :class:`~ui.input.input.Input` 同一档，横排才能对齐。
+SPACING = SPACE["2"]
 
 
 @ft.control
@@ -56,7 +58,11 @@ class SelectBox(Label):
         filled: 是否铺底色；默认描边 + 透明底，和输入框、多选下拉保持一致。
         editable: 允许在框里打字筛选；关闭后只能点选。
         hint_text: 未选时的占位文案；留空跟随界面语言（请选择 / Select…）。
-        width: 输入框与弹层宽度；默认 240，避免长选项把一行撑开。
+        label: 标签。默认放在框的**左侧**、右对齐（与 ``Input``、``FormRow``
+            同一套排版）；``is_vertical=True`` 时改到框的上方。
+        is_vertical: 标签放到框上方而不是左侧 —— 窄容器、设置项这类场景用。
+        width: 框与弹层宽度；``None`` 表示吃掉剩余宽度（放进 ``FormRow``
+            或拉伸的 Column 时用），默认 240 以免长选项把一行撑开。
         disabled: 禁用：框和箭头一起降灰，不响应点击。
         on_change: 选中回调，入参是 flet 事件对象；表单校验常挂在这里。
     """
@@ -67,7 +73,7 @@ class SelectBox(Label):
     filled: bool = False
     editable: bool = True
     hint_text: str | None = None
-    width: int = DEFAULT_WIDTH
+    width: int | None = DEFAULT_WIDTH
     disabled: bool = False
     on_change: Callable | None = None
 
@@ -100,7 +106,7 @@ class SelectBox(Label):
 
     @ft.component
     def ui(self):
-        """渲染下拉框：一行输入区 + 可展开的候选列表。"""
+        """渲染下拉框：可选标签 + 一行输入区 + 可展开的候选列表。"""
 
         def _on_select(e):
             self._on_change(e)
@@ -108,10 +114,14 @@ class SelectBox(Label):
                 self.on_change(e)
             self.notify()  # type: ignore[attr-defined]
 
+        # ``width=None`` 时吃掉剩余宽度：Row 的 mainAxisSize 默认 max，
+        # 由 expand 的子项拿走标签之外的全部空间。
+        fill = self.width is None
         v_ui = ft.Dropdown(
             value=self.value,
             options=self._dropdown_options(),
-            width=self.width,
+            width=None if fill else self.width,
+            expand=True if fill else None,
             height=INPUT_HEIGHT,
             text_size=TEXT_SIZE,
             dense=self.dense,
@@ -131,20 +141,24 @@ class SelectBox(Label):
             on_select=_on_select,
         )
 
-        if self.v_label is not None:
-            if self.is_vertical:
-                return ft.Column(
-                    controls=[self.v_label, v_ui],
-                    spacing=SPACE["1"],
-                    horizontal_alignment=ft.CrossAxisAlignment.START,
-                )
-            return ft.Row(
+        if self.v_label is None:
+            return v_ui
+        if self.is_vertical:
+            return ft.Column(
                 controls=[self.v_label, v_ui],
-                spacing=SPACE["2"],
-                # 42 高的框要和标签中线对齐，否则标签浮在框顶
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=SPACE["1"],
+                horizontal_alignment=ft.CrossAxisAlignment.START,
             )
-        return v_ui
+        # 横排：标签在左、框在右，和 Input / FormRow 同一套排版。
+        # 不用 Dropdown 自带的浮动 label —— 那个标签会浮到边框上，
+        # 和旁边同样"左标签"的输入框排在一起，一个浮一个不浮，像两种控件。
+        return ft.Row(
+            controls=[self.v_label, v_ui],
+            spacing=SPACING,
+            # 42 高的框要和标签中线对齐，否则标签浮在框顶
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            width=None if fill else self.label_width + SPACING + self.width,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +282,7 @@ SPEC = Spec(
         "滚动查找的那几步。"
     ),
     anatomy=[
+        ("标签", "框的左侧、右对齐并补冒号（与 Input 一致）；is_vertical 时挪到框上方。"),
         ("输入区", "42px 高、6px 圆角、1px 描边；聚焦转主色，禁用整体降灰。"),
         ("选中值", "选中项回填进框里；未选时显示占位文案（默认跟随界面语言）。"),
         ("筛选输入", "editable 打开后可直接打字，候选按文本忽略大小写过滤。"),
@@ -313,7 +328,19 @@ SPEC = Spec(
         ),
         Api("editable", "bool", "True", "允许在框里打字筛选；关掉只能点选"),
         Api("hint_text", "str | None", "None", "未选时的占位文案；留空跟随界面语言"),
-        Api("width", "int", "240", "输入框与弹层宽度，防止长选项撑破布局"),
+        Api("label", "str | None", "None", "标签文案；横排右对齐补冒号，纵排在上方"),
+        Api(
+            "label_width",
+            "int",
+            "150",
+            "横排时标签列宽，一列表单项靠它对齐（取自 Label）",
+        ),
+        Api(
+            "width",
+            "int | None",
+            "240",
+            "框与弹层宽度；None 表示吃掉剩余宽度（放进 FormRow 时用）",
+        ),
         Api("dense", "bool", "True", "紧凑排布，避免一行表单被撑高"),
         Api("filled", "bool", "False", "是否铺底色；默认描边 + 透明底"),
         Api("disabled", "bool", "False", "禁用：框与箭头一起降灰，不响应点击"),
