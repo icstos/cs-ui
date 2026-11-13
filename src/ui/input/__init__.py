@@ -19,6 +19,8 @@ lazy_exports(
         "DateInput": ".date_input",
         "DateTimeInput": ".datetime_input",
         "DirPicker": ".file_picker",
+        "FileDialog": ".file_picker",
+        "FileDialogError": ".file_picker",
         "FilePicker": ".file_picker",
         "FileSaver": ".file_picker",
         "ImagePicker": ".image_picker",

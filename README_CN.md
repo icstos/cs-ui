@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.12%2B-green)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-基于 [Flet](https://flet.dev/) 的 Python UI 组件库：74 个组件、一套算出来的配色、一套排印律。
+基于 [Flet](https://flet.dev/) 的 Python UI 组件库：78 个组件、一套算出来的配色、一套排印律。
 
 ## 特点
 
@@ -408,7 +408,7 @@ python scripts/check_all.py --stage visual  # 真机截图 + 灰块检测（会�
 | `_responsive_logic.py` | 断点表与 `ResponsiveRow` 逐项相同、档位单调且边界左闭右开、同档不重绘、限宽取 `min()`、私有字段不漏进序列化树 |
 | `_*_logic.py` | 各组件纯逻辑（状态推导、取值边界、回调、冻结树降级） |
 | `_ui_mcp_logic.py` | MCP 索引契约：范式与代码一致、常量只收底座、同名可分辨、中文别名不指向已删符号 |
-| `_doc_check.py` | 74 个组件的 SPEC / 示例 / API 完整性（示例真跑一遍） |
+| `_doc_check.py` | 78 个组件的 SPEC / 示例 / API 完整性（示例真跑一遍） |
 | `gen_ui_registry.py --check` | `ui.__all__` 与注册表不漂移 |
 | `build_docs_i18n.py --check` | 站点三语文案同步 |
 
@@ -417,7 +417,7 @@ python scripts/check_all.py --stage visual  # 真机截图 + 灰块检测（会�
 
 ## 文档站与示例
 
-组件文档站本身就是示例库：74 个组件各自带可运行示例与 API 说明，路由即页面。
+组件文档站本身就是示例库：78 个组件各自带可运行示例与 API 说明，路由即页面。
 
 ```bash
 python docs/main.py
@@ -452,7 +452,7 @@ python scripts/_visual_check.py --scroll 14 --routes /components/layout/table
 
 | 产物 | 内容 |
 |---|---|
-| `data/api.json` | 96 个组件、28 个数据类、185 个函数、8 个枚举、52 个令牌常量，外加组件继承到的 44 个外部类成员表 |
+| `data/api.json` | 101 个组件、28 个数据类、186 个函数、8 个枚举、52 个令牌常量，外加组件继承到的 47 个外部类成员表 |
 | `data/examples.json` | `examples/` 拆页 + 每个组件的真实调用片段 |
 | `data/docs.json` | README / TODO / 项目记忆切段，可检索 |
 

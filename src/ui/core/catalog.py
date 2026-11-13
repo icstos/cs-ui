@@ -200,6 +200,7 @@ GROUPS: Final[tuple[Category, ...]] = (
         "upload",
         ft.Icons.UPLOAD_FILE_OUTLINED,
         ("file_picker", "FilePicker", "ui.input.file_picker"),
+        ("file_dialog", "FileDialog", "ui.input.file_picker"),
         ("dir_picker", "DirPicker", "ui.input.file_picker"),
         ("file_saver", "FileSaver", "ui.input.file_picker"),
         ("image_picker", "ImagePicker", "ui.input.image_picker"),

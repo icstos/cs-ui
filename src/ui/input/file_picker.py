@@ -1,9 +1,15 @@
-"""文件选择 —— 选文件、选目录、另存为三个原生对话框入口。
+"""文件选择 —— 选文件、选目录、另存为的原生对话框入口。
 
-三者都是「按钮 + 结果回显」的薄壳：真正的系统对话框由 :class:`flet.FilePicker`
-打开，组件只负责把结果整理成状态并触发 ``on_change``。分成三个类而不是一个
-``mode="file|dir|save"``，是因为返回值的形状不同（文件列表 / 目录 / 目标文件），
-合并只会让类型分支与空值判断糊在一起。
+分两类，按"谁来发起选择"划界：
+
+**声明式三件套** :class:`FilePicker` / :class:`DirPicker` / :class:`FileSaver`
+是「按钮 + 结果回显」的薄壳：选择由用户在界面上点出来，结果落在 ``value`` 里。
+分成三个类而不是一个 ``mode="file|dir|save"``，是因为返回值的形状不同
+（文件列表 / 目录 / 目标文件），合并只会让类型分支与空值判断糊在一起。
+
+**命令式服务** :class:`FileDialog` 则面向"选择由视图模型发起"的场景：没有常驻
+按钮、不参与渲染，``await`` 一次拿一个结果。MVVM 里视图模型不认识控件，只能发出
+"请用户挑一个目录"的请求，由视图层代为 ``await``，结果再回喂给视图模型。
 
 用法::
 
@@ -30,6 +36,8 @@ from ui.core.tokens import FONT_SIZE, RADIUS, SPACE
 __all__ = [
     "SPECS",
     "DirPicker",
+    "FileDialog",
+    "FileDialogError",
     "FilePicker",
     "FileSaver",
     "get_human_file_size",
@@ -353,6 +361,189 @@ class FileSaver:
 
 
 # ---------------------------------------------------------------------------
+# 命令式服务：选择由视图模型发起时用（无控件、await 直接拿结果）
+# ---------------------------------------------------------------------------
+
+
+class FileDialogError(RuntimeError):
+    """对话框不可用或调用失败。
+
+    存在的意义是**把"失败"与"用户取消"分开**：取消是正常结果（返回 ``None``
+    或空列表），调用方一般什么都不做；而"平台不支持目录框""服务没挂到页面上"
+    必须让用户看见，不能和取消长成同一个返回值。
+    """
+
+
+class FileDialog:
+    """命令式文件对话框：``await`` 拿结果，不参与渲染。
+
+    声明式三件套解决"界面上放一个按钮"；但 MVVM 里选择往往由**视图模型**发起
+    —— 它只发一条"请用户挑个目录"的请求，根本不知道控件长什么样。这时在视图层
+    持有一个 :class:`FileDialog`，代替视图模型 ``await``，再把结果回喂回去。
+
+    构造即注册：内部持有的 flet 服务会在 ``__init__`` 里挂到当前页，所以**必须在
+    页面上下文里构造**（组件渲染期 ``use_ref(FileDialog)`` 最省事），并且**一个
+    会话只建一份** —— 每帧 new 一个会攒下一串再也用不到的对话框服务。
+
+    用法::
+
+        dialog = use_ref(FileDialog).current      # 渲染期构造 = 注册到当前页
+
+        folder = await dialog.pick_directory(title="选择导出目录")
+        if folder is None:
+            return                                # 用户取消，不是错误
+
+        saved = await dialog.save_file(
+            file_name="提交明细.csv", extensions=["csv"], data=csv_text
+        )
+
+    与声明式组件的分工：界面上要常驻一个「选择」按钮 + 结果回显 → 用
+    :class:`FilePicker` / :class:`DirPicker` / :class:`FileSaver`；选择是一次性的、
+    由业务流程触发 → 用本类。
+    """
+
+    def __init__(self) -> None:
+        # Service 的 __post_init__ 会读当前页自动注册；不在页面上下文里构造时
+        # 只构造不注册，第一次调用会在 _attached() 处给出一句人话。
+        self._picker = ft.FilePicker()
+
+    # ------------------------------------------------------------------ 入口
+    async def pick_directory(
+        self,
+        *,
+        title: str = "",
+        initial: str | Path | None = None,
+    ) -> Path | None:
+        """选一个目录。用户取消返回 ``None``。
+
+        Args:
+            title: 对话框标题；留空用系统默认。
+            initial: 打开时定位到的目录；留空用系统上次的位置。
+
+        Raises:
+            FileDialogError: 平台不支持（网页/移动端没有系统目录框）或调用失败。
+        """
+        self._attached()
+        try:
+            found = await self._picker.get_directory_path(
+                dialog_title=title or None,
+                initial_directory=_as_text(initial),
+            )
+        except Exception as exc:  # noqa: BLE001 —— 统一收敛成一种可捕获的失败
+            raise FileDialogError(f"打开目录对话框失败：{exc}") from exc
+        return Path(found) if found else None
+
+    async def pick_files(
+        self,
+        *,
+        title: str = "",
+        initial: str | Path | None = None,
+        extensions: Sequence[str] = (),
+        multiple: bool = True,
+    ) -> list[Path]:
+        """选若干个文件。用户取消返回空列表。
+
+        Args:
+            title: 对话框标题；留空用系统默认。
+            initial: 打开时定位到的目录；留空用系统上次的位置。
+            extensions: 只允许的后缀，带不带点都行（``["csv", ".xlsx"]``）；
+                留空则不过滤。
+            multiple: 是否允许多选。
+
+        Raises:
+            FileDialogError: 平台不支持或调用失败。
+        """
+        self._attached()
+        try:
+            picked = await self._picker.pick_files(
+                dialog_title=title or None,
+                initial_directory=_as_text(initial),
+                # 只传 allowed_extensions 时对话框仍会列出全部文件，必须切 CUSTOM
+                file_type=_file_type(extensions),
+                allowed_extensions=_extensions(extensions),
+                allow_multiple=multiple,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise FileDialogError(f"打开文件对话框失败：{exc}") from exc
+        # 取消时 flet 返回 None（历史版本是空列表），两种都当"没选"
+        return [Path(item.path) for item in picked or [] if item.path]
+
+    async def save_file(
+        self,
+        *,
+        file_name: str = "",
+        title: str = "",
+        initial: str | Path | None = None,
+        extensions: Sequence[str] = (),
+        data: str | bytes | None = None,
+    ) -> Path | None:
+        """另存为。用户取消返回 ``None``。
+
+        给了 ``data`` 就由 flet 顺手写入（``str`` 按 UTF-8 编码）；不给则只拿到
+        目标路径，写不写、写什么由调用方决定 —— 桌面端两种都支持。
+
+        Args:
+            file_name: 对话框里预填的文件名（含后缀）。
+            title: 对话框标题；留空用系统默认。
+            initial: 打开时定位到的目录；留空用系统上次的位置。
+            extensions: 只允许的后缀；留空则不过滤。
+            data: 要写入的内容。
+
+        Raises:
+            FileDialogError: 平台不支持或调用失败。
+        """
+        self._attached()
+        try:
+            saved = await self._picker.save_file(
+                dialog_title=title or None,
+                file_name=file_name or None,
+                initial_directory=_as_text(initial),
+                file_type=_file_type(extensions),
+                allowed_extensions=_extensions(extensions),
+                src_bytes=_payload(data),
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise FileDialogError(f"打开保存对话框失败：{exc}") from exc
+        return Path(saved) if saved else None
+
+    # ------------------------------------------------------------------ 内部
+    def _attached(self) -> None:
+        """服务没挂到页面上时给一句能照做的错误，而不是 flet 的原始异常。"""
+        try:
+            self._picker.page
+        except RuntimeError as exc:
+            raise FileDialogError(
+                "对话框服务没有挂到页面上：请在页面上下文里构造 FileDialog"
+                "（例如组件渲染期的 use_ref(FileDialog)）"
+            ) from exc
+
+
+def _as_text(path: str | Path | None) -> str | None:
+    return str(path) if path else None
+
+
+def _payload(data: str | bytes | None) -> bytes | None:
+    """``str`` 统一按 UTF-8 编码；``None`` 表示"只要路径，不写内容"。"""
+    return data.encode("utf-8") if isinstance(data, str) else data
+
+
+def _extensions(extensions: Sequence[str]) -> list[str] | None:
+    """去点、去空、转小写、去重；空列表转 ``None``（flet 认 ``None`` 为"不过滤"）。"""
+    cleaned = list(
+        dict.fromkeys(e.strip().lower().lstrip(".") for e in extensions if e.strip())
+    )
+    return cleaned or None
+
+
+def _file_type(extensions: Sequence[str]) -> ft.FilePickerFileType:
+    return (
+        ft.FilePickerFileType.CUSTOM
+        if _extensions(extensions)
+        else ft.FilePickerFileType.ANY
+    )
+
+
+# ---------------------------------------------------------------------------
 # 示例：全部用假数据回放「已经选过」的状态，渲染期不弹系统对话框
 # ---------------------------------------------------------------------------
 _DEMO_FILES = [
@@ -502,6 +693,85 @@ def _save_guard() -> ft.Control:
                     ),
                     ft.Text(result, size=FONT_SIZE["small"], color=_MUTED),
                 ],
+            ),
+        ],
+    )
+
+
+@ft.component
+def _dialog_demo() -> ft.Control:
+    """按钮只负责"发起请求"，结果由 ``await`` 拿到后写进状态。"""
+    # 渲染期构造即注册到当前页；一个组件实例只建一份
+    dialog = ft.use_memo(FileDialog, [])
+    result, set_result = ft.use_state("还没选")
+
+    def choose(_e):
+        async def run():
+            try:
+                folder = await dialog.pick_directory(title="选择导出目录")
+            except FileDialogError as exc:
+                set_result(f"失败：{exc}")
+                return
+            set_result(f"已选择：{folder}" if folder else "已取消")
+
+        ft.context.page.run_task(run)
+
+    return ft.Column(
+        spacing=SPACE["3"],
+        controls=[
+            ft.Button(
+                content=ft.Text("选择导出目录"),
+                icon=ft.Icons.FOLDER_OPEN,
+                on_click=choose,
+            ),
+            ft.Text(
+                result,
+                size=FONT_SIZE["small"],
+                color=_MUTED,
+                no_wrap=True,
+                overflow=ft.TextOverflow.ELLIPSIS,
+            ),
+        ],
+    )
+
+
+@ft.component
+def _dialog_save_demo() -> ft.Control:
+    """另存为：一次 await 同时完成"选路径"与"写内容"（桌面端）。"""
+    dialog = ft.use_memo(FileDialog, [])
+    result, set_result = ft.use_state("还没保存")
+    csv_text = "项目,变更\ncs-ui,3\n"
+
+    def save(_e):
+        async def run():
+            try:
+                saved = await dialog.save_file(
+                    file_name="变更明细.csv",
+                    title="导出变更明细",
+                    extensions=["csv"],
+                    data=csv_text,
+                )
+            except FileDialogError as exc:
+                set_result(f"失败：{exc}")
+                return
+            set_result(f"已写入：{saved}" if saved else "已取消")
+
+        ft.context.page.run_task(run)
+
+    return ft.Column(
+        spacing=SPACE["3"],
+        controls=[
+            ft.Button(
+                content=ft.Text("另存为 CSV"),
+                icon=ft.Icons.SAVE_OUTLINED,
+                on_click=save,
+            ),
+            ft.Text(
+                result,
+                size=FONT_SIZE["small"],
+                color=_MUTED,
+                no_wrap=True,
+                overflow=ft.TextOverflow.ELLIPSIS,
             ),
         ],
     )
@@ -782,10 +1052,121 @@ _SAVE_SPEC = Spec(
 )
 
 
+_DIALOG_CODE = """dialog = use_ref(FileDialog).current   # 渲染期构造 = 注册到当前页
+
+folder = await dialog.pick_directory(title="选择导出目录")
+if folder is None:                      # 取消，不是错误
+    return
+
+saved = await dialog.save_file(
+    file_name="提交明细.csv", extensions=["csv"], data=csv_text
+)"""
+
+
+_DIALOG_SPEC = Spec(
+    name="FileDialog",
+    summary="命令式对话框：await 一次拿结果，不渲染任何控件。",
+    definition=(
+        "选目录、选文件、另存为这三个动作在两种界面结构里发起方不同。声明式组件里"
+        "是用户点按钮，控件自己拿着结果；而 MVVM 里是视图模型说「请用户挑个目录」，"
+        "它只认识数据，不认识控件。FileDialog 把同一个系统对话框包成可 await 的"
+        "服务：视图层持有实例并代为调用，结果（一个 Path 或 None）再回喂给视图模型。"
+        "它不参与渲染，也不产生任何控件。"
+    ),
+    anatomy=[
+        (
+            "服务实例",
+            "构造即注册到当前页；一个会话一份，别每帧 new。",
+        ),
+        (
+            "pick_directory",
+            "选一个目录，返回 Path；用户取消返回 None。",
+        ),
+        (
+            "pick_files",
+            "选若干文件，返回 Path 列表；取消返回空列表；extensions 控制后缀过滤。",
+        ),
+        (
+            "save_file",
+            "另存为，返回目标 Path；给了 data 就顺手写入，不给则只拿路径。",
+        ),
+        (
+            "FileDialogError",
+            "平台不支持或调用失败时抛这一个异常 —— 与「取消」严格区分。",
+        ),
+    ],
+    when=[
+        "MVVM / 状态驱动：选择由视图模型发起，界面上没有常驻按钮",
+        "要按顺序编程：选完立刻拿结果继续下一步，而不是等 on_change 回调",
+        "同一个应用里有好几处要用目录框，不想每处都摆一套按钮与回显",
+    ],
+    avoid=[
+        "界面上要一直显示已选路径：用 DirPicker / FileSaver，状态自带回显",
+        "选择结果要进表单校验：用声明式组件，value 就是表单字段",
+        "上传文件到服务端：用 FilePicker 加 upload，本类只管选路径",
+    ],
+    examples=[
+        Example(
+            "命令式选目录",
+            _dialog_demo,
+            hint="点按钮才真正弹框；返回值写进下方文字，取消与失败分开显示。",
+            code=_DIALOG_CODE,
+        ),
+        Example(
+            "一次完成另存为",
+            _dialog_save_demo,
+            hint="save_file 带 data：选完路径就直接写入，不用再 open 一次。",
+        ),
+    ],
+    api=[
+        Api(
+            "pick_directory(title, initial)",
+            "Path | None",
+            "",
+            "选一个目录；取消返回 None",
+        ),
+        Api(
+            "pick_files(title, initial, extensions, multiple)",
+            "list[Path]",
+            "[]",
+            "选文件；取消返回空列表",
+        ),
+        Api(
+            "save_file(file_name, title, initial, extensions, data)",
+            "Path | None",
+            "",
+            "另存为；给 data 则一并写入",
+        ),
+        Api("FileDialogError", "Exception", "", "平台不支持或调用失败时抛出"),
+        Api("", "", "", "构造必须在页面上下文里，否则调用时抛 FileDialogError"),
+    ],
+    notes=[
+        info(
+            "构造即注册：内部持有的 flet 服务在 __init__ 里就挂到当前页，"
+            "所以要在渲染期构造（use_ref / use_memo），别在 async 任务里 new。"
+        ),
+        warn(
+            "取消与失败必须分开处理：取消返回 None / []，失败抛 FileDialogError。"
+            "把两者都当成 None，会让「对话框没弹出来」变成静默失败。"
+        ),
+        tip(
+            "extensions 只在 file_type=CUSTOM 下才过滤，本类在 extensions 非空时"
+            "自动切过去，调用方只传后缀即可（带不带点都行）。"
+        ),
+        info(
+            "网页与移动端没有系统目录框，flet 直接抛异常 —— 本类会把它包成"
+            "FileDialogError。桌面端才是它的主场。"
+        ),
+    ],
+    tags=("对话框", "选目录", "另存为", "dialog", "directory", "save"),
+)
+
+
 SPECS: dict[str, Spec] = {
     "file_picker": _FILE_SPEC,
     "dir_picker": _DIR_SPEC,
     "file_saver": _SAVE_SPEC,
+    "file_dialog": _DIALOG_SPEC,
 }
 
 
