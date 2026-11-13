@@ -130,6 +130,7 @@ GROUPS: Final[tuple[Category, ...]] = (
         "navigation",
         ft.Icons.EXPLORE_OUTLINED,
         ("app_bar", "AppBar", "ui.navigation.app_bar"),
+        ("menu_bar", "MenuBar", "ui.navigation.menu_bar"),
         ("status_bar", "StatusBar", "ui.navigation.status_bar"),
         ("bread_crumb", "BreadCrumb", "ui.navigation.bread_crumb"),
         ("menu", "Menu", "ui.navigation.menu"),

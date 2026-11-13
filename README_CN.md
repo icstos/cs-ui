@@ -103,7 +103,7 @@ if __name__ == "__main__":
 | `ui.feedback` | `AlertDialog`、`Message`（主动操作的回执）、`Notification`（系统级通报）、`Loading`、`ProgressBar` |
 | `ui.input` | 全部表单控件：`Input`、`Checkbox`、`Radio`、`Switch`、`SelectBox`、`MultiSelect`、`Cascader`、`Transfer`、`Slider`、`Rating`、`Chip`、`ColorPicker`、`DateInput`、`DateTimeInput`、`FilePicker`、`ImagePicker`、`NumberInput`、`SearchBar`、`SegmentedButton`、`Button` |
 | `ui.layout` | `PageLayout`、`Grid`、`Card`、`Column` / `Row` / `Stack` / `Container`、`Table`（含分页）、`Tabs`、`Step`、`Expander`、`Divider` |
-| `ui.navigation` | `AppBar`、`BreadCrumb`、`Menu`、`Pagination` |
+| `ui.navigation` | `AppBar`、`BreadCrumb`、`Menu`（常驻侧边导航树）、`MenuBar` / `MenuSection` / `MenuAction`（桌面下拉菜单栏）、`StatusBar`、`Pagination` |
 | `ui.utils` | `CodeEditor`、`CodeView`（带折叠与复制的代码展示） |
 
 精确定位某个组件、函数或令牌属于哪个模块，查 `ui-mcp` 的 `list_components` 比翻目录快。
@@ -392,7 +392,7 @@ python scripts/gen_ui_registry.py --check   # 校验是否与源码一致
 一致性靠"记得跑"是守不住的，所有检查都在一个入口里：
 
 ```bash
-python scripts/check_all.py                 # 31 项 / 约 53s
+python scripts/check_all.py                 # 34 项 / 约 58s
 python scripts/check_all.py --stage fast    # 只跑静态门禁与令牌审计（改样式时够用）
 python scripts/check_all.py --stage visual  # 真机截图 + 灰块检测（会开窗口）
 ```

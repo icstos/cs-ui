@@ -17,6 +17,9 @@
   上下各 8px + 一行 14px 行高，再矮就会把字顶到边上。
 - **左侧吃满剩余宽度**。统计类文字（"已加载 200 / 9435 条"）长度不固定，
   让它 expand，右侧的状态点与动作才会稳稳贴右，不会随文字长短跳动。
+- **``center`` 打开三段式**。看图 / 编辑器这类应用要在同一行里回答「哪个文件 /
+  什么规格 / 第几页」，三栏各占 1/3、各自独立省略，长文件名不会把中间信息挤走。
+  不传 ``center`` 时行为与原来完全一致（左统计 + 右状态）。
 - **``status`` 既能给字符串也能给控件**。需要强调（如故障时用危险色）时传
   一个 :class:`ui.Text` 自己上色，组件不替调用方猜哪种语气该变红。
 
@@ -63,42 +66,72 @@ class StatusBar(ft.Container):
 
     Args:
         summary: 左侧统计文案，``str`` 或任意控件。给字符串时按次要文字着色并吃满宽度。
+        center: 中段文案。给了就切成三段式（左 / 中 / 右各占 1/3，各自对齐），
+            默认空 —— 行为与旧版完全一致。
         status: 右侧状态文案，``str`` 或任意控件。给控件时样式由调用方负责。
         tone: 状态点的语气，取 :data:`TONES`；未知值退回 ``neutral``（不抛异常）。
         actions: 最右侧的动作控件，通常是一两个 ``IconButton``。
-        show_dot: 是否显示状态点。没有状态可报（纯统计条）时关掉。
+        show_dot: 是否显示状态点。没有状态可报（纯统计条 / 三段式）时关掉。
         divider: 顶部发丝线。默认开 —— 状态栏与内容之间需要一条边界。
+        bar_height: 状态栏高度，默认 :data:`HEIGHT`（30）。字段名**不能**叫
+            ``height``：``ft.Container`` 已有该字段，重复声明会把位置参数挤乱
+            （``AppBar`` 踩过同一个坑）。
     """
 
     summary: ft.StrOrControl = ""
+    center: ft.StrOrControl = ""
     status: ft.StrOrControl = ""
     tone: str = "neutral"
     actions: list[ft.Control] = field(default_factory=list)
     show_dot: bool = True
     divider: bool = True
+    bar_height: float = HEIGHT
 
     def init(self):
         # height / padding 在 init() 里设，不做成构造参数：Container 已经有这两个
         # 字段，重复声明会把位置参数挤乱（AppBar 踩过同一个坑）。
-        self.height = HEIGHT
+        self.height = self.bar_height
         self.padding = ft.Padding(SPACE["3"], SPACE["1"], SPACE["1"], SPACE["1"])
         self.bgcolor = self.bgcolor or ft.Colors.SURFACE_CONTAINER_LOW
         if self.divider:
             self.border = self.border or ft.Border(top=hairline())
+
+        dot = [self._dot()] if self.show_dot else []
+        if self.center:
+            # 三栏等分：超长文件名只在自己那 1/3 里省略，中段规格与右段页码
+            # 永远有位置。三段式默认不需要状态点，仍要显示时就放在右段之前。
+            self.content = ft.Row(
+                spacing=SPACE["1"],
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    self._side(self.summary, expand=1, align=ft.TextAlign.START),
+                    self._side(self.center, expand=1, align=ft.TextAlign.CENTER),
+                    *dot,
+                    self._side(self.status, expand=1, align=ft.TextAlign.END),
+                    *self.actions,
+                ],
+            )
+            return
 
         self.content = ft.Row(
             spacing=SPACE["1"],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 self._side(self.summary, expand=True),
-                *([self._dot()] if self.show_dot else []),
+                *dot,
                 self._side(self.status),
                 *self.actions,
             ],
         )
 
     # ------------------------------------------------------------------
-    def _side(self, value: ft.StrOrControl, *, expand: bool = False) -> ft.Control:
+    def _side(
+        self,
+        value: ft.StrOrControl,
+        *,
+        expand: bool | int = False,
+        align: ft.TextAlign | None = None,
+    ) -> ft.Control:
         """字符串按次要文字渲染；控件原样放过，样式归调用方。"""
         if not isinstance(value, str):
             return value
@@ -108,6 +141,7 @@ class StatusBar(ft.Container):
             weight=FONT_WEIGHT["regular"],
             color=ft.Colors.ON_SURFACE_VARIANT,
             expand=expand,
+            text_align=align,
             no_wrap=True,
             overflow=ft.TextOverflow.ELLIPSIS,
         )
@@ -213,6 +247,20 @@ def _actions() -> ft.Control:
     )
 
 
+@ft.component
+def _triple() -> ft.Control:
+    """三段式：文件名 / 规格 / 页码各占 1/3，长名只在自己那一段里省略。"""
+    return _frame(
+        _body("中间是画面区；状态栏一行同时回答「哪个文件、什么规格、第几页」。"),
+        StatusBar(
+            summary="2026-11-13_非常非常长的一次拍摄_RAW_原片最终版.nef",
+            center="6000 × 4000 · 42.6 MB · 动图 3/12 帧",
+            status="7 / 248 · 42% 适应",
+            show_dot=False,
+        ),
+    )
+
+
 SPEC = Spec(
     name="StatusBar",
     summary="窗口底部那一行：左侧统计、右侧状态点与动作。",
@@ -224,6 +272,7 @@ SPEC = Spec(
     ),
     anatomy=[
         ("左栏", "统计与说明，吃满剩余宽度；文字长也不推动右侧的点和按钮。"),
+        ("中段", "给了 center 就切成三段式：左 / 中 / 右各占 1/3，各自独立省略。"),
         ("状态点", "6px 圆点，语气由 tone 决定。只有它带颜色，整条底色保持中性。"),
         ("状态文案", "一句话说明当前状态。需要强调时可传 Text 自己上色。"),
         ("动作区", "最右侧的常驻入口（主题、设置）。贴右对齐，不随左栏文字跳动。"),
@@ -231,6 +280,7 @@ SPEC = Spec(
     ],
     when=[
         "桌面应用需要在窗口底部常驻「有多少、正不正常」",
+        "看图 / 编辑器：一行内同时显示文件名、规格与位置（三段式）",
         "列表 / 表格页：结果量、选中量、耗时这类随时要看的信息",
         "需要放一两个「总是可用」的入口（主题、设置、连接状态）",
     ],
@@ -254,6 +304,11 @@ SPEC = Spec(
             "右侧动作",
             _actions,
             hint="actions 贴右；左侧文案变长时按钮位置不动。",
+        ),
+        Example(
+            "三段式",
+            _triple,
+            hint="看图软件的一行三问：文件名 / 规格 / 页码，各自等分且独立省略。",
         ),
     ],
     target=StatusBar,
