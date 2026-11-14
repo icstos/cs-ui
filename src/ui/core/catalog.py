@@ -190,12 +190,6 @@ GROUPS: Final[tuple[Category, ...]] = (
         ("scatter_chart", "ScatterChart", "ui.chart.scatter_chart"),
     ),
     _make(
-        "media",
-        ft.Icons.PLAY_CIRCLE_OUTLINE,
-        ("audio", "Audio", "ui.display.media.audio"),
-        ("audio_player", "AudioPlayer", "ui.display.media.audio"),
-    ),
-    _make(
         "upload",
         ft.Icons.UPLOAD_FILE_OUTLINED,
         ("file_picker", "FilePicker", "ui.input.file_picker"),

@@ -186,13 +186,6 @@ _ZH_CN: dict[str, object] = {
             "range": "{name}：0 ~ {max}",
         },
         "image": {"size": "缩略图尺寸", "unit": "张"},
-        "audio": {
-            "title": "音频",
-            "idle": "未播放",
-            "playing": "播放中",
-            "paused": "已暂停",
-            "toggle": "播放 / 暂停",
-        },
         "app": {"not_found": "当前页未定义", "back_home": "回到首页"},
         "file": {
             "choose": "选择文件",
@@ -371,13 +364,6 @@ _ZH_TW: dict[str, object] = {
             "range": "{name}：0 ~ {max}",
         },
         "image": {"size": "縮圖尺寸", "unit": "張"},
-        "audio": {
-            "title": "音訊",
-            "idle": "未播放",
-            "playing": "播放中",
-            "paused": "已暫停",
-            "toggle": "播放 / 暫停",
-        },
         "app": {"not_found": "目前頁面未定義", "back_home": "回到首頁"},
         "file": {
             "choose": "選擇檔案",
@@ -556,13 +542,6 @@ _EN_US: dict[str, object] = {
             "range": "{name}: 0 – {max}",
         },
         "image": {"size": "Thumbnail size", "unit": "images"},
-        "audio": {
-            "title": "Audio",
-            "idle": "Not playing",
-            "playing": "Playing",
-            "paused": "Paused",
-            "toggle": "Play / Pause",
-        },
         "app": {"not_found": "Page not found", "back_home": "Back to home"},
         "file": {
             "choose": "Choose file",

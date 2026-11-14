@@ -9,7 +9,6 @@ dependencies = [
     "flet[all]>=1.1.2,<1.2",
     "flet-code-editor",
     "flet-charts",
-    "flet-audio",
 ]
 
 # ui-mcp（给 AI agent 的组件库 MCP 服务）是可选能力：装它不影响 ui 本身的使用。

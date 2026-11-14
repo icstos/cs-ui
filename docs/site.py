@@ -234,7 +234,6 @@ CATEGORY_ROLE: Final[dict[str, str]] = {
     "feedback": "danger",
     "display": "primary",
     "charts": "success",
-    "media": "warning",
     "upload": "info",
 }
 

@@ -111,8 +111,6 @@ M: dict[str, tuple[str, str, str]] = {
         "折線、面積、長條與散佈",
         "Line, area, bar and scatter charts",
     ),
-    "nav.media.title": ("媒体", "媒體", "Media"),
-    "nav.media.desc": ("音频、视频与 PDF", "音訊、影片與 PDF", "Audio, video and PDF"),
     "nav.upload.title": ("文件选择", "檔案選擇", "Files"),
     "nav.upload.desc": (
         "文件、目录、保存与图片",
@@ -1871,44 +1869,6 @@ M |= {
         "不传 color 时使用与主题协调的色板，换主色后图表也跟着变。",
         "不傳 color 時使用與主題協調的色盤，換主色後圖表也跟著變。",
         "Omit color to inherit a palette that tracks your seed color.",
-    ),
-    "cat.media.intro": (
-        "媒体控件把播放状态、进度与封面打包好，直接放进内容流里。",
-        "媒體元件把播放狀態、進度與封面打包好，直接放進內容流裡。",
-        (
-            "Media controls wrap playback state, progress and cover art for the conte"
-            "nt flow."
-            ""
-        ),
-    ),
-    "cat.media.audio.title": ("音频 Audio", "音訊 Audio", "Audio"),
-    "cat.media.audio.hint": (
-        "AudioPlayer 是卡片式播放器；Audio 本身是 Service，构造即注册。",
-        "AudioPlayer 是卡片式播放器；Audio 本身是 Service，建構即註冊。",
-        "AudioPlayer is the card player; Audio itself is a service — constructing it registers it.",
-    ),
-    "cat.media.audio.track": ("夜航", "夜航", "Night drive"),
-    "cat.media.audio.track2": ("第二首", "第二首", "Second track"),
-    "cat.media.audio.artist": (
-        "示例音轨 · SoundHelix",
-        "範例音軌 · SoundHelix",
-        "Sample track · SoundHelix",
-    ),
-    "cat.media.note1": (
-        "播放状态是 observable 的，界面可以跟着变。",
-        "播放狀態是 observable 的，介面可以跟著變。",
-        "Playback state is observable, so the UI can react.",
-    ),
-    "cat.media.note2": (
-        "远程地址与本地路径都接受，网络资源需要允许访问。",
-        "遠端位址與本機路徑都接受，網路資源需要允許存取。",
-        "Remote URLs and local paths both work, given network permission.",
-    ),
-    "cat.media.tip_title": ("大文件别内嵌", "大檔案別內嵌", "Don't inline big files"),
-    "cat.media.tip": (
-        "几十页的 PDF 嵌在页面里会很重，给出入口比内嵌更合适。",
-        "幾十頁的 PDF 嵌在頁面裡會很重，給出入口比內嵌更合適。",
-        "A 40-page PDF inline is heavy; link out instead.",
     ),
     "cat.upload.intro": (
         "文件链路有三段：选文件、选目录、选保存位置。三者的结果都直接读 value。",

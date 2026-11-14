@@ -168,7 +168,7 @@ if _API_ON:
 
         Args:
             category: 分类，如 "input"、"layout"、"display"、"feedback"、
-                "navigation"、"chart"、"core"、"utils"、"media"。
+                "navigation"、"chart"、"core"、"utils"。
             pattern: 范式，"static"（构造即用）、"observable"（必须调 .ui()）、
                 "function"（函数组件）、"mixin"、"dataclass"。
             kind: "control" / "component" / "type"。

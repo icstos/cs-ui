@@ -40,7 +40,11 @@ typographic law.
 
 - Python >= 3.12
 - flet[all] >= 1.1.2, < 1.2
-- flet-code-editor / flet-charts / flet-audio
+- flet-code-editor / flet-charts
+
+> No media playback here: audio / video own the timeline, devices and queue state, which
+> makes them applications rather than controls. Wrap your own engine (see
+> `cs-music-player`'s `infra/audio`).
 
 ## Install
 
@@ -108,7 +112,6 @@ panel (it takes layout height and pushes content down); `float_panel=False` turn
 | `ui.core` | Base: `tokens`, `palette` (color engine), `typography`, `theme`, `i18n`, `format`, `responsive`, `doc` (documentation kit) |
 | `ui.chart` | `BarChart` / `LineChart` / `AreaChart` / `ScatterChart` sharing one data parser and derived palette |
 | `ui.display` | `Text` family (`Header_1..6` / `Quote` / `Link` / `Code` / `Markdown` / `Json`), `Calendar`, `Carousel`, `Heatmap`, `Descriptions`, `Tree`, `ListTile`, `Image`, `LogContainer` |
-| `ui.display.media` | `Audio` / `AudioPlayer` |
 | `ui.feedback` | `AlertDialog`, `Message` (receipt for an explicit action), `Notification` (system-level), `Loading`, `ProgressBar` |
 | `ui.input` | Every form control: `Input`, `Checkbox`, `Radio`, `Switch`, `SelectBox`, `MultiSelect`, `Cascader`, `Transfer`, `Slider`, `Rating`, `Chip`, `ColorPicker`, `DateInput`, `DateTimeInput`, `FilePicker`, `ImagePicker`, `NumberInput`, `SearchBar`, `SegmentedButton`, `Button` |
 | `ui.layout` | `PageLayout`, `Grid`, `Card`, `Column` / `Row` / `Stack` / `Container`, `Table` (with paging), `Tabs`, `Step`, `Expander`, `Divider` |

@@ -109,8 +109,6 @@ ALIASES: dict[str, list[str]] = {
     "CodeView": ["代码查看"],
     "Markdown": ["markdown", "富文本渲染"],
     "Json": ["json 展示", "json 查看"],
-    "Audio": ["音频", "声音播放"],
-    "AudioPlayer": ["音频播放器", "播放器"],
     # ── feedback ─────────────────────────────────────────────────────
     "AlertDialog": ["对话框", "弹窗", "确认框"],
     "Loading": ["加载", "加载中", "loading"],

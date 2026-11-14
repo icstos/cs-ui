@@ -16,8 +16,6 @@ COMPONENT_MODULES: dict[str, str] = {
     "AlertDialog": "ui.feedback",
     "AppBar": "ui.navigation",
     "AreaChart": "ui.chart",
-    "Audio": "ui.display",
-    "AudioPlayer": "ui.display",
     "BODY": "ui.core",
     "BREAKPOINT": "ui.core",
     "BarChart": "ui.chart",
