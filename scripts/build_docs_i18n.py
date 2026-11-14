@@ -1894,13 +1894,6 @@ M |= {
         "範例音軌 · SoundHelix",
         "Sample track · SoundHelix",
     ),
-    "cat.media.video.title": ("视频 Video", "影片 Video", "Video"),
-    "cat.media.video.hint": (
-        "单视频或播放列表；控件自带播放条与全屏。",
-        "單一影片或播放清單；元件自帶播放列與全螢幕。",
-        "Single file or playlist; the player ships with controls and fullscreen.",
-    ),
-    "cat.media.video.playlist": ("播放列表", "播放清單", "Playlist"),
     "cat.media.note1": (
         "播放状态是 observable 的，界面可以跟着变。",
         "播放狀態是 observable 的，介面可以跟著變。",

@@ -1,7 +1,7 @@
-"""展示类组件：文本、图片、媒体、日志、图表容器等。
+"""展示类组件：文本、图片、音频、日志、图表容器等。
 
-门面惰性（见 :mod:`ui._lazy`）：``Text`` 与 ``Video`` 在同一层，但拿到 ``Text``
-不该付出 ``flet_video`` / ``flet_audio`` 的加载代价。
+门面惰性（见 :mod:`ui._lazy`）：``Text`` 与 ``Audio`` 在同一层，但拿到 ``Text``
+不该付出 ``flet_audio`` 的加载代价。
 """
 
 from ui._lazy import lazy_exports
@@ -11,24 +11,6 @@ lazy_exports(
     {
         "Audio": ".media.audio",
         "AudioPlayer": ".media.audio",
-        "Video": ".media.video",
-        "VideoMedia": ".media.video",
-        "build_playlist": ".media.video",
-        "BAR_PADDING": ".media.player",
-        "IconAction": ".media.player",
-        "MaterialDesktopVideoControls": ".media.player",
-        "MediaPalette": ".media.player",
-        "NativeSlider": ".media.player",
-        "NativeVideo": ".media.player",
-        "PlaylistMode": ".media.player",
-        "SpeedMenu": ".media.player",
-        "TimeSlider": ".media.player",
-        "VideoControlsMode": ".media.player",
-        "VOLUME_SLIDER_WIDTH": ".media.player",
-        "VolumeControl": ".media.player",
-        "desktop_controls": ".media.player",
-        "format_rate": ".media.player",
-        "format_time": ".media.player",
         "Calendar": ".calendar",
         "Carousel": ".carousel",
         "Descriptions": ".descriptions",

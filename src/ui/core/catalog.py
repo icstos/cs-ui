@@ -194,7 +194,6 @@ GROUPS: Final[tuple[Category, ...]] = (
         ft.Icons.PLAY_CIRCLE_OUTLINE,
         ("audio", "Audio", "ui.display.media.audio"),
         ("audio_player", "AudioPlayer", "ui.display.media.audio"),
-        ("video", "Video", "ui.display.media.video"),
     ),
     _make(
         "upload",

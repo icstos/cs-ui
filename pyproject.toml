@@ -9,7 +9,6 @@ dependencies = [
     "flet[all]>=1.1.2,<1.2",
     "flet-code-editor",
     "flet-charts",
-    "flet-video",
     "flet-audio",
 ]
 
