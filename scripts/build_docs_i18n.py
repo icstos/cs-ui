@@ -1901,13 +1901,6 @@ M |= {
         "Single file or playlist; the player ships with controls and fullscreen.",
     ),
     "cat.media.video.playlist": ("播放列表", "播放清單", "Playlist"),
-    "cat.media.pdf.title": ("PDF 阅读 Pdf", "PDF 閱讀 Pdf", "PDF"),
-    "cat.media.pdf.hint": (
-        "内嵌阅读器，支持滚动与翻页。",
-        "內嵌閱讀器，支援捲動與翻頁。",
-        "An embedded reader with scrolling and paging.",
-    ),
-    "cat.media.pdf.doc": ("示例文档", "範例文件", "Sample document"),
     "cat.media.note1": (
         "播放状态是 observable 的，界面可以跟着变。",
         "播放狀態是 observable 的，介面可以跟著變。",

@@ -186,13 +186,6 @@ _ZH_CN: dict[str, object] = {
             "range": "{name}：0 ~ {max}",
         },
         "image": {"size": "缩略图尺寸", "unit": "张"},
-        "pdf": {
-            "open": "打开",
-            "open_tooltip": "打开本地 PDF",
-            "reload": "重新加载",
-            "empty": "未选择 PDF",
-            "failed": "文档加载失败",
-        },
         "audio": {
             "title": "音频",
             "idle": "未播放",
@@ -378,13 +371,6 @@ _ZH_TW: dict[str, object] = {
             "range": "{name}：0 ~ {max}",
         },
         "image": {"size": "縮圖尺寸", "unit": "張"},
-        "pdf": {
-            "open": "開啟",
-            "open_tooltip": "開啟本機 PDF",
-            "reload": "重新載入",
-            "empty": "未選擇 PDF",
-            "failed": "文件載入失敗",
-        },
         "audio": {
             "title": "音訊",
             "idle": "未播放",
@@ -570,13 +556,6 @@ _EN_US: dict[str, object] = {
             "range": "{name}: 0 – {max}",
         },
         "image": {"size": "Thumbnail size", "unit": "images"},
-        "pdf": {
-            "open": "Open",
-            "open_tooltip": "Open a local PDF",
-            "reload": "Reload",
-            "empty": "No PDF selected",
-            "failed": "Failed to load the document",
-        },
         "audio": {
             "title": "Audio",
             "idle": "Not playing",

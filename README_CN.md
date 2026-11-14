@@ -33,7 +33,7 @@
 
 - Python >= 3.12
 - flet[all] >= 1.1.2, < 1.2
-- flet-code-editor / flet-charts / flet-video / flet-audio / flet-webview
+- flet-code-editor / flet-charts / flet-video / flet-audio
 
 ## 安装
 
@@ -99,7 +99,7 @@ if __name__ == "__main__":
 | `ui.core` | 底座：`tokens`（设计令牌）、`palette`（配色引擎）、`typography`（排印律）、`theme`、`i18n`、`format`、`responsive`、`doc`（文档套件） |
 | `ui.chart` | `BarChart` / `LineChart` / `AreaChart` / `ScatterChart`，共用一套数据解析与派生配色 |
 | `ui.display` | `Text` 系列（`Header_1..6` / `Quote` / `Link` / `Code` / `Markdown` / `Json`）、`Calendar`、`Carousel`、`Heatmap`、`Descriptions`、`Tree`、`ListTile`、`Image`、`LogContainer` |
-| `ui.display.media` | `Audio` / `AudioPlayer` / `Video` / `Pdf` |
+| `ui.display.media` | `Audio` / `AudioPlayer` / `Video` |
 | `ui.feedback` | `AlertDialog`、`Message`（主动操作的回执）、`Notification`（系统级通报）、`Loading`、`ProgressBar` |
 | `ui.input` | 全部表单控件：`Input`、`Checkbox`、`Radio`、`Switch`、`SelectBox`、`MultiSelect`、`Cascader`、`Transfer`、`Slider`、`Rating`、`Chip`、`ColorPicker`、`DateInput`、`DateTimeInput`、`FilePicker`、`ImagePicker`、`NumberInput`、`SearchBar`、`SegmentedButton`、`Button` |
 | `ui.layout` | `PageLayout`、`Grid`、`Card`、`Column` / `Row` / `Stack` / `Container`、`Table`（含分页）、`Tabs`、`Step`、`Expander`、`Divider` |

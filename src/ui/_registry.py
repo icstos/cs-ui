@@ -138,7 +138,6 @@ COMPONENT_MODULES: dict[str, str] = {
     "PageLayout": "ui.layout",
     "Pagination": "ui.navigation",
     "PaginationState": "ui.navigation",
-    "Pdf": "ui.display",
     "PlaylistMode": "ui.display",
     "ProgressBar": "ui.feedback",
     "Quote": "ui.display",

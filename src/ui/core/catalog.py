@@ -195,7 +195,6 @@ GROUPS: Final[tuple[Category, ...]] = (
         ("audio", "Audio", "ui.display.media.audio"),
         ("audio_player", "AudioPlayer", "ui.display.media.audio"),
         ("video", "Video", "ui.display.media.video"),
-        ("pdf", "Pdf", "ui.display.media.pdf"),
     ),
     _make(
         "upload",

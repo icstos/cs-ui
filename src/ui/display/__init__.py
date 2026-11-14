@@ -11,7 +11,6 @@ lazy_exports(
     {
         "Audio": ".media.audio",
         "AudioPlayer": ".media.audio",
-        "Pdf": ".media.pdf",
         "Video": ".media.video",
         "VideoMedia": ".media.video",
         "build_playlist": ".media.video",
