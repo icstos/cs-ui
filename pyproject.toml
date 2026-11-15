@@ -35,7 +35,10 @@ where = ["src"]   # 从 src 目录开始查找
 include = ["ui*"] # 匹配顶层包名 + 所有子包（*通配符）
 
 # 索引产物随包分发（和 flet-mcp 一样：装完即用，不需要额外构建步骤）
+# ui/data/fonts：内置字体必须随 wheel 走。运行时 page.fonts 指向的是**包内**的字体
+# 文件（见 ui/core/fonts.py），漏打包的后果是"开发环境有字体、装出来的程序没有"。
 [tool.setuptools.package-data]
+ui = ["data/fonts/*"]
 ui_mcp = ["data/*.json"]
 
 # [tool.setuptools.package-dir]

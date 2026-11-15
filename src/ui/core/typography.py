@@ -61,9 +61,11 @@ SPACE` 与 :data:`RHYTHM`），行高保持精确比例、由 Flutter 做亚像�
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 import flet as ft
 
+from ui.core import fonts
 from ui.core.tokens import FONT_SIZE, FONT_WEIGHT
 
 __all__ = [
@@ -270,11 +272,19 @@ def text_style(
     leading: float | None = None,
     tracking: float | None = None,
     italic: bool | None = None,
+    family: str | None | Literal["auto"] = "auto",
 ) -> ft.TextStyle:
-    """构造某档位的 :class:`flet.TextStyle`（字号 / 行高 / 字距 / 字重四件套）。
+    """构造某档位的 :class:`flet.TextStyle`（字号 / 行高 / 字距 / 字重 + 字体）。
 
     这是组件侧**唯一**该用来排字的入口：写 ``ft.Text("x", size=14)`` 会丢掉
     行高与字距，同一段话放进卡片和表格就会有两种行间距。
+
+    **字体也必须在这里写上**，这不是冗余。flet 把 ``TextStyle`` 下发给 Flutter
+    时是整体替换而不是合并 —— 一个只写字号颜色的样式会把主题里的 ``fontFamily``
+    一起清掉，界面于是静默退回系统字体（同一个坑还会清掉 ``color``，见
+    :func:`ui.core.theme.text_theme`）。所以"主题里设了 font_family"并不够，
+    由本函数排的每一处文字都要自己带族名；族名由 :mod:`ui.core.fonts` 统一给出，
+    应用换字体只需要改主题状态，不必逐个改样式。
 
     Args:
         name: 档位名（见 :data:`ROLES`）。
@@ -284,6 +294,9 @@ def text_style(
         leading: 覆盖行高倍数。多行引文、长文段落偶尔要更松，见 ``Quote``。
         tracking: 覆盖字距（px）。
         italic: 斜体。
+        family: 字体族名。``"auto"``（默认）取当前生效的字体；给 ``None`` 表示
+            **刻意不指定**（等宽 / 代码块这类要由调用方自己给 ``font_family``
+            的地方），给字符串则强制用该族。
 
     Returns:
         :class:`flet.TextStyle`，可直接交给 ``ft.Text(style=...)``。
@@ -296,6 +309,7 @@ def text_style(
         letter_spacing=tracking if tracking is not None else spec.tracking,
         color=color,
         italic=italic,
+        font_family=fonts.active_family() if family == "auto" else family,
     )
 
 

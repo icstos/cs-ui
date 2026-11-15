@@ -41,10 +41,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Literal
 
 import flet as ft
 
-from ui.core import palette, typography
+from ui.core import fonts, palette, typography
 from ui.core.i18n import use_t
 from ui.core.styles import outline_input
 from ui.core.tokens import (
@@ -215,7 +216,7 @@ def use_theme() -> ThemeState:
     return ft.use_context(theme_context)
 
 
-def text_theme() -> ft.TextTheme:
+def text_theme(family: str | None | Literal["auto"] = "auto") -> ft.TextTheme:
     """把排印系统铺到 Material 3 的十三个文字槽位上。
 
     **为什么必须显式写**：``ft.Text`` 不传 ``size`` 时用的是 Flutter 侧
@@ -249,9 +250,20 @@ def text_theme() -> ft.TextTheme:
     标签、列表标题一片空白，而截图检测（灰块 / 溢出）一声不响，因为它们既没渲染
     失败也没撑破盒子。所以颜色一律给 M3 的 ``ON_SURFACE``，需要别的颜色时由控件
     自己覆盖。
+
+    同一个原因，**每个槽位也必须带 ``font_family``**：``Theme.font_family`` 只对
+    "没有自带样式"的文字生效，而这些槽位本身就是显式样式 —— 不带族名就等于把
+    主题里设的字体在 Material 内置控件上又清了一遍（输入框、菜单、表格、对话框
+    全部退回系统字体，只有自研组件是对的那种"半张脸"效果）。
+
+    Args:
+        family: 字体族名。``"auto"``（默认）取当前生效的字体，见
+            :func:`ui.core.fonts.active_family`；``None`` 表示不指定。
     """
+    resolved = fonts.active_family() if family == "auto" else family
+
     def slot(name: str) -> ft.TextStyle:
-        return typography.text_style(name, color=ft.Colors.ON_SURFACE)
+        return typography.text_style(name, color=ft.Colors.ON_SURFACE, family=resolved)
 
     _fg = ft.Colors.ON_SURFACE
     return ft.TextTheme(
@@ -296,16 +308,20 @@ def build_theme(state: ThemeState, mode: str | None = None) -> ft.Theme:
     scheme = palette.build_scheme(
         state.primary, mode_name, surfaces=_norm_surfaces(state.surfaces)
     )
+    # 字体族名只在这里解析一次：``Theme.font_family`` 负责"没有自带样式"的文字，
+    # ``text_theme`` 里每个槽位再各自带上（flet 下发 TextStyle 是替换而非合并，
+    # 不带族名就等于把主题设的字体又清了一遍）。
+    family = state.font_family or fonts.active_family()
     return ft.Theme(
         # 只给 color_scheme，**不给** color_scheme_seed：两者并存时 Flutter 会
         # 忽略种子，但留着它等于写着"这里还在用种子推导"，读代码的人会以为
         # 改一个种子就能换肤 —— 实际换肤走的是上面这条 build_scheme。
         color_scheme=ft.ColorScheme(**scheme),
         use_material3=True,
-        font_family=state.font_family,
+        font_family=family,
         # 正文 14 的落地点：所有没写 size 的文字、以及 flet 内置控件（ListTile /
         # Dropdown / Tooltip / DatePicker …）的字号都从这套 text_theme 取。
-        text_theme=text_theme(),
+        text_theme=text_theme(family=family),
         # 表面策略在 palette 里已经兑现成具体的中性色值，这里显式写 neutral
         # 只是告诉 Flutter"别再自行推导表面"—— 否则它会在我们的色板之上再叠
         # 一层 tone 推导，把层次关系又搅乱。
@@ -409,8 +425,13 @@ def apply_theme(
     写出去之后，切模式只是换一棵现成的树，颜色一次都不用再算。
 
     幂等：重复调用不会重复挂监听（``system`` 模式下系统亮度变了才有意义）。
+    字体注册（``page.fonts``）也在这里一并做掉：字体与主题是同一件事的两半，
+    应用只调这一个入口就不会出现"主题设了族名、字体却没注册"的半套配置。
     """
     st = state or _state
+    # 先注册字体再建主题：族名由 apply_fonts 回填到 st.font_family，
+    # build_theme 才能把同一个族名同时写进 Theme 与 text_theme。
+    fonts.apply_fonts(page, st.font_family)
     page.theme = build_theme(st, "light")
     page.dark_theme = build_theme(st, "dark")
     # 页面底色必须**显式**给：不写的话 flet 的根视图是透明的，露出 Flutter 的

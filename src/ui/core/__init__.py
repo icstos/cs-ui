@@ -108,6 +108,15 @@ _ORIGIN: dict[str, str] = {
     "INPUT_RADIUS": ".styles",
     "outline_input": ".styles",
     "underline_input": ".styles",
+    # fonts —— 内置字体（字体与主题同源，注册入口在 apply_theme 里）
+    "FONT_DIR": ".fonts",
+    "FONT_FAMILY": ".fonts",
+    "FONT_FILE_NAME": ".fonts",
+    "active_family": ".fonts",
+    "apply_fonts": ".fonts",
+    "font_file": ".fonts",
+    "font_map": ".fonts",
+    "font_source": ".fonts",
     # theme —— 明暗模式、表面策略、主色种子
     "MODES": ".theme",
     "ThemeProvider": ".theme",

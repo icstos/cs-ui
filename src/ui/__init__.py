@@ -57,8 +57,15 @@ _SUBMODULES: tuple[str, ...] = (
     "utils",
 )
 
-#: 不属于任何子包 ``__all__``、但要能从 ``ui`` 直接取到的名字
-_EXTRA_LAZY: dict[str, str] = {"App": "ui.app"}
+#: 不属于任何子包 ``__all__``、但要能从 ``ui`` 直接取到的名字。
+#: 字体这几个是应用入口最常用的：「注册内置字体」和「主题」是同一件事的两半，
+#: 让它们和 ``apply_theme`` 一样能一行取到，应用就不必知道字体住在包内哪个角落。
+_EXTRA_LAZY: dict[str, str] = {
+    "App": "ui.app",
+    "FONT_FAMILY": "ui.core.fonts",
+    "apply_fonts": "ui.core.fonts",
+    "font_file": "ui.core.fonts",
+}
 
 #: 惰性求值的模块级属性。``__version__`` 要读安装元数据（首次约 37ms），
 #: 而 `import ui` 本身并不需要它 —— 只有显示版本号的地方（关于页 / CLI）才触发。

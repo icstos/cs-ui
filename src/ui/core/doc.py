@@ -1318,13 +1318,6 @@ def _host(docs: tuple[Spec, ...]) -> ft.Control:
     )
 
 
-def _font() -> Path | None:
-    path = Path(__file__).resolve().parents[1] / "data" / "fonts" / (
-        "AlibabaPuHuiTi-3-55-Regular.otf"
-    )
-    return path if path.exists() else None
-
-
 def run(
     *docs: Spec,
     dark: bool = False,
@@ -1343,6 +1336,7 @@ def run(
         width: 初始窗口宽。
         height: 初始窗口高。
     """
+    from ui.core.fonts import apply_fonts
     from ui.core.theme import theme_state
 
     if not docs:
@@ -1354,7 +1348,6 @@ def run(
     specs = tuple(
         doc.bound(key=key if single else "", group=group, source=source) for doc in docs
     )
-    font = _font()
 
     def boot(target: ft.Page) -> None:
         target.title = (
@@ -1367,10 +1360,9 @@ def run(
         target.window.height = height
         target.window.min_width = 720
         target.window.min_height = 560
-        if font is not None:
-            # 字体与 ThemeState 必须指向同一个族名，否则首帧与重绘之间会来回跳。
-            target.fonts = {"AlibabaPuHuiTi": str(font)}
-            theme_state().font_family = "AlibabaPuHuiTi"
+        # 字体与 ThemeState 必须指向同一个族名，否则首帧与重绘之间会来回跳 ——
+        # apply_fonts 一次把两件事做对（注册 + 回填族名）。
+        apply_fonts(target)
         if dark:
             theme_state().set_mode("dark")
         target.render(_app(specs))
