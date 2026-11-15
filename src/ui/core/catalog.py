@@ -99,8 +99,6 @@ GROUPS: Final[tuple[Category, ...]] = (
         ("quote", "Quote", "ui.display.text"),
         ("link", "Link", "ui.display.text"),
         ("markdown", "Markdown", "ui.display.text"),
-        ("code", "Code", "ui.display.text"),
-        ("json", "Json", "ui.display.text"),
         ("button", "Button", "ui.input.button"),
         ("chip", "Chip", "ui.input.chip"),
         ("tag", "Tag", "ui.display.tag"),
@@ -178,8 +176,6 @@ GROUPS: Final[tuple[Category, ...]] = (
         ("image_grid_view", "ImageGridView", "ui.display.image_gridview"),
         ("tree", "Tree", "ui.display.tree"),
         ("log_container", "LogContainer", "ui.display.log_container"),
-        ("code_editor", "CodeEditor", "ui.utils.code_editor"),
-        ("code_view", "CodeView", "ui.utils.code_view"),
     ),
     _make(
         "charts",

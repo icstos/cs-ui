@@ -7,8 +7,9 @@
 * 文档站（``docs/``）把同一份 :class:`Spec` 渲染进
   ``/components/navigation/pagination``，一个字都不用重写。
 
-所以这个模块只依赖 ``flet`` 本身（代码面板在渲染时才导入
-``flet_code_editor``），放进 ``ui.core`` 不会拖慢任何组件的导入。
+所以这个模块只依赖 ``flet`` 本身：代码面板用等宽文本渲染（见
+:func:`plain_code`），不再引入编辑器内核 —— 只用一个 Text 的应用不必为
+展示文档里的示例代码付出几十 MB 的依赖。
 
 写法（放在实现文件末尾，组件代码之后）::
 
@@ -52,12 +53,14 @@ from ui.core import typography
 from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, ICON_SIZE, RADIUS, semantic_text
 from ui.core.typography import RHYTHM
 
-# 代码块配色：**故意不跟随明暗主题**。代码高亮有自己的色板，浅色主题下把
-# 代码块也刷白，行内高亮的对比度会全线崩掉 —— VS Code / GitHub 也一样：
-# 主题变，代码块底色保持深色。命名成常量，是为了让"刻意"和"随手写死"可区分。
+# 代码面板配色：**故意不跟随明暗主题**。浅色界面里它是一块「墨」，深色界面里
+# 比背景高一档；主题变，代码面板底色保持深色。命名成常量，是为了让"刻意"
+# 和"随手写死"可区分。纯 Flet 渲染没有语法高亮色板，前景因此直接给两档灰。
 _CODE_BG = "#0E1117"
 _CODE_BG_BAR = "#151A22"
 _CODE_BORDER = "#232A35"
+_CODE_FG = "#C9D1D9"
+_CODE_GUTTER = "#6E7681"
 
 __all__ = [
     "Api",
@@ -72,6 +75,7 @@ __all__ = [
     "info",
     "outline",
     "page",
+    "plain_code",
     "run",
     "sections",
     "tip",
@@ -728,21 +732,82 @@ def _when(doc: Spec) -> ft.Control:
     )
 
 
+# -- 纯 Flet 源码渲染 -------------------------------------------------------
+def plain_code(
+    source: str,
+    *,
+    size: float = 12.5,
+    height: int | None = None,
+    line_numbers: bool = True,
+    color: ft.ColorValue = _CODE_FG,
+    gutter_color: ft.ColorValue = _CODE_GUTTER,
+    font_family: str = "monospace",
+    padding: ft.Padding | None = None,
+) -> ft.Control:
+    """只读源码渲染：等宽文本 + 行号，两个方向都能滚动，**只用 flet**。
+
+    为什么不每行建一个控件：一份 200 行的示例就是 400 个 Text，文档站逐页
+    渲染时纯属浪费。这里整段源码用一个 ``ft.Text``（``no_wrap`` 保留长行），
+    行号用另一个同样式的 Text —— 行高一致，行号天然对齐，节点数恒为 2。
+
+    横向滚动交给内层 Row、纵向交给外层 Column；``selectable=True`` 让整段
+    仍可选中复制。没有语法高亮：高亮需要编辑器内核，那是 ``cs-code`` 的事。
+
+    Args:
+        source: 源码文本。
+        size: 字号（px）；长行多时由调用方按最长行缩小。
+        height: 代码区可视高度；``None`` 时由内容撑开。
+        line_numbers: 是否显示行号列。
+        color / gutter_color: 前景与行号色；默认按深色面板配好。
+        font_family: 等宽字体族名。
+        padding: 代码区内边距，默认 12px。
+    """
+    style = ft.TextStyle(size=size, height=1.55, font_family=font_family, color=color)
+    controls: list[ft.Control] = []
+    if line_numbers:
+        # 行数 = 换行数 + 1；range 的 stop 要比行数大 1。
+        gutter = "\n".join(str(i) for i in range(1, source.count("\n") + 2))
+        controls.append(
+            ft.Container(
+                padding=ft.Padding.only(right=12),
+                content=ft.Text(
+                    value=gutter,
+                    style=ft.TextStyle(
+                        size=size,
+                        height=1.55,
+                        font_family=font_family,
+                        color=gutter_color,
+                    ),
+                    text_align=ft.TextAlign.RIGHT,
+                    no_wrap=True,
+                ),
+            )
+        )
+    controls.append(ft.Text(value=source, style=style, no_wrap=True, selectable=True))
+    return ft.Container(
+        height=height,
+        padding=padding if padding is not None else ft.Padding.all(12),
+        content=ft.Column(
+            tight=True,
+            scroll=ft.ScrollMode.AUTO,
+            controls=[
+                ft.Row(
+                    tight=True,
+                    spacing=0,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                    scroll=ft.ScrollMode.AUTO,
+                    controls=controls,
+                )
+            ],
+        ),
+    )
+
+
 # -- 代码面板 ---------------------------------------------------------------
 @ft.component
 def code_panel(source: str, *, filename: str | None = None) -> ft.Control:
     """只读代码面板：深色底、可复制。刻意不跟随明暗主题（"纸与墨"）。"""
     copied, set_copied = ft.use_state(False)
-    try:
-        import flet_code_editor as fce
-    except ImportError:  # pragma: no cover - 可选依赖
-        return ft.Container(
-            padding=14,
-            border_radius=RADIUS["lg"],
-            bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
-            content=ft.Text(source, size=12, selectable=True),
-        )
-
     longest = max((len(line) for line in source.splitlines()), default=0)
     size = 12.5 if longest <= 72 else (11.6 if longest <= 92 else 10.8)
     height = min(460, (source.count("\n") + 1) * round(size * 1.72) + 14)
@@ -796,13 +861,11 @@ def code_panel(source: str, *, filename: str | None = None) -> ft.Control:
                         ],
                     ),
                 ),
-                fce.CodeEditor(
-                    value=source,
-                    language=fce.CodeLanguage.PYTHON,
-                    code_theme=fce.CodeTheme.ATOM_ONE_DARK,
-                    read_only=True,
+                plain_code(
+                    source,
+                    size=size,
                     height=height,
-                    text_style=ft.TextStyle(size=size, height=1.55),
+                    padding=ft.Padding.all(12),
                 ),
             ],
         ),

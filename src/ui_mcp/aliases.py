@@ -104,11 +104,7 @@ ALIASES: dict[str, list[str]] = {
     "Header_5": ["五级标题"],
     "Quote": ["引用", "引用块"],
     "Link": ["链接", "超链接"],
-    "Code": ["代码", "代码块"],
-    "CodeEditor": ["代码编辑器"],
-    "CodeView": ["代码查看"],
     "Markdown": ["markdown", "富文本渲染"],
-    "Json": ["json 展示", "json 查看"],
     # ── feedback ─────────────────────────────────────────────────────
     "AlertDialog": ["对话框", "弹窗", "确认框"],
     "Loading": ["加载", "加载中", "loading"],

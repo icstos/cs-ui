@@ -79,7 +79,6 @@ _ZH_CN: dict[str, object] = {
             "unit": "项",
         },
         "table": {"number": "编号"},
-        "codeview": {"title": "查看代码"},
         "menu": {
             "collapse": "收起菜单",
             "expand": "展开菜单",
@@ -257,7 +256,6 @@ _ZH_TW: dict[str, object] = {
             "unit": "項",
         },
         "table": {"number": "編號"},
-        "codeview": {"title": "檢視程式碼"},
         "menu": {
             "collapse": "收合選單",
             "expand": "展開選單",
@@ -435,7 +433,6 @@ _EN_US: dict[str, object] = {
             "unit": "items",
         },
         "table": {"number": "#"},
-        "codeview": {"title": "View code"},
         "menu": {
             "collapse": "Collapse menu",
             "expand": "Expand menu",

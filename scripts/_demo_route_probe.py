@@ -148,7 +148,7 @@ async def probe(page: ft.Page) -> None:
                 "Segment",
             },
             "/feedback": {"ProgressBar", "Button"},
-            "/display": {"CodeEditor", "Image", "ListTile"},
+            "/display": {"Image", "ListTile"},
             "/charts": {"LineChart", "AreaChart", "BarChart", "ScatterChart"},
         }
         print()

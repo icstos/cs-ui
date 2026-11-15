@@ -30,7 +30,6 @@ from ui import (
     Checkbox,
     CheckboxGroup,
     Chip,
-    Code,
     DateInput,
     Divider,
     Expander,
@@ -42,7 +41,6 @@ from ui import (
     Header_5,
     Image,
     Input,
-    Json,
     # chart
     LineChart,
     Link,
@@ -1089,14 +1087,6 @@ def DisplayPage():
             Link("访问 CS-UI GitHub 仓库", link="https://github.com/icstos/cs-ui"),
         ),
         section(
-            "代码 (Code)",
-            "只读代码编辑器，支持语法高亮",
-            Code(
-                value='def hello(name: str) -> str:\n    return f"Hello, {name}!"\n\nprint(hello("CS-UI"))',
-                height=120,
-            ),
-        ),
-        section(
             "Markdown",
             "GitHub 风格的 Markdown 渲染",
             Markdown(
@@ -1109,14 +1099,6 @@ def DisplayPage():
                     "- 列表项三\n\n"
                     "[链接](https://github.com/icstos/cs-ui)\n"
                 ),
-            ),
-        ),
-        section(
-            "JSON 展示 (Json)",
-            "只读 JSON 代码视图",
-            Json(
-                value='{\n  "name": "cs-ui",\n  "version": "0.2.0",\n  "author": "Shawn Chen",\n  "dependencies": ["flet>=1.1.2", "flet-charts"]\n}',
-                height=140,
             ),
         ),
         section(

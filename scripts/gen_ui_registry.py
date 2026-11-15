@@ -30,7 +30,6 @@ ORDER: tuple[str, ...] = (
     "input",
     "layout",
     "navigation",
-    "utils",
 )
 
 TARGET = ROOT / "src" / "ui" / "_registry.py"

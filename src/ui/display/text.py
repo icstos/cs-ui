@@ -1,11 +1,13 @@
-"""文本与富文本 (Text / Heading / Quote / Link / Markdown / Code / Json)。
+"""文本与富文本 (Text / Heading / Quote / Link / Markdown)。
 
 这一组组件都在解决「一段内容怎么显示」：
 
 * :class:`Text` 是正文；:class:`Header_1` … :class:`Header_6` 是六级标题；
 * :class:`Quote` 给一段话划出边界，:class:`Link` 让文字可点；
-* :class:`Markdown` / :class:`Code` / :class:`Json` 负责三种「来自别处」的文本 ——
-  markdown 文档、源码、JSON 数据。
+* :class:`Markdown` 负责「来自别处」的文档文本。
+
+代码展示（``Code`` / ``Json`` / ``CodeEditor`` / ``CodeView``）已拆到独立项目
+``cs-code``：它们需要 ``flet-code-editor`` 内核，本模块只用 flet 本身。
 
 颜色与字号全部走 :mod:`ui.core.tokens` 和 ``ft.Colors`` 的角色色，明暗主题与
 主色切换时不需要改一行组件代码。
@@ -17,7 +19,6 @@ import webbrowser
 from dataclasses import field
 
 import flet as ft
-import flet_code_editor as fce
 
 from ui.core import typography
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
@@ -25,7 +26,6 @@ from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE, disabled_layer
 
 __all__ = [
     "SPECS",
-    "Code",
     "Header",
     "Header_1",
     "Header_2",
@@ -33,7 +33,6 @@ __all__ = [
     "Header_4",
     "Header_5",
     "Header_6",
-    "Json",
     "Link",
     "Markdown",
     "Quote",
@@ -292,36 +291,6 @@ class Link(ft.Text):
 
 
 # ---------------------------------------------------------------------------
-# 代码块：只读的 CodeEditor
-# ---------------------------------------------------------------------------
-@ft.control
-class Code(fce.CodeEditor):
-    """只读代码块。
-
-    Args:
-        value: 源码文本。
-        language: 高亮语言，见 ``fce.CodeLanguage``。
-    """
-
-    language: fce.CodeLanguage = fce.CodeLanguage.PYTHON
-    code_theme: fce.CodeTheme = fce.CodeTheme.ATOM_ONE_LIGHT
-    read_only: bool = True
-
-    def init(self):
-        # 编辑器自身没有留白与字号，贴边时会和卡片描边粘在一起。
-        if self.padding is None:
-            self.padding = ft.Padding.all(SPACE["3"])
-        if self.text_style is None:
-            # 等宽字体**不加字距**：每个字宽度相同，tracking 会把代码栅格撕开。
-            self.text_style = typography.text_style(
-                "small", leading=typography.LEADING_CODE, tracking=0
-            )
-        # 空内容时 CodeEditor 会缩成一条线，示例舞台跟着塌掉。
-        if self.min_height is None:
-            self.min_height = 44
-
-
-# ---------------------------------------------------------------------------
 # Markdown
 # ---------------------------------------------------------------------------
 @ft.control
@@ -338,37 +307,6 @@ class Markdown(ft.Markdown):
     code_theme: ft.MarkdownCodeTheme = ft.MarkdownCodeTheme.MONOKAI
     # flet 默认 False：文档里的链接点了没反应，读者会以为组件坏了。
     auto_follow_links: bool = True
-
-
-# ---------------------------------------------------------------------------
-# JSON：固定语言、默认不显示行号
-# ---------------------------------------------------------------------------
-@ft.control
-class Json(fce.CodeEditor):
-    """JSON 查看器。
-
-    Args:
-        value: JSON 文本（字符串，不是 dict）。
-    """
-
-    language: fce.CodeLanguage = fce.CodeLanguage.JSON
-    code_theme: fce.CodeTheme = fce.CodeTheme.ATOM_ONE_LIGHT
-    read_only: bool = True
-    # 行号由 gutter 控制：CodeEditor 没有 line_numbers 字段，写它不会生效。
-    # 配置文件的行号没有意义，折叠柄才是读深层结构的手段，所以只关行号。
-    gutter_style: fce.GutterStyle = field(
-        default_factory=lambda: fce.GutterStyle(show_line_numbers=False)
-    )
-
-    def init(self):
-        if self.padding is None:
-            self.padding = ft.Padding.all(SPACE["3"])
-        if self.text_style is None:
-            self.text_style = typography.text_style(
-                "small", leading=typography.LEADING_CODE, tracking=0
-            )
-        if self.min_height is None:
-            self.min_height = 44
 
 
 # ---------------------------------------------------------------------------
@@ -731,156 +669,6 @@ def _markdown_code() -> ft.Control:
     return ft.Container(width=640, content=Markdown(_MARKDOWN_FENCED))
 
 
-_PYTHON_SNIPPET = """from dataclasses import dataclass
-
-
-@dataclass
-class Page:
-    index: int = 1
-    size: int = 20
-
-    @property
-    def offset(self) -> int:
-        # 第 1 页从 0 开始
-        return (self.index - 1) * self.size
-
-
-page = Page(index=3)
-print(page.offset)  # 40
-"""
-
-_BASH_SNIPPET = """#!/usr/bin/env bash
-set -euo pipefail
-
-for file in src/ui/**/*.py; do
-    ruff check "$file"
-done
-"""
-
-_JAVASCRIPT_SNIPPET = """const page = { index: 3, size: 20 };
-
-export function offset({ index, size }) {
-  return (index - 1) * size;
-}
-
-console.log(offset(page)); // 40
-"""
-
-_CODE_SNIPPETS: dict[str, tuple[str, fce.CodeLanguage]] = {
-    "python": (_PYTHON_SNIPPET, fce.CodeLanguage.PYTHON),
-    "bash": (_BASH_SNIPPET, fce.CodeLanguage.BASH),
-    "js": (_JAVASCRIPT_SNIPPET, fce.CodeLanguage.JAVASCRIPT),
-}
-
-
-@ft.component
-def _code_basic() -> ft.Control:
-    return Code(value=_PYTHON_SNIPPET, height=210)
-
-
-@ft.component
-def _code_language() -> ft.Control:
-    """换 language 只换高亮规则，代码本身不用动。"""
-    current, set_current = ft.use_state("python")
-    source, language = _CODE_SNIPPETS[current]
-
-    def pick(event: ft.Event[ft.Container]):
-        set_current(event.control.data)
-
-    return ft.Column(
-        spacing=SPACE["2"],
-        controls=[
-            ft.Row(
-                spacing=SPACE["1"],
-                controls=[
-                    ft.Container(
-                        padding=ft.Padding.symmetric(
-                            horizontal=SPACE["2"], vertical=SPACE["1"]
-                        ),
-                        border_radius=RADIUS["sm"],
-                        bgcolor=(
-                            ft.Colors.PRIMARY
-                            if key == current
-                            else ft.Colors.SURFACE_CONTAINER
-                        ),
-                        data=key,
-                        on_click=pick,
-                        content=ft.Text(
-                            label,
-                            size=FONT_SIZE["small"],
-                            color=(
-                                ft.Colors.ON_PRIMARY
-                                if key == current
-                                else ft.Colors.ON_SURFACE_VARIANT
-                            ),
-                        ),
-                    )
-                    for key, label in (
-                        ("python", "Python"),
-                        ("bash", "Bash"),
-                        ("js", "JavaScript"),
-                    )
-                ],
-            ),
-            Code(value=source, language=language, height=190),
-        ],
-    )
-
-
-@ft.component
-def _code_long_line() -> ft.Control:
-    """长行不折行：编辑器横向滚动，行号留在左边。"""
-    source = (
-        "SELECT id, name, email, created_at, updated_at "
-        "FROM users WHERE tenant_id = 'acme' AND deleted_at IS NULL "
-        "ORDER BY created_at DESC LIMIT 20 OFFSET 40;"
-    )
-    return Code(value=source, language=fce.CodeLanguage.SQL, height=96)
-
-
-_JSON_CONFIG = """{
-  "name": "cs-ui",
-  "version": "0.1.1",
-  "components": {
-    "display": ["text", "heading", "quote", "markdown"],
-    "input": ["button", "chip"]
-  },
-  "theme": {
-    "seed": "#1F6FEB",
-    "mode": "system",
-    "radius": { "sm": 4, "md": 6, "lg": 8 }
-  },
-  "debug": false
-}"""
-
-_JSON_COMPACT = (
-    '{"id":1,"name":"cs-ui","tags":["ui","flet"],"active":true,'
-    '"meta":{"stars":128,"license":"MIT"}}'
-)
-
-
-@ft.component
-def _json_basic() -> ft.Control:
-    """折叠柄在行号槽里：点箭头可收起一层，不需要滚动找结构。"""
-    return Json(value=_JSON_CONFIG, height=230)
-
-
-@ft.component
-def _json_compact() -> ft.Control:
-    """压缩成一行的响应体：横向滚动，不重排内容。"""
-    return Json(value=_JSON_COMPACT, height=72)
-
-
-@ft.component
-def _json_numbers() -> ft.Control:
-    """需要按行报错时，把行号打开。"""
-    return Json(
-        value=_JSON_CONFIG,
-        height=230,
-        gutter_style=fce.GutterStyle(show_line_numbers=True),
-    )
-
-
 # ---------------------------------------------------------------------------
 # 示例源码（“查看代码”面板）
 # ---------------------------------------------------------------------------
@@ -924,18 +712,6 @@ _MARKDOWN_CODE = '''Markdown("""
 | --- | --- |
 | page | int |
 """)'''
-
-_CODE_CODE = """Code(value="print('hello')", height=120)
-Code(value=sql, language=fce.CodeLanguage.SQL, height=96)
-
-# 关掉行号（默认打开）
-Code(value=src, gutter_style=fce.GutterStyle(show_line_numbers=False))"""
-
-_JSON_CODE = """Json(value=json.dumps(payload, ensure_ascii=False, indent=2), height=230)
-
-# 需要行号时再打开
-Json(value=text, gutter_style=fce.GutterStyle(show_line_numbers=True))"""
-
 
 # ---------------------------------------------------------------------------
 # 组件说明
@@ -1376,186 +1152,12 @@ _MARKDOWN_SPEC = Spec(
     tags=("markdown", "文档", "富文本", "readme", "表格"),
 )
 
-_CODE_SPEC = Spec(
-    name="Code",
-    summary="只读代码块：语法高亮、行号、横向滚动，按语言着色。",
-    definition=(
-        "代码要「像代码」才读得下去：等宽字体、行号、语法高亮三者缺一不可。Code "
-        "复用 flet_code_editor 的编辑器内核并锁成只读 —— 滚动、选中复制、折叠的"
-        "行为与真正的编辑器一致，而不是用 Text 拼一个看起来像代码的色块。"
-    ),
-    anatomy=[
-        (
-            "语言",
-            "language 决定高亮规则（PYTHON / SQL / BASH …）；选错只是不着色，不报错。",
-        ),
-        (
-            "行号槽",
-            "gutter_style 控制行号、折叠柄与错误标记，默认三者全开。",
-        ),
-        (
-            "主题",
-            "code_theme 默认 ATOM_ONE_LIGHT；这是编辑器配色，不随页面明暗主题变。",
-        ),
-        (
-            "只读",
-            "read_only=True：可选中复制、不可编辑；要编辑请直接用 fce.CodeEditor。",
-        ),
-        (
-            "尺寸",
-            "height 决定可视高度，超出纵向滚动；长行不折行，横向滚动。",
-        ),
-    ],
-    when=[
-        "展示示例代码、配置片段、命令行",
-        "需要行号对照报错（第 12 行）",
-        "内容较长，需要滚动与选中复制",
-    ],
-    avoid=[
-        "一行命令或一个字段名：行内 code 用 Text 或 Markdown",
-        "需要编辑：用 fce.CodeEditor，read_only 关掉",
-        "大段运行日志：用 LogContainer，代码高亮对日志没有增益",
-    ],
-    examples=[
-        Example(
-            "Python",
-            _code_basic,
-            hint="装饰器、注释、字符串各一色；高度固定，超出部分纵向滚动。",
-            code=_CODE_CODE,
-        ),
-        Example(
-            "切换语言",
-            _code_language,
-            hint="同一段内容换个 language 就换一套高亮规则，点击上方标签切换。",
-        ),
-        Example(
-            "长行",
-            _code_long_line,
-            hint="SQL 写成一行时不折行，编辑器横向滚动，行号固定留在左侧。",
-        ),
-    ],
-    api=[
-        Api("value", "str | None", "None", "源码文本"),
-        Api("language", "CodeLanguage", "PYTHON", "高亮语言，见 fce.CodeLanguage"),
-        Api("code_theme", "CodeTheme", "ATOM_ONE_LIGHT", "编辑器配色，不随页面主题"),
-        Api("read_only", "bool", "True", "只读；可选中复制"),
-        Api("gutter_style", "GutterStyle | None", "None", "行号 / 折叠柄 / 错误标记"),
-        Api("text_style", "TextStyle | None", "None", "默认 12.5px / 行高 1.55"),
-        Api("padding", "PaddingValue | None", "None", "默认 12px 内边距"),
-        Api("height", "int | None", "None", "可视高度；超出纵向滚动"),
-        Api("issues", "list[Issue]", "[]", "行内错误标记，配合行号使用"),
-    ],
-    notes=[
-        warn(
-            "长行不会自动折行，只横向滚动；放进窄容器时务必给 height，"
-            "否则编辑器会和父容器抢高度，看起来像「没渲染出来」。"
-        ),
-        info(
-            "空 value 保留 44px 最小高度（init 里设 min_height），避免示例舞台"
-            "缩成一条线；正常内容不受影响。"
-        ),
-        tip(
-            "隐藏行号传 gutter_style=fce.GutterStyle(show_line_numbers=False)；"
-            "CodeEditor 没有 line_numbers 字段，直接写会被静默忽略。"
-        ),
-    ],
-    tags=("代码", "代码块", "code", "highlight", "语法高亮"),
-)
-
-_JSON_SPEC = Spec(
-    name="Json",
-    summary="JSON 查看器：按 JSON 语法高亮，带折叠柄，默认不显示行号。",
-    definition=(
-        "JSON 的结构靠缩进表达，所以查看器最重要的不是颜色，而是折叠：一个两百行的"
-        "响应体，用户往往只想看第一层键。Json 复用代码编辑器内核，固定 JSON 语言、"
-        "默认关掉行号（配置文件的行号没有意义），把行号槽留给折叠柄。"
-    ),
-    anatomy=[
-        (
-            "语言",
-            "固定 JSON，不接受切换；键、字符串、数字、布尔各一色。",
-        ),
-        (
-            "折叠柄",
-            "行号槽里的箭头，按对象 / 数组层级收起；读深层结构主要靠它。",
-        ),
-        (
-            "行号",
-            "默认关闭（GutterStyle(show_line_numbers=False)），需要按行报错时再开。",
-        ),
-        (
-            "只读",
-            "read_only=True：能选中复制，不能改坏原文。",
-        ),
-    ],
-    when=[
-        "展示接口响应、配置、事件负载",
-        "层级深、需要逐层展开查看",
-        "需要复制其中一段原文给同事",
-    ],
-    avoid=[
-        "需要校验或编辑 JSON：用可编辑的 fce.CodeEditor",
-        "只有几个键值对：用 Descriptions 或 Text，JSON 语法反而啰嗦",
-        "超长数组：先截断，高亮不会让五千行变得可读",
-    ],
-    examples=[
-        Example(
-            "嵌套结构",
-            _json_basic,
-            hint="三层对象 + 数组：点行号槽里的箭头可以逐层收起。",
-            code=_JSON_CODE,
-        ),
-        Example(
-            "压缩成一行",
-            _json_compact,
-            hint="接口返回的原始响应体：不重排、不折行，横向滚动。",
-        ),
-        Example(
-            "打开行号",
-            _json_numbers,
-            hint="需要按行报错时传 GutterStyle(show_line_numbers=True)。",
-        ),
-    ],
-    api=[
-        Api("value", "str | None", "None", "JSON 文本；必须是字符串"),
-        Api("code_theme", "CodeTheme", "ATOM_ONE_LIGHT", "编辑器配色"),
-        Api(
-            "gutter_style",
-            "GutterStyle",
-            "",
-            "默认 GutterStyle(show_line_numbers=False)",
-        ),
-        Api("read_only", "bool", "True", "只读；可选中复制"),
-        Api("text_style", "TextStyle | None", "None", "默认 12.5px / 行高 1.55"),
-        Api("padding", "PaddingValue | None", "None", "默认 12px 内边距"),
-        Api("height", "int | None", "None", "可视高度；超出纵向滚动"),
-    ],
-    notes=[
-        warn(
-            "value 必须是合法 JSON 文本：传 dict 不会自动序列化，先 "
-            "json.dumps(data, ensure_ascii=False, indent=2)。"
-        ),
-        info(
-            "行号由 gutter_style.show_line_numbers 控制。CodeEditor 本身没有 "
-            "line_numbers 字段，写 line_numbers=False 会被静默忽略。"
-        ),
-        tip(
-            "折叠柄只在有嵌套时出现；单层对象看起来就是一段高亮文本，"
-            "别误以为折叠功能没生效。"
-        ),
-    ],
-    tags=("json", "数据", "查看器", "折叠", "配置"),
-)
-
-
 SPECS: dict[str, Spec] = {
     "text": _TEXT_SPEC,
     "heading": _HEADING_SPEC,
     "quote": _QUOTE_SPEC,
     "link": _LINK_SPEC,
     "markdown": _MARKDOWN_SPEC,
-    "code": _CODE_SPEC,
-    "json": _JSON_SPEC,
 }
 
 

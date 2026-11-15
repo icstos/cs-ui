@@ -33,7 +33,10 @@
 
 - Python >= 3.12
 - flet[all] >= 1.1.2, < 1.2
-- flet-code-editor / flet-charts
+- flet-charts
+
+> 代码类组件（`Code` / `Json` / `CodeEditor` / `CodeView`）已拆到独立项目
+> [`cs-code`](../cs-code)：它基于 cs-ui + flet-code-editor，cs-ui 本体不再依赖编辑器内核。
 
 > 不含媒体播放能力：音频 / 视频要接管时间轴、设备与播放列表状态，属于应用而不是控件。
 > 需要播放器的项目自行封装引擎（参考 `cs-music-player` 的 `infra/audio`）。
@@ -101,13 +104,11 @@ if __name__ == "__main__":
 |---|---|
 | `ui.core` | 底座：`tokens`（设计令牌）、`palette`（配色引擎）、`typography`（排印律）、`theme`、`i18n`、`format`、`responsive`、`doc`（文档套件） |
 | `ui.chart` | `BarChart` / `LineChart` / `AreaChart` / `ScatterChart`，共用一套数据解析与派生配色 |
-| `ui.display` | `Text` 系列（`Header_1..6` / `Quote` / `Link` / `Code` / `Markdown` / `Json`）、`Calendar`、`Carousel`、`Heatmap`、`Descriptions`、`Tree`、`ListTile`、`Image`、`LogContainer` |
+| `ui.display` | `Text` 系列（`Header_1..6` / `Quote` / `Link` / `Markdown`）、`Calendar`、`Carousel`、`Heatmap`、`Descriptions`、`Tree`、`ListTile`、`Image`、`LogContainer` |
 | `ui.feedback` | `AlertDialog`、`Message`（主动操作的回执）、`Notification`（系统级通报）、`Loading`、`ProgressBar` |
 | `ui.input` | 全部表单控件：`Input`、`Checkbox`、`Radio`、`Switch`、`SelectBox`、`MultiSelect`、`Cascader`、`Transfer`、`Slider`、`Rating`、`Chip`、`ColorPicker`、`DateInput`、`DateTimeInput`、`FilePicker`、`ImagePicker`、`NumberInput`、`SearchBar`、`SegmentedButton`、`Button` |
 | `ui.layout` | `PageLayout`、`Grid`、`Card`、`Column` / `Row` / `Stack` / `Container`、`Table`（含分页）、`Tabs`、`Step`、`Expander`、`Divider` |
 | `ui.navigation` | `AppBar`、`BreadCrumb`、`Menu`（常驻侧边导航树）、`MenuBar` / `MenuSection` / `MenuAction`（桌面下拉菜单栏）、`StatusBar`、`Pagination` |
-| `ui.utils` | `CodeEditor`、`CodeView`（带折叠与复制的代码展示） |
-
 精确定位某个组件、函数或令牌属于哪个模块，查 `ui-mcp` 的 `list_components` 比翻目录快。
 
 ## 设计令牌与主题
@@ -369,7 +370,8 @@ macOS `Application Support`、Linux `$XDG_CONFIG_HOME`），**首帧之前同步
 from ui import Button, Card, Column, Container, Divider, Row, Text, TextField, ft
 ```
 
-`ui.__all__` 是 780 个名字（flet 全部公开名 + 各子包 `__all__` + 子模块名 + `ft`）。
+`ui.__all__` 由 flet 全部公开名 + 各子包 `__all__` + 子模块名 + `ft` 拼成（数量随 flet
+版本变化，用 `len(ui.__all__)` 取当前值）。
 
 **导入是懒的**：`import ui` 只加载 `flet` 本身（约 0.2s），组件在第一次被访问时才从所属子包
 导入。全量 star-import 的实测代价是 **1.4s** —— `ui.chart` 单它就把 matplotlib + plotly 拖进来

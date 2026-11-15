@@ -40,7 +40,11 @@ typographic law.
 
 - Python >= 3.12
 - flet[all] >= 1.1.2, < 1.2
-- flet-code-editor / flet-charts
+- flet-charts
+
+> Code components (`Code` / `Json` / `CodeEditor` / `CodeView`) now live in the
+> separate [`cs-code`](../cs-code) project (cs-ui + flet-code-editor). This package
+> has no editor dependency.
 
 > No media playback here: audio / video own the timeline, devices and queue state, which
 > makes them applications rather than controls. Wrap your own engine (see
@@ -111,13 +115,11 @@ panel (it takes layout height and pushes content down); `float_panel=False` turn
 |---|---|
 | `ui.core` | Base: `tokens`, `palette` (color engine), `typography`, `theme`, `i18n`, `format`, `responsive`, `doc` (documentation kit) |
 | `ui.chart` | `BarChart` / `LineChart` / `AreaChart` / `ScatterChart` sharing one data parser and derived palette |
-| `ui.display` | `Text` family (`Header_1..6` / `Quote` / `Link` / `Code` / `Markdown` / `Json`), `Calendar`, `Carousel`, `Heatmap`, `Descriptions`, `Tree`, `ListTile`, `Image`, `LogContainer` |
+| `ui.display` | `Text` family (`Header_1..6` / `Quote` / `Link` / `Markdown`), `Calendar`, `Carousel`, `Heatmap`, `Descriptions`, `Tree`, `ListTile`, `Image`, `LogContainer` |
 | `ui.feedback` | `AlertDialog`, `Message` (receipt for an explicit action), `Notification` (system-level), `Loading`, `ProgressBar` |
 | `ui.input` | Every form control: `Input`, `Checkbox`, `Radio`, `Switch`, `SelectBox`, `MultiSelect`, `Cascader`, `Transfer`, `Slider`, `Rating`, `Chip`, `ColorPicker`, `DateInput`, `DateTimeInput`, `FilePicker`, `ImagePicker`, `NumberInput`, `SearchBar`, `SegmentedButton`, `Button` |
 | `ui.layout` | `PageLayout`, `Grid`, `Card`, `Column` / `Row` / `Stack` / `Container`, `Table` (with paging), `Tabs`, `Step`, `Expander`, `Divider` |
 | `ui.navigation` | `AppBar`, `BreadCrumb`, `Menu`, `Pagination` |
-| `ui.utils` | `CodeEditor`, `CodeView` (collapsible, copyable code display) |
-
 To locate a specific component, function or token, `ui-mcp`'s `list_components` is faster than
 walking the tree.
 
@@ -394,8 +396,8 @@ needs `read()` / `write()`.
 from ui import Button, Card, Column, Container, Divider, Row, Text, TextField, ft
 ```
 
-`ui.__all__` holds 780 names (everything public in flet + each package's `__all__` + submodule names +
-`ft`).
+`ui.__all__` merges every public flet name with each subpackage's `__all__`, the submodule
+names and `ft` (count it with `len(ui.__all__)` — the number moves with the flet version).
 
 **Imports are lazy**: `import ui` loads only `flet` itself (~0.2s); a component imports its package on
 first access. A full star-import measured **1.4s** — `ui.chart` alone drags in matplotlib + plotly

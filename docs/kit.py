@@ -14,10 +14,10 @@ from collections.abc import Callable, Sequence
 from typing import Any, cast
 
 import flet as ft
-import flet_code_editor as fce
 
 from docs.blocks import CalloutKind, Demo, Tone
-from ui import Code, accent_text, use_i18n, use_t
+from ui import accent_text, use_i18n, use_t
+from ui.core.doc import plain_code
 from ui.core.theme import use_theme
 
 # ---------------------------------------------------------------------------
@@ -294,15 +294,8 @@ def kbd(text: str) -> ft.Control:
 # 代码
 # ---------------------------------------------------------------------------
 
-_LANGUAGES: dict[str, fce.CodeLanguage] = {
-    "python": fce.CodeLanguage.PYTHON,
-    "bash": fce.CodeLanguage.BASH,
-    "shell": fce.CodeLanguage.SHELL,
-    "json": fce.CodeLanguage.JSON,
-    "yaml": fce.CodeLanguage.YAML,
-    "toml": fce.CodeLanguage.PLAINTEXT,
-    "text": fce.CodeLanguage.PLAINTEXT,
-}
+#: 语言只用在标题栏文字（``filename or language.upper()``）。纯 Flet 渲染
+#: 不做语法高亮，因此这里不需要语言枚举表。
 
 _LINE_HEIGHT = 24
 _CODE_PAD = 10
@@ -313,7 +306,7 @@ _CODE_SIZE_MIN = 10.4
 def _code_size(source: str) -> float:
     """按最长行挑字号：宽格子用大字号，窄格子自动缩，别让代码被右边切掉。
 
-    ``CodeEditor`` 不会横向滚动也不会换行，所以只能靠字号买宽度。阈值按
+    ``plain_code`` 不折行、只在框内横向滚动，长行多时靠缩小字号买宽度。阈值按
     "分栏里那半边"（约 520px）与整页正文（约 700px）两种常见宽度取。
     """
     longest = max((len(line) for line in source.splitlines()), default=0)
@@ -351,7 +344,6 @@ def code_block(
     copied, set_copied = ft.use_state(False)
     size = font_size or _code_size(source)
     resolved = height or _fitted_height(source, size)
-    code_language = _LANGUAGES.get(language, fce.CodeLanguage.PYTHON)
 
     async def copy(event: ft.Event[ft.IconButton]) -> None:
         """复制是客户端动作（action），这里只负责把图标换成对勾再换回来。"""
@@ -417,13 +409,11 @@ def code_block(
                         ],
                     ),
                 ),
-                Code(
-                    value=source,
-                    language=code_language,
-                    code_theme=fce.CodeTheme.ATOM_ONE_DARK,
+                plain_code(
+                    source,
+                    size=size,
                     height=resolved,
-                    text_style=ft.TextStyle(size=size, height=1.55),
-                    read_only=True,
+                    padding=ft.Padding.all(_CODE_PAD),
                 ),
             ],
         ),

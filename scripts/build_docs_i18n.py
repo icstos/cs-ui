@@ -1671,17 +1671,13 @@ M |= {
         "Avatar, title, subtitle and trailing action — one row, one thing.",
     ),
     "cat.display.tile.more": ("更多", "更多", "More"),
-    "cat.display.editor.title": (
-        "代码编辑器 CodeEditor",
-        "程式碼編輯器 CodeEditor",
-        "Code editor",
-    ),
+    "cat.display.editor.title": ("代码块", "程式碼區塊", "Code block"),
     "cat.display.editor.hint": (
-        "带行号与语法高亮的可编辑区域，read_only 即为代码块。",
-        "帶行號與語法高亮的可編輯區域，read_only 即為程式碼區塊。",
-        "Editable with line numbers and highlighting; read_only turns it into a code block.",
+        "只读源码面板：等宽、带行号、可整段复制，不随明暗主题变。",
+        "唯讀原始碼面板：等寬、帶行號、可整段複製，不隨明暗主題變。",
+        "Read-only source panel: monospace, line numbers, copyable, always dark.",
     ),
-    "cat.display.view.title": ("代码视图 CodeView", "程式碼檢視 CodeView", "Code view"),
+    "cat.display.view.title": ("源码展示", "原始碼展示", "Source panel"),
     "cat.display.view.hint": (
         "一个组件配一段可展开的源码，适合做“这个控件怎么用”。",
         "一個元件配一段可展開的原始碼，適合做「這個元件怎麼用」。",
@@ -1821,9 +1817,9 @@ M |= {
         "Slide {n} of {total}",
     ),
     "cat.display.note1": (
-        "代码主题跟随明暗模式，浅色界面里也能看清。",
-        "程式碼主題跟隨明暗模式，淺色介面裡也能看清。",
-        "Code themes follow light/dark so contrast always holds.",
+        "代码面板固定深色，浅色界面里也能看清。",
+        "程式碼面板固定深色，淺色介面裡也能看清。",
+        "Code panels stay dark so contrast always holds.",
     ),
     "cat.display.note2": (
         "ListTile 的 trailing 可以放开关、按钮或角标。",
@@ -1831,9 +1827,9 @@ M |= {
         "ListTile trailing takes switches, buttons or badges.",
     ),
     "cat.display.note3": (
-        "CodeView 折叠时只占一行，展开后不挤压周围内容。",
-        "CodeView 摺疊時只佔一列，展開後不擠壓周圍內容。",
-        "Collapsed CodeView is one row; expanded it doesn't squeeze neighbours.",
+        "代码块折叠时只占一行，展开后不挤压周围内容。",
+        "程式碼區塊摺疊時只佔一列，展開後不擠壓周圍內容。",
+        "A collapsed code block is one row; expanded it doesn't squeeze neighbours.",
     ),
     "cat.display.tip_title": ("代码也属于界面", "程式碼也屬於介面", "Code is UI too"),
     "cat.display.tip": (

@@ -7,14 +7,14 @@
 
 - ``ui.chart`` → ``flet_charts`` → matplotlib + plotly                  ~0.62s
 - 536 个 ``ft.X = ...`` 逐属性反射（触发 flet 懒导入全部子模块）          ~0.59s
-- 其余子包（display / feedback / input / layout / navigation / utils）  ~0.18s
+- 其余子包（display / feedback / input / layout / navigation）           ~0.18s
 
 改成 PEP 562 模块级 ``__getattr__``：
 
 1. ``ui.X`` 首次被访问 → 按 ``_registry.COMPONENT_MODULES`` 导入所属子包并缓存到
    ``globals()``，此后就是普通属性查找；
 2. ``ui.<子包名>`` → 直接返回 ui 自己的子模块（**必须先于 flet 判断**：flet 的
-   ``__all__`` 里也有 ``utils`` / ``input`` / ``icons`` 这类同名项，ui 的子包赢）；
+   ``__all__`` 里也有 ``input`` / ``icons`` 这类同名项，ui 的子包赢）；
 3. 其余交给 ``flet`` —— 只在用到时反射。
 
 ``dir(ui)`` 仍返回完整名字表（含未加载的），IDE 补全与 ``from ui import *`` 行为不变。
@@ -43,7 +43,7 @@ ft = flet
 require_flet(strict=False)
 
 #: ui 自己的子模块（``ui.layout`` 等）。必须显式登记：flet 的 ``__all__`` 里也有
-#: 同名项（``utils`` / ``icons`` / ``padding`` …），不能靠「flet 没有再试子模块」判定。
+#: 同名项（``icons`` / ``padding`` …），不能靠「flet 没有再试子模块」判定。
 _SUBMODULES: tuple[str, ...] = (
     "app",
     "chart",
@@ -54,7 +54,6 @@ _SUBMODULES: tuple[str, ...] = (
     "input",
     "layout",
     "navigation",
-    "utils",
 )
 
 #: 不属于任何子包 ``__all__``、但要能从 ``ui`` 直接取到的名字。
@@ -81,9 +80,9 @@ _FLET_SUBMODULES: tuple[str, ...] = ("canvas",)
 def __getattr__(name: str) -> _Any:
     """按需加载 ``ui.<name>``（PEP 562）。
 
-    顺序不可调换：ui 子模块 → ui 组件 → flet 名字。调换会让 ``ui.utils`` 变成
-    ``flet.utils``、``ui.input`` 变成 ``flet.input``（flet 的 ``__all__`` 就带着这些
-    子模块名），而这两个名字在改造前指向的是 ui 自己的子包。
+    顺序不可调换：ui 子模块 → ui 组件 → flet 名字。调换会让 ``ui.input`` 变成
+    ``flet.input``（flet 的 ``__all__`` 就带着这个子模块名），而它本该指向
+    ui 自己的子包。
     """
     if name in _SUBMODULES:
         value: _Any = importlib.import_module(f"{__name__}.{name}")
