@@ -64,6 +64,10 @@ _EXTRA_LAZY: dict[str, str] = {
     "FONT_FAMILY": "ui.core.fonts",
     "apply_fonts": "ui.core.fonts",
     "font_file": "ui.core.fonts",
+    # 声明式范式的核心容器：应用构造 observable 文档/列表时需要它，而 flet
+    # 并未把它放进顶层 __all__。由 cs-ui 统一暴露，应用就不必去 import
+    # flet 的内部模块路径（那条路径随版本重组会静默断裂）。
+    "ObservableList": "flet.components.observable",
 }
 
 #: 惰性求值的模块级属性。``__version__`` 要读安装元数据（首次约 37ms），

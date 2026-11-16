@@ -181,6 +181,7 @@ _ORIGIN: dict[str, str] = {
     "disabled_layer": ".tokens",
     "elevation": ".tokens",
     "focus_border": ".tokens",
+    "focus_ring": ".tokens",
     "hairline": ".tokens",
     "on_semantic": ".tokens",
     "overlay": ".tokens",

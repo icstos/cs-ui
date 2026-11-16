@@ -153,6 +153,7 @@ GROUPS: Final[tuple[Category, ...]] = (
         ("datetime_input", "DateTimeInput", "ui.input.datetime_input"),
         ("color_picker", "ColorPicker", "ui.input.color_picker"),
         ("search_bar", "SearchBar", "ui.input.search_bar"),
+        ("search_field", "SearchField", "ui.input.search_field"),
     ),
     _make(
         "feedback",

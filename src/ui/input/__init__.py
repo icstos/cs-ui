@@ -31,6 +31,8 @@ lazy_exports(
         "RangeSlider": ".slider",
         "Rating": ".rating",
         "SearchBar": ".search_bar",
+        "SearchField": ".search_field",
+        "SearchFieldPalette": ".search_field",
         "SegmentedButton": ".segmented_button",
         "SelectBox": ".select_box",
         "SelectOption": ".select_box",

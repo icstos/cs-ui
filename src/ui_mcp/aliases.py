@@ -27,6 +27,7 @@ ALIASES: dict[str, list[str]] = {
     "Tree": ["树", "树形控件", "树形结构", "目录树"],
     "SelectOption": ["下拉选项"],
     "SearchBar": ["搜索框", "搜索栏"],
+    "SearchField": ["行内搜索框", "搜索输入框", "过滤输入框", "搜索条", "替换框"],
     "NumberInput": ["数字输入", "数值输入框", "步进器"],
     "Slider": ["滑块", "拖动条", "单值滑块"],
     "RangeSlider": ["范围滑块", "双滑块", "区间滑块"],

@@ -104,6 +104,7 @@ __all__ = [
     "disabled_layer",
     "elevation",
     "focus_border",
+    "focus_ring",
     "hairline",
     "on_semantic",
     "overlay",
@@ -639,6 +640,27 @@ def elevation(level: int = 1) -> ft.BoxShadow:
 def focus_border(width: float = 2.0) -> ft.BorderSide:
     """聚焦描边（键盘 Tab 走焦用）。用主色 + 2px，与 Material 规范一致。"""
     return ft.BorderSide(width, ft.Colors.PRIMARY)
+
+
+def focus_ring(
+    color: str | ft.Colors = ft.Colors.PRIMARY,
+    *,
+    spread: float = 2.0,
+    opacity: float = 0.18,
+) -> ft.BoxShadow:
+    """聚焦环：**实心外扩**，不是模糊光晕。
+
+    模糊光晕在浅色面板上会糊成一团灰，读起来像脏了；``spread_radius`` 的外扩
+    描边与 1px 边框同色系，层次清楚又不喧哗。用 ``Container.shadow`` 承载，
+    与 ``focus_border``（BorderSide，键盘走焦）互补：一个画控件外，一个描控件边。
+    暗色底把 ``opacity`` 提到 0.4 左右才看得见。
+    """
+    return ft.BoxShadow(
+        spread_radius=spread,
+        blur_radius=0,
+        color=ft.Colors.with_opacity(opacity, color),
+        offset=ft.Offset(0, 0),
+    )
 
 
 def hairline() -> ft.BorderSide:
