@@ -1,14 +1,11 @@
 [project]
 name = "cs-ui"
-version = "0.2.0"
+version = "0.3.1"
 description = "A Python UI framework inspired by Flet"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Shawn Chen", email = "cs@cstos.com" }]
-dependencies = [
-    "flet[all]>=1.1.2,<1.2",
-    "flet-charts",
-]
+dependencies = ["flet==1.1.2", "flet-charts"]
 
 # ui-mcp（给 AI agent 的组件库 MCP 服务）是可选能力：装它不影响 ui 本身的使用。
 [project.optional-dependencies]
@@ -44,4 +41,3 @@ ui_mcp = ["data/*.json"]
 # ui = "cs_ui"
 [project.scripts]
 ui-mcp = "ui_mcp.cli:main"
-moss-tts-nano = "ui.cli:main"

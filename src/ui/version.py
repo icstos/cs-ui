@@ -52,7 +52,7 @@ FLET_MIN: str = "1.1.2"
 FLET_SERIES: str = "1.1"
 
 #: 源码目录直接运行（尚未 ``pip install``）时的兜底版本，与 pyproject 保持一致。
-_FALLBACK_UI_VERSION: str = "0.2.0"
+_FALLBACK_UI_VERSION: str = "0.3.1"
 
 _VERSION_RE = re.compile(r"(\d+)\.(\d+)(?:\.(\d+))?")
 
