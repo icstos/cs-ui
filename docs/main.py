@@ -31,18 +31,15 @@ for entry in (ROOT, ROOT / "src"):
 import flet as ft
 
 from docs.app import App
-from docs.site import FONT_FAMILY, FONT_FILE
-from ui import theme_state
 from ui.core.responsive import apply_responsive
 
 TITLE = "cs-ui · 用 Python 构建桌面界面"
 
 
 def configure_page(page: ft.Page) -> None:
-    """窗口、字体与内边距。
+    """窗口与内边距。
 
-    主题交给 ``ThemeProvider``；这里只登记字体，并让主题状态引用同一个族名 ——
-    两处必须一致，否则字体会在首帧与重绘之间来回跳。
+    主题与平台字体由 ``ThemeProvider`` 统一配置。
     """
     page.title = TITLE
     page.padding = 0
@@ -52,10 +49,6 @@ def configure_page(page: ft.Page) -> None:
     # 站点自己不吃自己的规矩就没法验证框架的窄屏行为。
     page.window.min_width = 360
     page.window.min_height = 520
-    if FONT_FILE.exists():
-        page.fonts = {FONT_FAMILY: str(FONT_FILE)}
-        theme_state().font_family = FONT_FAMILY
-
     # 响应式引擎要有人喂宽度：读一次当前窗口，之后跟着 on_resize 走，且只在
     # 跨档（compact / medium / expanded）时通知组件重绘 —— 拖动窗口不会变成幻灯片。
     # 外壳里的 ``use_responsive()`` 全部依赖这一句。

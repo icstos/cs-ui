@@ -36,7 +36,6 @@ from ui.layout.grid import Grid  # noqa: E402
 from ui.layout.page import PageLayout  # noqa: E402
 from ui.layout.table import Table  # noqa: E402
 
-FONT_FILE = ROOT / "src" / "ui" / "data" / "fonts" / "AlibabaPuHuiTi-3-55-Regular.otf"
 WIDTH = int(os.environ.get("CS_UI_PROBE_WIDTH", "1400"))
 HEIGHT = int(os.environ.get("CS_UI_PROBE_HEIGHT", "900"))
 DARK = os.environ.get("CS_UI_THEME", "light").lower() == "dark"
@@ -129,11 +128,7 @@ def main(page: ft.Page) -> None:
     page.title = "RSPROBE"
     page.window.width = WIDTH
     page.window.height = HEIGHT
-    font = None
-    if FONT_FILE.exists():
-        page.fonts = {"AlibabaPuHuiTi": str(FONT_FILE)}
-        font = "AlibabaPuHuiTi"
-    apply_theme(page, ThemeState(mode="dark" if DARK else "light", font_family=font))
+    apply_theme(page, ThemeState(mode="dark" if DARK else "light"))
     apply_responsive(page)
     layout: ft.Control | None = None
 

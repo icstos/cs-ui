@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 
 import flet as ft
 
+from ui.core import fonts
 from ui.core.doc import Api, Example, Spec, info, run, tip, warn
 from ui.core.empty import empty_line
 from ui.core.i18n import t, use_t
@@ -45,10 +46,6 @@ TEXT = ft.Colors.ON_SURFACE
 MUTED = ft.Colors.ON_SURFACE_VARIANT
 LINE = ft.Colors.OUTLINE_VARIANT
 PANEL = ft.Colors.SURFACE_CONTAINER_LOW
-
-#: 等宽族：三个平台各取一个实际存在的，最后退回通用族。
-MONO = "Consolas"
-MONO_FALLBACK = ["Menlo", "DejaVu Sans Mono", "Courier New", "monospace"]
 
 #: 级别词 → 语义角色。取**行内第一个**命中，而不是按严重程度排序扫。
 #: 按严重程度扫的话「INFO 重试完毕，fail=0」会被 fail 抢成红色，整块日志就红了。
@@ -98,8 +95,8 @@ def _log_text(line: str) -> ft.Text:
         line,
         size=FONT_SIZE["small"],
         color=_color(line),
-        font_family=MONO,
-        font_family_fallback=MONO_FALLBACK,
+        font_family=fonts.monospace_family(),
+        font_family_fallback=fonts.monospace_font_fallback(),
         style=ft.TextStyle(height=1.6),
     )
 

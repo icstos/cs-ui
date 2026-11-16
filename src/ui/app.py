@@ -13,16 +13,11 @@ from pathlib import Path
 import flet as ft
 
 from ui.core.config import logger
-from ui.core.fonts import FONT_DIR as FONT_DIR  # 兼容旧引用，显式再导出
-from ui.core.fonts import FONT_FAMILY, font_map
 from ui.core.i18n import t, use_t
 from ui.core.responsive import apply_responsive
 from ui.core.theme import apply_theme, theme_state
 from ui.core.tokens import FONT_SIZE, RADIUS
 
-#: 兼容旧引用：字体的事实源在 :mod:`ui.core.fonts`，这里只是它的两个别名。
-#: ``page.fonts`` 不再由本模块设置 —— :func:`ui.core.theme.apply_theme` 会一并注册。
-FONTS = font_map()
 
 @ft.component
 def Home():
@@ -135,11 +130,8 @@ class App:
         page = ft.context.page
         page.title = self.name
         # 主题只有一个事实源：ui.core.theme。apply_theme 同时写下明暗两套 ——
-        # 只写 page.theme 的话深色模式没有为深色准备的那棵树 —— 并把内置字体
-        # 注册到 page.fonts（字体与主题同源，见 ui.core.fonts）。
+        # 只写 page.theme 的话深色模式没有为深色准备的那棵树。
         st = theme_state()
-        if not st.font_family:
-            st.font_family = FONT_FAMILY
         apply_theme(page, st)
         # 响应式与主题同一个位置：都是"页面级、框架级、只做一次"的事。
         # 宽度只在**跨档**时触发重绘，拖动窗口不会变成幻灯片。

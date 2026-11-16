@@ -49,7 +49,7 @@ from typing import Any, Literal
 
 import flet as ft
 
-from ui.core import typography
+from ui.core import fonts, typography
 from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, ICON_SIZE, RADIUS, semantic_text
 from ui.core.typography import RHYTHM
 
@@ -89,7 +89,12 @@ _MAX_W = 960  # 正文最大宽度：再宽一行字就长到读不下去
 _GUTTER = 32  # 小窗时的左右留白
 _MUTED = ft.Colors.ON_SURFACE_VARIANT
 _LINE = ft.Colors.OUTLINE_VARIANT
-_MONO = ft.TextStyle(letter_spacing=-0.1)
+def _mono_style() -> ft.TextStyle:
+    return ft.TextStyle(
+        letter_spacing=-0.1,
+        font_family=fonts.monospace_family(),
+        font_family_fallback=fonts.monospace_font_fallback(),
+    )
 
 #: 分类键 → 中文名。文档站有完整的三语导航，这里只服务独立窗口的眉标。
 _GROUP_LABEL: dict[str, str] = {
@@ -619,7 +624,7 @@ def _anatomy(doc: Spec) -> ft.Control:
                             size=11,
                             color=ft.Colors.PRIMARY,
                             weight=ft.FontWeight.W_700,
-                            style=_MONO,
+                            style=_mono_style(),
                         ),
                     ),
                     ft.Container(
@@ -741,7 +746,7 @@ def plain_code(
     line_numbers: bool = True,
     color: ft.ColorValue = _CODE_FG,
     gutter_color: ft.ColorValue = _CODE_GUTTER,
-    font_family: str = "monospace",
+    font_family: str | None = None,
     padding: ft.Padding | None = None,
 ) -> ft.Control:
     """只读源码渲染：等宽文本 + 行号，两个方向都能滚动，**只用 flet**。
@@ -759,10 +764,18 @@ def plain_code(
         height: 代码区可视高度；``None`` 时由内容撑开。
         line_numbers: 是否显示行号列。
         color / gutter_color: 前景与行号色；默认按深色面板配好。
-        font_family: 等宽字体族名。
+        font_family: 等宽字体族名；留空时按运行平台选择。
         padding: 代码区内边距，默认 12px。
     """
-    style = ft.TextStyle(size=size, height=1.55, font_family=font_family, color=color)
+    resolved_family = font_family or fonts.monospace_family()
+    fallback = fonts.monospace_font_fallback()
+    style = ft.TextStyle(
+        size=size,
+        height=1.55,
+        font_family=resolved_family,
+        font_family_fallback=fallback,
+        color=color,
+    )
     controls: list[ft.Control] = []
     if line_numbers:
         # 行数 = 换行数 + 1；range 的 stop 要比行数大 1。
@@ -775,7 +788,8 @@ def plain_code(
                     style=ft.TextStyle(
                         size=size,
                         height=1.55,
-                        font_family=font_family,
+                        font_family=resolved_family,
+                        font_family_fallback=fallback,
                         color=gutter_color,
                     ),
                     text_align=ft.TextAlign.RIGHT,
@@ -991,7 +1005,7 @@ def _cell(text: str, width: int | None, *, mono: bool = False, muted: bool = Fal
         color=_MUTED if muted else ft.Colors.ON_SURFACE,
         no_wrap=True,
         overflow=ft.TextOverflow.ELLIPSIS,
-        style=_MONO if mono else None,
+        style=_mono_style() if mono else None,
     )
     if width is None:
         return ft.Container(expand=True, content=control)
@@ -1193,7 +1207,7 @@ def _footer(doc: Spec) -> ft.Control:
                             doc.source,
                             size=FONT_SIZE["caption"],
                             color=_MUTED,
-                            style=_MONO,
+                            style=_mono_style(),
                             selectable=True,
                         ),
                     ]
@@ -1423,8 +1437,7 @@ def run(
         target.window.height = height
         target.window.min_width = 720
         target.window.min_height = 560
-        # 字体与 ThemeState 必须指向同一个族名，否则首帧与重绘之间会来回跳 ——
-        # apply_fonts 一次把两件事做对（注册 + 回填族名）。
+        # 记录当前平台，主题与文本样式据此选择系统字体。
         apply_fonts(target)
         if dark:
             theme_state().set_mode("dark")

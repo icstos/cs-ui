@@ -57,13 +57,10 @@ _SUBMODULES: tuple[str, ...] = (
 )
 
 #: 不属于任何子包 ``__all__``、但要能从 ``ui`` 直接取到的名字。
-#: 字体这几个是应用入口最常用的：「注册内置字体」和「主题」是同一件事的两半，
-#: 让它们和 ``apply_theme`` 一样能一行取到，应用就不必知道字体住在包内哪个角落。
+#: 应用入口常用的页面级主题与字体平台选择入口。
 _EXTRA_LAZY: dict[str, str] = {
     "App": "ui.app",
-    "FONT_FAMILY": "ui.core.fonts",
     "apply_fonts": "ui.core.fonts",
-    "font_file": "ui.core.fonts",
     # 声明式范式的核心容器：应用构造 observable 文档/列表时需要它，而 flet
     # 并未把它放进顶层 __all__。由 cs-ui 统一暴露，应用就不必去 import
     # flet 的内部模块路径（那条路径随版本重组会静默断裂）。

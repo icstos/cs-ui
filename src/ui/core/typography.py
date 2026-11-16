@@ -302,6 +302,16 @@ def text_style(
         :class:`flet.TextStyle`，可直接交给 ``ft.Text(style=...)``。
     """
     spec = role(name)
+    if family == "auto":
+        resolved_family = fonts.active_family()
+        fallback = fonts.body_font_fallback()
+    elif family is None:
+        resolved_family = None
+        fallback = None
+    else:
+        resolved_family = family
+        fallback = fonts.body_font_fallback()
+
     return ft.TextStyle(
         size=size if size is not None else spec.size,
         height=leading if leading is not None else spec.leading,
@@ -309,7 +319,8 @@ def text_style(
         letter_spacing=tracking if tracking is not None else spec.tracking,
         color=color,
         italic=italic,
-        font_family=fonts.active_family() if family == "auto" else family,
+        font_family=resolved_family,
+        font_family_fallback=fallback,
     )
 
 

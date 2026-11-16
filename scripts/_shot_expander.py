@@ -21,7 +21,6 @@ import flet as ft  # noqa: E402
 from ui.core.theme import ThemeState, apply_theme  # noqa: E402
 from ui.layout.expander import Expander  # noqa: E402
 
-FONT_FILE = ROOT / "src" / "ui" / "data" / "fonts" / "AlibabaPuHuiTi-3-55-Regular.otf"
 DARK = os.environ.get("CS_UI_THEME", "light").lower() == "dark"
 
 
@@ -103,11 +102,7 @@ def main(page: ft.Page) -> None:
     page.window.height = 1180
     # 走真实主题装配，别自己拼 ft.Theme —— 否则截图验的不是产品里的那套颜色。
     # 用独立的 ThemeState，不碰全局状态与本地配置。
-    font = None
-    if FONT_FILE.exists():
-        page.fonts = {"AlibabaPuHuiTi": str(FONT_FILE)}
-        font = "AlibabaPuHuiTi"
-    apply_theme(page, ThemeState(mode="dark" if DARK else "light", font_family=font))
+    apply_theme(page, ThemeState(mode="dark" if DARK else "light"))
     page.add(_page())
 
 

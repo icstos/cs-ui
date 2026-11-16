@@ -20,9 +20,11 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import flet as ft  # noqa: E402
 
+from ui.core import fonts as font_mod  # noqa: E402
 from ui.core import palette as pl  # noqa: E402
 from ui.core import theme as theme_mod  # noqa: E402
 from ui.core import tokens as tk  # noqa: E402
+from ui.core.doc import plain_code  # noqa: E402
 from ui.core.theme import (  # noqa: E402
     MODES,
     ThemeState,
@@ -124,6 +126,18 @@ check("semantic_text 未知角色退回 neutral", semantic_text("nope", "light")
       semantic_text("neutral", "light"))
 check("semantic_text 与填充在浅色下同档（省一档认知负担）",
       semantic_text("success", "light"), semantic("success", "light"))
+
+check("Windows 正文使用 Segoe UI 并回退到雅黑",
+      font_mod.get_body_font_config(ft.PagePlatform.WINDOWS),
+      {"font_family": "Segoe UI", "fallback": ["Microsoft YaHei", "sans-serif"]})
+check("macOS 代码使用 Menlo 并回退到苹方",
+      font_mod.get_monospace_font_config(ft.PagePlatform.MACOS),
+      {"font_family": "Menlo", "fallback": ["PingFang SC", "monospace"]})
+check("Web 正文使用系统字体栈",
+      font_mod.get_body_font_config("web")["font_family"], "system-ui")
+check("未知平台使用通用正文字体",
+      font_mod.get_body_font_config(None),
+      {"font_family": "sans-serif", "fallback": []})
 
 
 # 对比度：WCAG 2.1 —— 正文 4.5:1（1.4.3），图形/大字 3:1（1.4.11）。
@@ -274,24 +288,50 @@ check("build_theme 明暗两套不同（不是同一棵树涂两遍）",
 check("build_theme 走 Material 3", t.use_material3, True)
 check("build_theme 装上了滚动条主题（桌面端细滚动条）", t.scrollbar_theme is not None, True)
 check("build_theme 路由切换无动画", t.page_transitions.windows, ft.PageTransitionTheme.NONE)
-check("build_theme 不写死字体", t.font_family, None)
-check("build_theme 给字体就用", build_theme(
-    ThemeState(font_family="AlibabaPuHuiTi")).font_family, "AlibabaPuHuiTi")
+check("build_theme 未识别平台使用通用字体", t.font_family, "sans-serif")
+check("build_theme 尊重自定义字体",
+      build_theme(ThemeState(font_family="Custom Font")).font_family, "Custom Font")
 
 
 class FakePage:
     """只提供 apply_theme 会碰到的字段，避免真开窗口。"""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, platform: ft.PagePlatform | None = None, *, web: bool = False
+    ) -> None:
         self.theme = None
         self.theme_mode = None
+        self.platform = platform
+        self.web = web
         self.platform_brightness = ft.Brightness.DARK
         self.on_platform_brightness_change = None
 
 
-fp = FakePage()
+fp_web = FakePage(ft.PagePlatform.WINDOWS, web=True)
+s_web = fresh("light")
+apply_theme(fp_web, s_web)
+check("Web 页面优先使用 Web 字体栈", fp_web.theme.font_family, "system-ui")
+check("Web 主题包含 Web 中文回退字体",
+      fp_web.theme.text_theme.body_medium.font_family_fallback,
+      ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto",
+       "Helvetica Neue", "Arial", "Microsoft YaHei", "sans-serif"])
+
+
+fp = FakePage(ft.PagePlatform.WINDOWS)
 s = fresh("dark", "#0D9488")
 apply_theme(fp, s)
+check("apply_theme 按页面平台配置正文字体",
+      fp.theme.font_family, "Segoe UI")
+check("主题文字样式包含中文回退字体",
+      fp.theme.text_theme.body_medium.font_family_fallback,
+      ["Microsoft YaHei", "sans-serif"])
+code_widget = plain_code("print('hello')")
+code_text = code_widget.content.controls[0].controls[-1]
+check("文档代码块使用 Windows 等宽字体",
+      code_text.style.font_family, "Consolas")
+check("文档代码块包含中文回退字体",
+      code_text.style.font_family_fallback,
+      ["Microsoft YaHei", "monospace"])
 check("apply_theme 写 page.theme（按浅色档算）",
       fp.theme.color_scheme.primary, pl.build_scheme("#0D9488", "light")["primary"])
 check("apply_theme 也写 page.dark_theme（flet 深色下用的是这棵）",

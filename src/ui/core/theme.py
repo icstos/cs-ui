@@ -125,7 +125,7 @@ class ThemeState:
     #: 放在状态里而不是写成常量，是因为"换一种表面"和"换主色"是同一类决定 ——
     #: 都由主题运行时统一下发，组件不需要知道。
     surfaces: str = "neutral"
-    font_family: str | None = None  # None = 用 Flutter 默认
+    font_family: str | None = None  # None = 按运行平台选择系统字体
     platform_brightness: str = "light"  # 系统亮度，仅 mode=="system" 时生效
     _bound: bool = False  # 是否已挂过 platform_brightness 监听
 
@@ -425,12 +425,10 @@ def apply_theme(
     写出去之后，切模式只是换一棵现成的树，颜色一次都不用再算。
 
     幂等：重复调用不会重复挂监听（``system`` 模式下系统亮度变了才有意义）。
-    字体注册（``page.fonts``）也在这里一并做掉：字体与主题是同一件事的两半，
-    应用只调这一个入口就不会出现"主题设了族名、字体却没注册"的半套配置。
+    平台字体配置也在这里一并选择：中文回退字体与主题、文本样式使用同一配置。
     """
     st = state or _state
-    # 先注册字体再建主题：族名由 apply_fonts 回填到 st.font_family，
-    # build_theme 才能把同一个族名同时写进 Theme 与 text_theme。
+    # 先记录当前平台，再建主题，保证 Theme 与各文本样式使用同一组系统字体。
     fonts.apply_fonts(page, st.font_family)
     page.theme = build_theme(st, "light")
     page.dark_theme = build_theme(st, "dark")

@@ -27,8 +27,6 @@ DOCS_ROOT: Final[Path] = Path(__file__).resolve().parent
 PROJECT_ROOT: Final[Path] = DOCS_ROOT.parent
 UI_ROOT: Final[Path] = PROJECT_ROOT / "src" / "ui"
 
-FONT_FILE: Final[Path] = UI_ROOT / "data" / "fonts" / "AlibabaPuHuiTi-3-55-Regular.otf"
-FONT_FAMILY: Final[str] = "AlibabaPuHuiTi"
 LOGO_FILE: Final[Path] = UI_ROOT / "data" / "images" / "logo.png"
 
 I18N_DIR: Final[Path] = DOCS_ROOT / "i18n" / "site"
@@ -340,8 +338,6 @@ __all__ = [
     "DOCS_ROOT",
     "FLET_URL",
     "FLET_VERSION",
-    "FONT_FAMILY",
-    "FONT_FILE",
     "GITHUB_URL",
     "HOME",
     "I18N_DIR",
