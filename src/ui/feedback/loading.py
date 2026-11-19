@@ -11,7 +11,7 @@
 
 用法::
 
-    Row([Loading("small"), Text("正在保存…")])
+    Row([Loading(size_name="small"), Text("正在保存…")])
 
     Container(
         height=180,
@@ -46,6 +46,15 @@ class Loading(ft.ProgressRing):
     size_name: str = "normal"
 
     def init(self):
+        # value 是继承来的第一个位置参数（进度值）。位置参数很容易误写成档位
+        # （Loading("small")），字符串下传给 Flutter 会让整块控件树渲染失败。
+        # 这里只放行数字；非法值回退成"不确定进度"，最坏也只是照常转圈。
+        if self.value is not None:
+            try:
+                self.value = float(self.value)
+            except (TypeError, ValueError):
+                self.value = None
+
         size = _SIZE_MAP.get(str(self.size_name).lower(), _DEFAULT_SIZE)
 
         # 只在调用方没显式给宽高时套档位：Loading(width=16) 应该被尊重
@@ -90,15 +99,15 @@ def _inline() -> ft.Control:
             ft.Row(
                 spacing=SPACE["2"],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[Loading("small"), _muted("正在保存 3 项修改…")],
+                controls=[Loading(size_name="small"), _muted("正在保存 3 项修改…")],
             ),
             ft.Row(
                 spacing=SPACE["3"],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    Loading("small"),
+                    Loading(size_name="small"),
                     Loading(),
-                    Loading("large"),
+                    Loading(size_name="large"),
                     _caption("small 20 · normal 32 · large 48"),
                 ],
             ),
@@ -171,7 +180,7 @@ def _skeleton() -> ft.Control:
 _INLINE_CODE = """from ui.feedback import Loading
 
 # 行内：跟在一句话左边
-Row([Loading("small"), Text("正在保存…")])
+Row([Loading(size_name="small"), Text("正在保存…")])
 
 # 区块中央：一块内容整体没到位
 Container(

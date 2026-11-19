@@ -28,7 +28,7 @@ sys.path.insert(0, str(ROOT / "src"))
 import flet as ft
 
 from ui.core.constants import StyleType
-from ui.feedback import Message, Notification
+from ui.feedback import Loading, Message, Notification
 from ui.feedback._overlay import (
     SLOTS,
     OverlayHost,
@@ -241,6 +241,22 @@ check(
     sum(len(h.cards) for h in [peek_host(page, p) for p in SLOTS] if h is not None),
     0,
 )
+
+
+# ---------------------------------------------------------------------------
+# Loading：档位尺寸与 value 防御
+# ---------------------------------------------------------------------------
+# 继承 ft.ProgressRing 后，value 是第一个位置参数、排在 size_name 前面。
+# 曾把档位误写成位置参数 Loading("small")：字符串流进 value，Flutter 渲染
+# 断言失败整块变灰，同时三档尺寸全塌成 normal。这里的断言同时钉住两件事。
+check("Loading small 档位尺寸", Loading(size_name="small").width, 20)
+check("Loading normal 档位尺寸", Loading(size_name="normal").width, 32)
+check("Loading large 档位尺寸", Loading(size_name="large").width, 48)
+check("未知档位回退 normal", Loading(size_name="bogus").width, 32)
+check("合法数字进度保留", Loading(value=0.5).value, 0.5)
+check("位置参数误写档位不污染 value", Loading("small").value, None)
+check("字符串进度也不下传", Loading(value="80%").value, None)
+check("线宽按直径 1/10", Loading(size_name="large").stroke_width, 4.8)
 
 
 print()
