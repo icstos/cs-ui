@@ -46,15 +46,15 @@ from ui.core.tokens import (
 )
 from ui.input.button import Button
 
-from ._look import icon_chip
+from ._look import SEMANTIC_ICON_SIZE, icon_chip
 from ._overlay import SLOTS, OverlayCard, host_for, peek_host
 
 __all__ = ["Notification"]
 
 GAP = 12
 WIDTH = 360
-#: 图标底色块的边长，正文缩进要按它对齐
-ICON = 24
+#: 语义图标的边尺寸，正文缩进要按它对齐
+ICON = SEMANTIC_ICON_SIZE
 DEFAULT_DURATION = 4500
 
 
@@ -212,7 +212,7 @@ class Notification:
     def _build(self) -> ft.Control:
         # 两段式：标题行（图标 + 标题 + 关闭）在上，正文另起一行、只缩进到标题。
         # 正文因此能吃到关闭按钮那 30px —— 360 宽的卡片里这是"少折一行"的关键。
-        head: list[ft.Control] = [icon_chip(self.style_type, size=24, icon_size=16)]
+        head: list[ft.Control] = [icon_chip(self.style_type, size=ICON)]
         head.append(self._title() if self.title else self._body_text(expand=True))
         if self.show_close:
             head.append(self._close_button())
@@ -499,10 +499,10 @@ SPEC = Spec(
     ),
     anatomy=[
         (
-            "图标块",
+            "语义图标",
             (
-                "24px 的淡底方块 + 语义图标，与标题同一行。底色只有 12% 的强调色，"
-                "四张通知叠在一起时也不会变成一排色块。"
+                "20px 的纯色图标，不带背景块，与标题同一行。用压在表面色上解过"
+                "对比度的强调色，四张通知叠在一起也不会凑成一排色块。"
             ),
         ),
         (

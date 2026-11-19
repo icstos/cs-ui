@@ -37,7 +37,7 @@ from ui.core.i18n import t
 from ui.core.tokens import FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE
 from ui.input.button import Button
 
-from ._look import icon_chip, wash
+from ._look import SEMANTIC_ICON_SIZE, icon_chip, wash
 
 __all__ = ["AlertDialog", "show_alert_dialog"]
 
@@ -104,8 +104,8 @@ class AlertDialog(ft.AlertDialog):
     def build_title(self, title: str) -> None:
         """标题条：语义色 8% 的底（``wash``）+ 正文色标题，上沿圆角跟着对话框走。
 
-        用 8% 而不是图标底座那档 12%：铺满一整条比铺 26px 的小方块重得多，
-        同一透明度在横带上会从"轻轻提示"变成"整块警报"。见 tokens 的
+        用 8% 而不是 12% 那档淡底：铺满一整条比小面积使用重得多，同一透明度
+        在横带上会从"轻轻提示"变成"整块警报"。见 tokens 的
         ``SEMANTIC_WASH`` / ``SEMANTIC_TINT``。
         """
         self.title = ft.Container(
@@ -128,7 +128,7 @@ class AlertDialog(ft.AlertDialog):
         )
 
     def build_content(self) -> None:
-        """正文：图标块 + 一段说明。DEFAULT 不画图标，语气更轻。"""
+        """正文：语义图标 + 一段说明。DEFAULT 不画图标，语气更轻。"""
         if isinstance(self.msg, str):
             body: ft.Control = ft.Text(
                 self.msg,
@@ -141,8 +141,9 @@ class AlertDialog(ft.AlertDialog):
 
         controls: list[ft.Control] = []
         if self.style_type != StyleType.DEFAULT:
-            # 用淡底图标块而不是实底方块：黄底白图标只有 2:1 的对比度，读不出来
-            controls.append(icon_chip(self.style_type, size=26, icon_size=17))
+            # 纯色图标而不是实底方块：警告色实底配白图标只有约 2:1，读不出来。
+            # 图标色走 accent_text（解过对比度），压在表面色上清晰。
+            controls.append(icon_chip(self.style_type, size=SEMANTIC_ICON_SIZE))
         controls.append(body)
 
         self.content = ft.Container(
@@ -379,9 +380,9 @@ SPEC = Spec(
             ),
         ),
         (
-            "图标块",
+            "语义图标",
             (
-                "26px 的淡底方块 + 类型图标，与正文同行。style_type=DEFAULT 不画 —— "
+                "20px 的纯色图标，不带背景块，与正文同行。style_type=DEFAULT 不画 —— "
                 "只是问一句「确定吗」时，一个感叹号会把语气升级成事故。"
             ),
         ),

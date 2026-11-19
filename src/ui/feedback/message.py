@@ -296,7 +296,7 @@ def _caption(text: str) -> ft.Control:
 
 @ft.component
 def _semantics() -> ft.Control:
-    """四条语义色各弹一次：颜色只落在图标块上，正文永远是正文色。"""
+    """四条语义色各弹一次：颜色只落在语义图标上，正文永远是正文色。"""
     page = ft.context.page
 
     def trigger(text: str, style: StyleType) -> Callable[[Any], None]:
@@ -423,10 +423,10 @@ SPEC = Spec(
     ),
     anatomy=[
         (
-            "图标块",
+            "语义图标",
             (
-                "22px 的淡底方块 + 语义图标。颜色只出现在这里：底是 12% 的强调色，"
-                "深色主题下不发亮，类型也能先于文字被读到。"
+                "20px 的纯色图标，不带背景块。颜色只出现在这里：用压在表面色上"
+                "解过对比度的强调色，深浅主题都清晰，类型先于文字被读到。"
             ),
         ),
         (
@@ -472,7 +472,7 @@ SPEC = Spec(
         Example(
             "四种语义",
             _semantics,
-            hint="成功 / 警告 / 错误 / 信息各弹一次，正文始终是正文色，只有图标块变色。",
+            hint="成功 / 警告 / 错误 / 信息各弹一次，正文始终是正文色，只有语义图标变色。",
             code=_SEMANTICS_CODE,
         ),
         Example(

@@ -1,4 +1,4 @@
-"""语义类型 → 图标 / 强调色 / 图标底座。
+"""语义类型 → 图标 / 强调色 / 淡底色。
 
 ``Message`` / ``Notification`` / ``AlertDialog`` / ``Button`` 共用这一套"类型
 长相"：换一处，四处一起变。这是全框架唯一一个把 :class:`StyleType` 翻成具体
@@ -18,8 +18,8 @@
     style = feedback_style(StyleType.SUCCESS)
     style.fill   # 实底：成功徽标 / 实心按钮
     style.text   # 压在页面上的字：提示条标题 / 镂空按钮
-    style.soft   # 12% 淡底：图标底座
-    icon_chip(StyleType.SUCCESS)
+    style.soft   # 12% 淡底：需要淡底的场合（如计数徽标）
+    icon_chip(StyleType.SUCCESS)  # 纯色语义图标，20px，不带背景块
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ import flet as ft
 
 from ui.core.constants import FeedbackStyle, StyleType
 from ui.core.tokens import (
-    RADIUS,
+    ICON_SIZE,
     accent_fill,
     accent_on,
     accent_soft,
@@ -36,7 +36,15 @@ from ui.core.tokens import (
     accent_wash,
 )
 
-__all__ = ["accent", "feedback_style", "icon", "icon_chip", "soft", "wash"]
+__all__ = [
+    "SEMANTIC_ICON_SIZE",
+    "accent",
+    "feedback_style",
+    "icon",
+    "icon_chip",
+    "soft",
+    "wash",
+]
 
 #: 类型 → (图标, 强调角色)。``DEFAULT`` 是"中性通知"，不是错误，所以走 neutral。
 _LOOK: dict[StyleType, tuple[ft.IconData, str]] = {
@@ -81,7 +89,7 @@ def accent(style_type: StyleType) -> str:
 
 
 def soft(style_type: StyleType) -> str:
-    """该类型的**小面积**淡底（12%）：图标底座、计数徽标。"""
+    """该类型的**小面积**淡底（12%）：计数徽标等需要淡底的场合。"""
     return accent_soft(_entry(style_type)[1])
 
 
@@ -90,18 +98,18 @@ def wash(style_type: StyleType) -> str:
     return accent_wash(_entry(style_type)[1])
 
 
-def icon_chip(style_type: StyleType, *, size: int = 22, icon_size: int = 15) -> ft.Control:
-    """淡底圆角方块 + 图标。
+#: 语义图标尺寸。比正文（14px）大一号，去掉淡底后仍能被先于文字读到。
+SEMANTIC_ICON_SIZE: int = ICON_SIZE["xl"]
 
-    给类型一个颜色锚点，又不像"整卡染成绿色"的提示条那样吵。兑的是
-    ``accent_soft``（12% 而不是实底），在深色主题下也不刺眼。
+
+def icon_chip(style_type: StyleType, *, size: int = SEMANTIC_ICON_SIZE) -> ft.Control:
+    """语义图标：纯色图标，不带背景块。
+
+    早期版本在图标下垫一块 12% 的淡底圆角方块。淡底让图标显小、发灰，几个
+    提示叠在一起又凑成一排色块。参考 Ant Design / MUI 的做法 —— 语义图标
+    直接用 ``accent_text`` 着色，不垫底色：颜色本就是为"压在表面色上"解的
+    对比度（浅 5:1 / 深 7:1），去掉底不改变可读性，反而更清晰简洁。
+
+    ``size`` 现在就是图标尺寸（不再有容器），默认 20px，比正文大一号。
     """
-    color = accent(style_type)
-    return ft.Container(
-        width=size,
-        height=size,
-        bgcolor=soft(style_type),
-        border_radius=RADIUS["md"],
-        alignment=ft.Alignment.CENTER,
-        content=ft.Icon(icon(style_type), size=icon_size, color=color),
-    )
+    return ft.Icon(icon(style_type), size=size, color=accent(style_type))
