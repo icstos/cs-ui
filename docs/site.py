@@ -61,10 +61,10 @@ type Kind = Literal["page", "category", "component"]
 class PageMeta:
     """一个页面。
 
-    普通页与分类页的标题 / 摘要走语言包 ``nav.<key>.*``；组件页的标题是导入名
-    （``Pagination``，语言中性）、摘要是实现文件里那句 ``SPEC.summary`` ——
-    所以这里留 ``name`` / ``brief`` 两个原文字段，由 :meth:`title` /
-    :meth:`desc` 统一出口，外壳就不用分支判断了。
+    普通页与分类页的标题 / 摘要走语言包 ``nav.<key>.*``；组件页的标题是展示名
+    （``"Pagination 分页"``，英文导入名 + 中文，来自 catalog）、摘要是实现文件里
+    那句 ``SPEC.summary`` —— 所以这里留 ``name`` / ``brief`` 两个原文字段，
+    由 :meth:`title` / :meth:`desc` 统一出口，外壳就不用分支判断了。
     """
 
     key: str
@@ -72,7 +72,7 @@ class PageMeta:
     group: Group
     icon: ft.IconData
     kind: Kind = "page"
-    #: 组件页：导入名（``"Pagination"``）
+    #: 组件页：展示名，来自 ``catalog.Entry.name``（``"Pagination 分页"``）
     name: str = ""
     #: 组件页：一句话摘要，来自 ``SPEC.summary``（可能为空，页面自己再取）
     brief: str = ""

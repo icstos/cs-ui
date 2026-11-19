@@ -29,6 +29,11 @@
     empty_line("没有匹配的项", height=40)        # 覆盖文案
     empty_block("还没有任何订单", hint="点右上角「新建」开始",
                 icon=ft.Icons.INBOX)
+
+    # 整块空态 + 下一步按钮：空态的价值在于告诉用户现在该做什么
+    empty_block("暂无任务", hint="新建第一条任务", icon=ft.Icons.INBOX_OUTLINED,
+                action=Button("新建任务", style_type=StyleType.PRIMARY),
+                height=None)                    # 交给父容器撑开
 """
 
 from __future__ import annotations
@@ -107,16 +112,22 @@ def empty_block(
     *,
     hint: str | None = None,
     icon: ft.IconData | None = None,
+    icon_color: str | None = None,
+    action: ft.Control | None = None,
     height: float | None = EMPTY_HEIGHT,
     width: float | None = None,
 ) -> ft.Control:
-    """整块空态：图标（可选）+ 主文 + 下一步提示（可选）。
+    """整块空态：图标（可选）+ 主文 + 下一步提示 + 可选入口按钮。
 
     Args:
         text: 主文；``None`` 取语言包的「暂无数据」。
         hint: 第二行提示，说明"下一步该做什么"。**只在真的存在下一步时给** ——
             搜索无结果时说「去别处勾选」是假话，那是被筛掉了不是被搬走了。
         icon: 图标。``None`` 时不画图标，只剩两行字。
+        icon_color: 图标色；``None`` 用次要文字色。整块空态的图标本来就轻，
+            不要为了"好看"换成高饱和色 —— 那会把注意力从主文上抢走。
+        action: 下一步的入口按钮（如「新建任务」）。给了 ``hint`` 又说"点这里"时，
+            按钮才是真正可执行的那一步；纯搜索无结果不要给，那是筛掉了不是没有。
         height: 占位高度，默认 :data:`EMPTY_HEIGHT`；显式传 ``None`` 表示
             "由父容器撑开"（``expand=True`` 的整块结果区用这个）。
         width: 固定宽度，一般不用。
@@ -133,7 +144,11 @@ def empty_block(
                 border_radius=RADIUS["full"],
                 bgcolor=overlay(0.04),
                 alignment=ft.Alignment.CENTER,
-                content=ft.Icon(icon, size=ICON_SIZE["2xl"], color=ft.Colors.ON_SURFACE_VARIANT),
+                content=ft.Icon(
+                    icon,
+                    size=ICON_SIZE["2xl"],
+                    color=icon_color or ft.Colors.ON_SURFACE_VARIANT,
+                ),
             )
         )
     lines.append(
@@ -151,6 +166,13 @@ def empty_block(
                 size=FONT_SIZE["small"],
                 color=ft.Colors.ON_SURFACE_VARIANT,
                 text_align=ft.TextAlign.CENTER,
+            )
+        )
+    if action is not None:
+        lines.append(
+            ft.Container(
+                margin=ft.Margin.only(top=SPACE["2"]),
+                content=action,
             )
         )
 

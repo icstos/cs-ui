@@ -3,11 +3,15 @@
 - 代码即文档，ui代码生成文档网站（docs/）
 - ui-mcp：
 
+一套跨平台的Python UI组件库
+- 组件：简洁、易用、功能强大
+- 跨平台：一套代码支持多个平台
 扁平化设计（Flat Design）
 
 ## 方向
 色彩、排版、布局、图片、图标、组件、动画
-
+- 可定制性
+- 开发者体验
 - 一致性：提升整体感
   - 排版：行高、字距
   - 字体、字号、字重
@@ -22,6 +26,38 @@
 字号：一般说是14px（客户端） -16px（网页），
 字重：正文使用 400（Regular）
 字号：
+
+颜色
+- 语义化颜色
+- 清晰的层级
+- 有意识的强调
+light, dark
+accent
+accent-hover
+accent-foreground
+accent-soft-hover
+accent-soft-foregound
+使用语义命名（primary、secondary、tertiary、danger），而非视觉描述（solid、flat、bordered）
+
+一般圆角：4px
+反馈类圆角：4px
+卡片圆角：8px
+
+行高：1.5
+文字粗细：normal
+
+状态：
+Success
+Error
+Warning
+Waiting
+Running
+Skipped
+Canceled
+Invalid
+Initial
+## UI框架
+[HeroUI - Never start from scratch again](https://heroui.com/)
 ## TODO
 
 - [ ] 声明式范式收敛：把仍用 `@ft.observable` + `.ui()` 的组件（`Input` / `Checkbox` /
